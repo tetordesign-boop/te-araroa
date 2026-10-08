@@ -20,7 +20,7 @@ export interface MapData {
   recent: LngLat[];
 }
 
-export interface LiveData { c: LngLat; stale: boolean; label: string }
+export interface LiveData { c: LngLat; stale: boolean; label: string; name: string }
 
 export interface MapCallbacks {
   onDay: (dayNumber: number) => void;
@@ -216,13 +216,15 @@ export class TrailMap {
       const el = document.createElement("button");
       el.className = "live-pin";
       el.type = "button";
-      el.innerHTML = '<span class="live-pin__halo"></span><span class="live-pin__dot"></span>';
+      el.innerHTML = '<span class="live-pin__halo"></span><span class="live-pin__dot"></span><span class="live-pin__label"></span>';
       el.addEventListener("click", (e) => { e.stopPropagation(); this.cb.onLive(); });
       this.liveMarker = new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat(live.c).addTo(this.map);
     }
     const el = this.liveMarker.getElement();
     el.classList.toggle("is-stale", live.stale);
     el.setAttribute("aria-label", live.label);
+    const tag = el.querySelector(".live-pin__label");
+    if (tag && tag.textContent !== live.name) tag.textContent = live.name;
     this.liveMarker.setLngLat(live.c);
   }
 

@@ -42,14 +42,15 @@ export async function loadServer() {
 export async function loadRoute() {
   try {
     const cached = await caches?.open?.("ta-admin-trail").then((c) => c.match(TRAIL_URL)).catch(() => undefined);
-    const res = navigator.onLine ? await fetch(TRAIL_URL).catch(() => cached) : cached;
+    const fresh = navigator.onLine ? await fetch(TRAIL_URL).catch(() => undefined) : undefined;
+    const res = fresh?.ok ? fresh : cached;
     if (!res || !res.ok) return;
     const clone = res.clone();
     const trail = (await res.json()) as Trail;
     if (trail?.parts?.length) {
       adminRoute.value = new Route(trail);
       adminRouteFull.value = true;
-      if (navigator.onLine) caches?.open?.("ta-admin-trail").then((c) => c.put(TRAIL_URL, clone)).catch(() => {});
+      if (res === fresh) caches?.open?.("ta-admin-trail").then((c) => c.put(TRAIL_URL, clone)).catch(() => {});
     }
   } catch (_) { /* keep the light route */ }
 }

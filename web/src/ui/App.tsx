@@ -1,7 +1,7 @@
 import { computed, effect } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { OFFLINE_MAP } from "../config";
-import { lang, setLang, t } from "../i18n";
+import { hikerName, lang, t } from "../i18n";
 import {
   dayByNumber, days, latestDay, latestPosition, liveState, media, mediaPositions, positions,
   route, settings, status, walked, offline,
@@ -11,7 +11,10 @@ import type { LngLat } from "../lib/geo";
 import { TrailMap, type LiveData, type MapData } from "../map/map";
 import { DayView } from "./DayView";
 import { Home } from "./Home";
-import { Layers, Locate, Marker, Mountain } from "./icons";
+import { dayKm } from "./Home";
+import { Layers, Locate, Marker, Mountain, Replay } from "./icons";
+import { startReplay } from "./replayControl";
+import { isDesktop } from "./state";
 import { About, Journal, Stats } from "./Pages";
 import { Sheet } from "./Sheet";
 import { detent, go, mapApi, replayState, toastMsg, view } from "./state";
@@ -43,7 +46,10 @@ const mapData = computed<MapData>(() => {
 const liveData = computed<LiveData | null>(() => {
   const lp = latestPosition.value;
   if (!lp) return null;
-  return { c: [lp.lng, lp.lat], stale: liveState.value === "stale", label: `${t(liveState.value === "live" ? "live" : "lastKnown")}, ${relTime(lp.recorded_at, lang.value)}` };
+  return {
+    c: [lp.lng, lp.lat], stale: liveState.value === "stale", name: hikerName.value || "Ewan",
+    label: `${t(liveState.value === "live" ? "live" : "lastKnown")}, ${relTime(lp.recorded_at, lang.value)}`,
+  };
 });
 
 function focusTarget(): LngLat | null {
@@ -54,6 +60,41 @@ function focusTarget(): LngLat | null {
   if (ld?.end_km != null) return route.value.pointAt(ld.end_km);
   return null;
 }
+
+function Brand({ inPanel }: { inPanel?: boolean }) {
+  const l = lang.value;
+  const s = settings.value;
+  const tag = (l === "en" ? s?.site_tagline_en : s?.site_tagline_fr) || t("whereNow");
+  return (
+    <button class={`brand${inPanel ? " brand--panel" : " glass"}`} type="button" onClick={() => go({ name: "about" })} aria-label={t("about")}>
+      <Marker class="brand__mark" />
+      <span>
+        <span class="brand__title">{s?.site_title || "Te Araroa"}</span>
+        <span class="brand__tag">{tag}</span>
+      </span>
+    </button>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div class="skel" aria-busy="true" aria-label={t("loading")}>
+      <span class="w1" /><span class="w2" /><span class="w3" /><span class="w1" />
+    </div>
+  );
+}
+
+/** The day on screen, if it can be flown over in 3D. */
+const replayable = computed(() => {
+  const v = view.value;
+  if (v.name !== "day") return null;
+  const d = dayByNumber.value.get(v.n);
+  if (!d || d.kind === "rest") return null;
+  const km = dayKm(d);
+  return km !== null && km > 0.3 ? d : null;
+});
+
+const viewKey = (v: ReturnType<typeof view.peek>) => (v.name === "day" ? `day-${v.n}` : v.name);
 
 export function App() {
   const mapEl = useRef<HTMLDivElement>(null);
@@ -120,9 +161,6 @@ export function App() {
   }), []);
 
   const v = view.value;
-  const l = lang.value;
-  const s = settings.value;
-  const tag = (l === "en" ? s?.site_tagline_en : s?.site_tagline_fr) || t("whereNow");
 
   const toggleBase = () => {
     const next = base === "satellite" ? "relief" : "satellite";
@@ -135,15 +173,7 @@ export function App() {
     <>
       <div class="map" ref={mapEl} />
 
-      <header class="topbar">
-        <button class="brand glass" type="button" onClick={() => go({ name: "about" })} aria-label={t("about")}>
-          <Marker class="brand__mark" />
-          <span>
-            <span class="brand__title">{s?.site_title || "Te Araroa"}</span>
-            <span class="brand__tag">{tag}</span>
-          </span>
-        </button>
-      </header>
+      <header class="topbar"><Brand /></header>
 
       <nav class="controls glass" aria-label="Carte">
         <button type="button" onClick={toggleBase} aria-label={base === "satellite" ? t("plan") : t("satellite")} title={base === "satellite" ? t("plan") : t("satellite")}>
@@ -155,24 +185,32 @@ export function App() {
         <button type="button" onClick={() => { const c = focusTarget(); if (c) mapApi.value?.flyTo(c, 12.5); else mapApi.value?.overview(route.value); }} aria-label={t("recenter")} title={t("recenter")}>
           <Locate class={liveState.value === "live" ? "is-on" : ""} />
         </button>
-        <button type="button" onClick={() => setLang(l === "fr" ? "en" : "fr")} aria-label={t("lang")} title={t("lang")}>
-          <span>{t("langCode")}</span>
-        </button>
       </nav>
 
       <Sheet label={t("whereNow")}>
+        {isDesktop.value && <Brand inPanel />}
         {status.value === "error" && !days.value.length ? (
           <div>
             <p class="empty">{t("loadError")}</p>
-            <button class="btn" type="button" onClick={() => location.reload()}>{t("retry")}</button>
+            <button class="btn" type="button" style={{ marginTop: "14px" }} onClick={() => location.reload()}>{t("retry")}</button>
           </div>
-        ) : v.name === "day" ? <DayView n={v.n} photo={v.photo} />
-          : v.name === "journal" ? <Journal />
-          : v.name === "stats" ? <Stats />
-          : v.name === "about" ? <About />
-          : <Home />}
+        ) : status.value === "loading" && !days.value.length && !settings.value ? <Skeleton /> : (
+          <div class="view" key={viewKey(v)}>
+            {v.name === "day" ? <DayView n={v.n} photo={v.photo} />
+              : v.name === "journal" ? <Journal />
+              : v.name === "stats" ? <Stats />
+              : v.name === "about" ? <About />
+              : <Home />}
+          </div>
+        )}
         {offline.value && <p class="fine" style={{ marginTop: "18px" }}>{t("offline")}</p>}
       </Sheet>
+
+      {replayable.value && !replayState.value && (isDesktop.value || detent.value !== "full") && (
+        <button class="replay-fab glass" type="button" onClick={() => startReplay(replayable.value!)}>
+          <Replay />{t("replay3d")}
+        </button>
+      )}
 
       {replayState.value && (
         <div class="replay-hud glass" role="status">

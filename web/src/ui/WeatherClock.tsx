@@ -1,7 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
-import { lang, t, weatherLabel } from "../i18n";
+import { weatherLabel } from "../i18n";
 import { clock, latestPosition } from "../lib/data";
-import { nzHour, nzTime } from "../lib/format";
+import type { Lang } from "../types";
 
 interface Wx { temp: number; code: number; at: number; key: string }
 const cache = new Map<string, Wx>();
@@ -23,7 +23,8 @@ async function getWeather(lat: number, lng: number): Promise<Wx | null> {
   }
 }
 
-export function WeatherClock() {
+/** Current weather where Ewan last was (Open-Meteo, refreshed every 20 minutes). */
+export function useWeather(l: Lang): { icon: string; temp: number; label: string } | null {
   const pos = latestPosition.value;
   const [wx, setWx] = useState<Wx | null>(null);
   useEffect(() => {
@@ -32,20 +33,7 @@ export function WeatherClock() {
     getWeather(pos.lat, pos.lng).then((w) => alive && setWx(w));
     return () => { alive = false; };
   }, [pos?.lat.toFixed(2), pos?.lng.toFixed(2), Math.floor(clock.value / (20 * 60_000))]);
-
-  const l = lang.value;
-  const now = new Date(clock.value);
-  const h = nzHour(now);
-  const night = h >= 22 || h < 6;
-  const w = wx ? weatherLabel(wx.code, l) : null;
-  if (!wx && !night) return null;
-  return (
-    <div class="weather">
-      {wx && w && (
-        <span class="pill"><span aria-hidden="true">{w.icon}</span><span class="num">{wx.temp}°</span><span class="muted">{w.label}</span></span>
-      )}
-      {night && <span class="pill"><span aria-hidden="true">😴</span><span class="muted">{t("asleep")}</span></span>}
-      <span class="sr-only">{t("nzTime", { time: nzTime(l, now) })}</span>
-    </div>
-  );
+  if (!wx) return null;
+  const w = weatherLabel(wx.code, l);
+  return { icon: w.icon, temp: wx.temp, label: w.label };
 }

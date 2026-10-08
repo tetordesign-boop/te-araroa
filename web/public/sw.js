@@ -18,7 +18,9 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => !KEEP.includes(k)).map((k) => caches.delete(k)));
+    // only this worker's own old caches (the Carnet keeps its own, e.g. the full trail for offline use)
+    const mine = /^(shell|assets|tiles|media|data)-v\d+$/;
+    await Promise.all(keys.filter((k) => mine.test(k) && !KEEP.includes(k)).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });

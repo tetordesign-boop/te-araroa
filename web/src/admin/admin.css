@@ -139,6 +139,8 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 .hint strong { font-weight: 650; }
 .hint span { color: var(--ink-2); }
 .hint__glyph { display: inline-block; vertical-align: -2px; color: var(--marker); margin: 0 1px; }
+.hint--action { width: 100%; border: 0; font-family: inherit; color: var(--ink); cursor: pointer; }
+.hint--action:active { filter: brightness(0.96); }
 
 /* help page */
 .help h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin: 26px 4px 8px; }

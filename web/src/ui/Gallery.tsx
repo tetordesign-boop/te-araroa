@@ -1,6 +1,7 @@
 import { useEffect } from "preact/hooks";
 import { mediaUrl } from "../config";
 import { lang, t } from "../i18n";
+import { typo } from "../lib/format";
 import type { Media } from "../types";
 import { Play } from "./icons";
 
@@ -29,7 +30,7 @@ export async function openLightbox(list: Media[], index: number) {
     if (m.kind === "embed" && m.embed_url) return { html: `<div class="pswp__video">${embedHtml(m.embed_url)}</div>` };
     return { src: mediaUrl(m.path), msrc: mediaUrl(m.thumb_path ?? m.path), width: m.width ?? 1600, height: m.height ?? 1200, alt: m.caption ?? t("photoBy") };
   });
-  const captions = list.map((m) => (l === "en" && m.caption_en) || m.caption || "");
+  const captions = list.map((m) => typo((l === "en" && m.caption_en) || m.caption || ""));
   const lb = new PhotoSwipeLightbox({
     dataSource,
     pswpModule: () => import("photoswipe"),
@@ -65,14 +66,36 @@ export async function openLightbox(list: Media[], index: number) {
   lb.loadAndOpen(index);
 }
 
-function Thumb({ m, hero, onOpen }: { m: Media; hero?: boolean; onOpen: () => void }) {
-  const src = mediaUrl(hero ? (m.path && m.kind === "photo" ? m.path : m.thumb_path ?? m.path) : (m.thumb_path ?? m.path));
+/** Split n tiles into rows of three and two, never leaving a tile alone on its row. */
+export function rowSizes(n: number): number[] {
+  if (n <= 0) return [];
+  if (n === 1) return [1];
+  if (n === 2) return [2];
+  if (n === 4) return [2, 2];
+  const rows: number[] = [];
+  let left = n;
+  while (left > 0) {
+    if (left === 4) { rows.push(2, 2); break; }
+    if (left === 2) { rows.push(2); break; }
+    rows.push(3);
+    left -= 3;
+  }
+  return rows;
+}
+
+const MAX_TILES = 9;
+
+function Tile({ m, hero, wide, more, onOpen }: { m: Media; hero?: boolean; wide?: boolean; more?: number; onOpen: () => void }) {
+  const big = hero || wide;
+  const src = mediaUrl(big && m.kind === "photo" && m.path ? m.path : m.thumb_path ?? m.path);
   const isVideo = m.kind !== "photo";
+  const portrait = hero && m.width && m.height ? m.height > m.width * 1.05 : false;
   return (
-    <button type="button" class={hero ? "hero" : "grid__item"} onClick={onOpen}
-      aria-label={isVideo ? t("playVideo") : (m.caption || t("photoBy"))}>
+    <button type="button" class={`tile${hero ? " tile--hero" : ""}${portrait ? " is-portrait" : ""}`} onClick={onOpen}
+      aria-label={more ? t("photosN", { n: more + 1 }) : isVideo ? t("playVideo") : (m.caption || t("photoBy"))}>
       {src ? <img src={src} alt="" loading={hero ? "eager" : "lazy"} decoding="async" /> : null}
-      {isVideo && <span class="play-badge"><Play /></span>}
+      {isVideo && !more && <span class="play-badge"><Play /></span>}
+      {more ? <span class="tile__more num">+{more}</span> : null}
     </button>
   );
 }
@@ -86,15 +109,30 @@ export function Gallery({ list, cover, openId }: { list: Media[]; cover: Media |
   }, [openId]);
   if (!ordered.length) return null;
   const [first, ...rest] = ordered;
+  const visible = rest.slice(0, MAX_TILES);
+  const extra = rest.length - visible.length;
+  const rows = rowSizes(visible.length);
+  let k = 0;
   return (
     <div class="gallery">
-      <Thumb m={first} hero onOpen={() => openLightbox(ordered, 0)} />
-      {rest.length > 0 && (
-        <div class="grid">
-          {rest.map((m, i) => <Thumb m={m} onOpen={() => openLightbox(ordered, i + 1)} />)}
-        </div>
-      )}
-      {first.caption && <p class="caption">{(lang.value === "en" && first.caption_en) || first.caption}</p>}
+      <div class="mosaic">
+        <Tile m={first} hero onOpen={() => openLightbox(ordered, 0)} />
+        {rows.map((size) => {
+          const items = visible.slice(k, k + size);
+          const startIdx = k;
+          k += size;
+          return (
+            <div class={`mosaic__row n${size}`}>
+              {items.map((m, i) => {
+                const idx = startIdx + i + 1;
+                const last = extra > 0 && startIdx + i === visible.length - 1;
+                return <Tile m={m} wide={size === 1} more={last ? extra : undefined} onOpen={() => openLightbox(ordered, idx)} />;
+              })}
+            </div>
+          );
+        })}
+      </div>
+      {first.caption && <p class="caption">{typo((lang.value === "en" && first.caption_en) || first.caption)}</p>}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { t } from "../i18n";
 import { detent, isDesktop, mapApi, type Detent } from "./state";
 
 const PEEK = 230;
@@ -105,7 +106,7 @@ export function Sheet({ children, label }: { children: ComponentChildren; label:
       onPointerCancel={() => { drag.current = null; setDragging(false); setOffset(null); }}
       onClickCapture={onClickCapture as unknown as (e: Event) => void}
     >
-      <div class="sheet__grip" role="button" tabIndex={0} aria-label={current === "full" ? "Réduire" : "Agrandir"}
+      <div class="sheet__grip" role="button" tabIndex={0} aria-label={current === "full" ? t("collapse") : t("expand")}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();

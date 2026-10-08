@@ -65,6 +65,25 @@ export function relTime(iso: string, lang: Lang, now = Date.now()): string {
   return rtf.format(-d, "day");
 }
 
+/** Compact form for tight spots: "il y a 20 min", "20 min ago". */
+export function relTimeShort(iso: string, lang: Lang, now = Date.now()): string {
+  const diff = Math.max(0, now - new Date(iso).getTime());
+  const min = Math.round(diff / 60000);
+  if (min < 1) return lang === "fr" ? "à l'instant" : "just now";
+  if (lang === "en") {
+    if (min < 60) return `${min} min ago`;
+    const h = Math.round(min / 60);
+    if (h < 24) return `${h} h ago`;
+    const d = Math.round(h / 24);
+    return d === 1 ? "yesterday" : `${d} days ago`;
+  }
+  if (min < 60) return `il y a ${min}\u00a0min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `il y a ${h}\u00a0h`;
+  const d = Math.round(h / 24);
+  return d === 1 ? "hier" : `il y a ${d}\u00a0jours`;
+}
+
 export function fmtDuration(min: number | null | undefined, lang: Lang): string {
   if (!min) return "–";
   const h = Math.floor(min / 60), m = Math.round(min % 60);
@@ -74,4 +93,16 @@ export function fmtDuration(min: number | null | undefined, lang: Lang): string 
 
 export function plural(n: number, one: string, many: string): string {
   return Math.abs(n) >= 2 ? many : one;
+}
+
+/**
+ * Typography for text people type on phones: a narrow no-break space before ? ! : ; and inside « »,
+ * so a question mark never ends up alone on the next line.
+ */
+export function typo(text: string): string {
+  return text
+    .replace(/[ \u00a0]+([?!:;»])/g, "\u202f$1")
+    .replace(/«[ \u00a0]+/g, "«\u202f")
+    .replace(/ →/g, "\u00a0→")
+    .replace(/(\d) (?=(km|m|h|min)\b)/g, "$1\u00a0");
 }

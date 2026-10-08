@@ -3,8 +3,11 @@ import { lang, t } from "../i18n";
 import { fmtKm } from "../lib/format";
 import type { Route } from "../lib/geo";
 
-/** The whole trail as one line, like a metro map: walked part in marker orange, transfers as breaks. */
-export function TrailStrip({ route, walked, here }: { route: Route; walked: [number, number][]; here: number | null }) {
+/**
+ * The whole trail as one line, like a metro diagram: the part Ewan walked in marker orange,
+ * the river and lake crossings he can't walk as breaks. The large version names the towns.
+ */
+export function TrailStrip({ route, walked, here, large }: { route: Route; walked: [number, number][]; here: number | null; large?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(340);
   useLayoutEffect(() => {
@@ -17,7 +20,10 @@ export function TrailStrip({ route, walked, here }: { route: Route; walked: [num
 
   const total = route.total;
   const gaps = route.trail.gaps.map((g) => g.km).sort((a, b) => a - b);
-  const GAP = 7, PAD = 4, Y = 14;
+  const SW = large ? 8 : 6;
+  const R = large ? 9 : 7.5;
+  const GAP = 7, PAD = R, Y = R + 1;
+  const H = large ? Y + SW / 2 + 40 : Y * 2;
   const usable = w - 2 * PAD - gaps.length * GAP;
   const x = (km: number) => PAD + (km / total) * usable + gaps.filter((g) => g < km - 1e-6).length * GAP;
   const bounds = [0, ...gaps, total];
@@ -32,24 +38,65 @@ export function TrailStrip({ route, walked, here }: { route: Route; walked: [num
   const places = route.places();
   const next = here !== null ? places.find((p) => p.km > here + 0.5) : null;
   const l = lang.value;
+  const towns = large ? places.filter((p) => TOWNS.has(p.n)) : [];
+  const inset = SW / 2;
 
   return (
-    <div class="strip" ref={ref}>
-      <svg viewBox={`0 0 ${w} 44`} role="img" aria-label={here !== null ? `${fmtKm(here, l)} ${t("walkedOf", { total: fmtKm(total, l) })}` : t("notStarted")}>
-        {parts.map(([a, b]) => <line class="strip__base" x1={x(a) + 3} x2={x(b) - 3} y1={Y} y2={Y} />)}
-        {segs.map(([a, b]) => <line class="strip__walked" x1={x(a) + 3} x2={Math.max(x(a) + 3, x(b) - 3)} y1={Y} y2={Y} />)}
-        {places.slice(1, -1).filter((p) => STATIONS.has(p.n)).map((p) => <circle class="strip__station" cx={x(p.km)} cy={Y} r={1.7} />)}
-        <text class="strip__label" x={PAD} y={Y + 26}>Ship Cove</text>
-        <text class="strip__label strip__label--end" x={w - PAD} y={Y + 26}>Bluff</text>
-        {here !== null && <circle class="strip__here" cx={Math.min(w - PAD - 3, Math.max(PAD + 3, x(here)))} cy={Y} r={7} />}
+    <div class={`strip${large ? " strip--large" : ""}`} ref={ref}>
+      <svg viewBox={`0 0 ${w} ${H}`} height={H} role="img"
+        aria-label={here !== null ? `${fmtKm(here, l, 0)} ${t("walkedOf", { total: fmtKm(total, l, 0) })}` : t("notStarted")}>
+        {parts.map(([a, b]) => <line class="strip__base" x1={x(a) + inset} x2={x(b) - inset} y1={Y} y2={Y} stroke-width={SW} />)}
+        {segs.map(([a, b]) => <line class="strip__walked" x1={x(a) + inset} x2={Math.max(x(a) + inset, x(b) - inset)} y1={Y} y2={Y} stroke-width={SW} />)}
+        {places.slice(1, -1).filter((p) => STATIONS.has(p.n)).map((p) => <circle class="strip__station" cx={x(p.km)} cy={Y} r={large ? 2 : 1.6} />)}
+        {large && placeTowns([
+          { x: PAD - R + 1, name: "Ship Cove", end: true },
+          { x: w - PAD + R - 1, name: "Bluff", end: true },
+          ...towns.map((p) => ({ x: x(p.km), name: townName(p.n), end: false })),
+        ], w).map(({ x: tx, name, row, anchor, end }) => (
+          <g>
+            {!end && <line class="strip__tick" x1={tx} x2={tx} y1={Y + SW / 2 + 3} y2={Y + SW / 2 + (row ? 20 : 7)} />}
+            <text class={`strip__town${end ? " is-end" : ""}`} x={tx} y={Y + SW / 2 + (row ? 33 : 20)} text-anchor={anchor}>{name}</text>
+          </g>
+        ))}
+        {here !== null && <circle class="strip__here" cx={Math.min(w - PAD, Math.max(PAD, x(here)))} cy={Y} r={R} />}
       </svg>
-      {next && here !== null && here > 0 && (
-        <div class="strip__next">{t("toPlace", { km: fmtKm(next.km - here, l), place: shortPlace(next.n) })}</div>
+      {!large && (
+        <div class="strip__legend">
+          <span>Ship Cove</span>
+          {next && here !== null && here > 0
+            ? <span class="strip__next"><strong class="num">{fmtKm(next.km - here, l)} km</strong> {t("beforePlace", { place: shortPlace(next.n) })}</span>
+            : <span class="strip__next" />}
+          <span>Bluff</span>
+        </div>
       )}
     </div>
   );
 }
 
-const STATIONS = new Set(["Havelock", "St Arnaud", "Boyle Village", "Arthur's Pass (Klondyke Corner)", "Lake Tekapo", "Twizel", "Wānaka", "Queenstown", "Riverton · Aparima", "Invercargill"]);
+const townName = (n: string) => shortPlace(n).replace("Lake Tekapo", "Tekapo");
 
-export const shortPlace =(n: string) => n.replace(" (Klondyke Corner)", "").replace(" · Stirling Point", "").replace(" · Meretoto", "").replace(" · Aparima", "").replace("Lake Coleridge · Rakaia", "Lake Coleridge");
+/** Two rows of town names under the line; a name that would touch another is left out. */
+function placeTowns(items: { x: number; name: string; end: boolean }[], w: number) {
+  const width = (s: string) => s.length * 6.2 + 8;
+  const rows: [number, number][][] = [[], []];
+  const out: { x: number; name: string; end: boolean; row: number; anchor: "start" | "middle" | "end" }[] = [];
+  for (const it of items) {
+    const tw = width(it.name);
+    const anchor = it.x - tw / 2 < 0 ? "start" : it.x + tw / 2 > w ? "end" : "middle";
+    const x0 = anchor === "start" ? it.x : anchor === "end" ? it.x - tw : it.x - tw / 2;
+    const x1 = x0 + tw;
+    for (let r = 0; r < 2; r++) {
+      if (rows[r].every(([a, b]) => x1 <= a || x0 >= b)) {
+        rows[r].push([x0, x1]);
+        out.push({ ...it, row: r, anchor });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+const STATIONS = new Set(["Havelock", "St Arnaud", "Boyle Village", "Arthur's Pass (Klondyke Corner)", "Lake Tekapo", "Twizel", "Wānaka", "Queenstown", "Riverton · Aparima", "Invercargill"]);
+const TOWNS = new Set(["Havelock", "St Arnaud", "Arthur's Pass (Klondyke Corner)", "Lake Tekapo", "Wānaka", "Queenstown", "Invercargill"]);
+
+export const shortPlace = (n: string) => n.replace(" (Klondyke Corner)", "").replace(" · Stirling Point", "").replace(" · Meretoto", "").replace(" · Aparima", "").replace("Lake Coleridge · Rakaia", "Lake Coleridge");

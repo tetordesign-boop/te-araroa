@@ -55,6 +55,12 @@ export function Dashboard() {
       <p class="adm-sub">Bonjour {name}, on est le {fmtDate(today, "fr")} en Nouvelle-Zélande.</p>
       <SyncPill />
       <InstallHint />
+      {s && !s.start_date && (
+        <button class="hint hint--action" type="button" onClick={() => open({ name: "settings" })}>
+          <strong>Indique ta date de départ</strong>
+          <span>Réglages › Départ de Ship Cove. Elle numérote tes jours, et ta position n'apparaît sur le site qu'à partir de cette date : sans elle, jamais.</span>
+        </button>
+      )}
 
       <button class="bigbtn bigbtn--primary" type="button" onClick={startToday}>
         {local.some((d) => d.date === today) || adminDays.value.some((d) => d.date === today) ? "Reprendre l'étape du jour" : "Publier l'étape du jour"}

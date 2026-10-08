@@ -1,21 +1,45 @@
-import { lang, t } from "../i18n";
-import {
-  coverOf, dayOnTrail, dayTitle, days, latestPosition, livePlacement, liveState, mediaByDay,
-  phase, progressKm, route, settings, walked, clock,
-} from "../lib/data";
-import { daysBetween, fmtDate, fmtKm, nzHour, nzTime, nzToday, relTime } from "../lib/format";
 import { mediaUrl } from "../config";
-import type { Day } from "../types";
+import { hikerName, lang, setLang, t } from "../i18n";
+import {
+  clock, coverOf, dayOnTrail, dayTitle, days, latestPosition, livePlacement, liveState, mediaByDay,
+  phase, progressKm, route, settings, walked,
+} from "../lib/data";
+import { addDays, daysBetween, fmtDate, fmtInt, fmtKm, nzHour, nzTime, nzToday, relTimeShort, typo } from "../lib/format";
+import type { Day, Lang } from "../types";
 import { HutBook } from "./HutBook";
-import { ChevronRight } from "./icons";
+import { ChevronRight, Trail } from "./icons";
 import { go, hrefFor } from "./state";
 import { shortPlace, TrailStrip } from "./TrailStrip";
-import { WeatherClock } from "./WeatherClock";
+import { useWeather } from "./WeatherClock";
 
-export function Status() {
+// ------------------------------------------------------------------ helpers shared with the other views
+export const dayKm = (d: Day) => d.distance_km ?? (d.start_km !== null && d.end_km !== null ? d.end_km - d.start_km : null);
+
+/** "aujourd'hui", "hier", or the date. */
+export function dayWhen(date: string, l: Lang, today: string): string {
+  if (date === today) return t("today");
+  if (date === addDays(today, -1)) return t("yesterday");
+  return fmtDate(date, l);
+}
+
+/** First paragraph of the story, in the reader's language when Ewan wrote one. */
+export function excerpt(d: Day, l: Lang): string | null {
+  const s = (l === "en" && d.story_en) || d.story;
+  return s ? typo(s.split(/\n{2,}/)[0].trim()) : null;
+}
+
+export function titleOf(d: Day, l: Lang): string {
+  return typo(dayTitle(d, l) || (d.kind === "rest" ? t("rest") : t("noTitle", { n: d.day_number })));
+}
+
+const open = (d: Day) => (e: Event) => { e.preventDefault(); go({ name: "day", n: d.day_number }); };
+
+// ------------------------------------------------------------------ where is Ewan
+function Status() {
   const p = latestPosition.value;
   const state = liveState.value;
   const l = lang.value;
+  clock.value; // re-render on clock ticks
   if (!p) return null;
   const lp = livePlacement.value;
   let where = "";
@@ -24,45 +48,150 @@ export function Status() {
     const near = Math.abs(lp.km - prev.km) <= Math.abs(next.km - lp.km) ? prev : next;
     if (Math.abs(near.km - lp.km) < 25) where = t("near", { place: shortPlace(near.n) });
   }
-  const now = new Date(clock.value); // re-render on clock ticks
-  const h = nzHour(now);
   return (
     <div class={`status${state === "stale" ? " is-stale" : ""}`}>
       <span class="status__dot" aria-hidden="true" />
       <span class="status__text">
-        <strong>{state === "live" ? t("live") : t("lastKnown")}</strong>{" "}
-        {relTime(p.recorded_at, l)}{where ? `, ${where}` : ""}
+        <strong>{state === "live" ? t("live") : t("lastKnown")}</strong>{where ? `, ${where}` : ""}
       </span>
-      <span class="status__clock num" title={t("nzTime", { time: nzTime(l, now) })}>
-        <span aria-hidden="true">{h >= 21 || h < 6 ? "🌙" : "🕒"}</span>
-        <span class="sr-only">{t("nzTime", { time: "" })}</span>{nzTime(l, now)}
-      </span>
+      <span class="status__side"><span class="muted">{relTimeShort(p.recorded_at, l)}</span></span>
     </div>
   );
 }
 
-export function DayRow({ d, large }: { d: Day; large?: boolean }) {
+/** Weather where he is and the time in New Zealand, said in a sentence. */
+function Conditions() {
+  const l = lang.value;
+  const wx = useWeather(l);
+  const now = new Date(clock.value);
+  const h = nzHour(now);
+  const night = h >= 21 || h < 6;
+  const time = nzTime(l, now);
+  return (
+    <p class="conditions">
+      {wx ? `${t("wxLine", { icon: wx.icon, temp: wx.temp, label: wx.label })} ` : ""}
+      {night ? t("timeNight", { time, name: hikerName.value }) : t("timeDay", { time })}
+    </p>
+  );
+}
+
+function Now() {
+  const l = lang.value;
+  const r = route.value;
+  const km = progressKm.value;
+  const ph = phase.value;
+  const n = dayOnTrail.value;
+  return (
+    <section class="now" aria-label={t("whereNow")}>
+      <Status />
+      <div class="now__row">
+        <div class="now__km"><span class="num now__big">{fmtKm(km, l, 0)}</span><span class="now__unit">km</span></div>
+        <div class="now__side">
+          {n ? <span class="now__day">{ph === "after" ? t("finished", { n }) : t("day", { n })}</span> : null}
+          <span class="now__of">{t("ofTotal", { total: fmtKm(r.total, l, 0) })}</span>
+        </div>
+      </div>
+      <TrailStrip route={r} walked={walked.value.hike} here={km} />
+      {latestPosition.value && <Conditions />}
+    </section>
+  );
+}
+
+function Before() {
+  const l = lang.value;
+  const s = settings.value;
+  const today = nzToday(new Date(clock.value));
+  const n = s?.start_date ? daysBetween(today, s.start_date) : null;
+  const date = s?.start_date ? fmtDate(s.start_date, l, { day: "numeric", month: "long" }) : null;
+  return (
+    <section class="now">
+      {n !== null && n > 0 ? (
+        <div class="now__row" style={{ marginTop: "2px" }}>
+          <div class="now__km"><span class="num now__big">{n}</span><span class="now__unit">{n === 1 ? t("dayUnit") : t("daysUnit")}</span></div>
+          <div class="now__side">
+            <span class="now__day">{t("beforeStart")}</span>
+            <span class="now__of">{date}</span>
+          </div>
+        </div>
+      ) : <h2 class="before__big">{n === 0 ? t("countdownToday") : t("notStarted")}</h2>}
+      <TrailStrip route={route.value} walked={[]} here={null} />
+      {date && <p class="conditions">{t("startsOn", { date })}</p>}
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------ the latest day, as a cover story
+function Feature({ d }: { d: Day }) {
   const l = lang.value;
   const cover = coverOf(d);
   const n = (mediaByDay.value.get(d.id) ?? []).length;
-  const km = d.distance_km ?? (d.start_km !== null && d.end_km !== null ? d.end_km - d.start_km : null);
-  const title = dayTitle(d, l) || t("day", { n: d.day_number });
+  const today = nzToday(new Date(clock.value));
+  const km = dayKm(d);
+  const ex = excerpt(d, l);
+  const src = cover ? mediaUrl(cover.kind === "photo" ? cover.path : cover.thumb_path ?? cover.path) : null;
   return (
-    <a class={`row${large ? " journal-row" : ""}`} href={hrefFor({ name: "day", n: d.day_number })}
-      onClick={(e) => { e.preventDefault(); go({ name: "day", n: d.day_number }); }}>
+    <a class="feature" href={hrefFor({ name: "day", n: d.day_number })} onClick={open(d)}>
+      {src && (
+        <div class="feature__img">
+          <img src={src} alt="" loading="lazy" decoding="async" />
+          {n > 1 && <span class="feature__count">{t("photosN", { n })}</span>}
+        </div>
+      )}
+      <div class="feature__body">
+        <div class="kicker"><span class="kicker__n">{t("day", { n: d.day_number })}</span><span>{dayWhen(d.date, l, today)}</span></div>
+        <h2 class="feature__title voice">{titleOf(d, l)}</h2>
+        {ex && <p class="feature__excerpt voice">{ex}</p>}
+        {d.kind === "rest" ? <p class="feature__meta">{t("rest")}</p> : km ? (
+          <p class="feature__meta">
+            <span class="num">{fmtKm(km, l, 1)} km</span>
+            {d.ascent_m ? `, ${t("climbM", { m: fmtInt(d.ascent_m, l) })}` : ""}
+          </p>
+        ) : null}
+      </div>
+    </a>
+  );
+}
+
+export function DayRow({ d }: { d: Day }) {
+  const l = lang.value;
+  const cover = coverOf(d);
+  const km = dayKm(d);
+  return (
+    <a class="row" href={hrefFor({ name: "day", n: d.day_number })} onClick={open(d)}>
       {cover
         ? <img class="row__thumb" src={mediaUrl(cover.thumb_path ?? cover.path)} alt="" loading="lazy" decoding="async" />
-        : <span class="row__thumb row__thumb--empty" aria-hidden="true">{d.kind === "rest" ? "☕" : "⛰"}</span>}
+        : <span class="row__thumb row__thumb--empty" aria-hidden="true"><Trail /></span>}
       <span class="row__main">
-        <span class="row__title" style={{ display: "block" }}>{title}</span>
-        <span class="row__meta" style={{ display: "block" }}>
+        <span class="row__title voice">{titleOf(d, l)}</span>
+        <span class="row__meta">
           {t("day", { n: d.day_number })}, {fmtDate(d.date, l, { day: "numeric", month: "short" })}
-          {d.kind === "rest" ? `, ${t("rest").toLowerCase()}` : km ? <>, <span class="num">{fmtKm(km, l)} km</span></> : null}
-          {large && n > 0 ? `, ${n === 1 ? t("photoOne") : t("photosN", { n })}` : null}
+          {d.kind === "rest" ? `, ${t("rest").toLowerCase()}` : km ? <>, <span class="num">{fmtKm(km, l, 1)} km</span></> : null}
         </span>
       </span>
-      <ChevronRight class="row__chev" width={18} height={18} />
+      <ChevronRight class="row__chev" />
     </a>
+  );
+}
+
+export function LangSwitch() {
+  const l = lang.value;
+  return (
+    <div class="seg" role="group" aria-label={t("language")}>
+      <button type="button" lang="fr" aria-pressed={l === "fr"} onClick={() => setLang("fr")}>Français</button>
+      <button type="button" lang="en" aria-pressed={l === "en"} onClick={() => setLang("en")}>English</button>
+    </div>
+  );
+}
+
+function Footer() {
+  return (
+    <footer class="foot">
+      <nav class="foot__links">
+        <a href="#/stats" onClick={(e) => { e.preventDefault(); go({ name: "stats" }); }}>{t("stats")}</a>
+        <a href="#/apropos" onClick={(e) => { e.preventDefault(); go({ name: "about" }); }}>{t("about")}</a>
+      </nav>
+      <LangSwitch />
+    </footer>
   );
 }
 
@@ -70,71 +199,33 @@ export function Home() {
   const l = lang.value;
   const s = settings.value;
   const ph = phase.value;
-  const r = route.value;
-  const km = progressKm.value;
-  const latest = days.value.slice(-3).reverse();
-  const today = nzToday(new Date(clock.value));
+  const list = days.value;
+  const latest = list[list.length - 1] ?? null;
+  const earlier = list.slice(-4, -1).reverse();
+  const intro = (l === "en" && s?.intro_en) || s?.intro_fr;
 
   return (
     <div class="home">
-      {ph === "before" ? (
-        <div class="countdown">
-          {s?.start_date ? (() => {
-            const n = daysBetween(today, s.start_date);
-            return (
-              <>
-                <div class="countdown__big">{n > 1 ? t("countdown", { n }) : n === 1 ? t("countdownOne") : t("countdownToday")}</div>
-                <p class="countdown__text">{t("startsOn", { date: fmtDate(s.start_date, l, { day: "numeric", month: "long" }) })}</p>
-              </>
-            );
-          })() : <div class="countdown__big">{t("notStarted")}</div>}
-          <TrailStrip route={r} walked={[]} here={null} />
-        </div>
-      ) : (
-        <>
-          <Status />
-          <div class="progress">
-            <div class="progress__row">
-              <span class="progress__km num">{fmtKm(km, l, 0)}</span>
-              <span class="progress__label">{t("walkedOf", { total: fmtKm(r.total, l, 0) })}</span>
-              {dayOnTrail.value && <span class="progress__day">{ph === "after" ? t("finished", { n: dayOnTrail.value }) : t("day", { n: dayOnTrail.value })}</span>}
-            </div>
-            <TrailStrip route={r} walked={walked.value.hike} here={km} />
-          </div>
-          {latestPosition.value && <WeatherClock />}
-        </>
+      {ph === "before" ? <Before /> : <Now />}
+
+      {ph === "before" && intro && (
+        <div class="prose voice block">{intro.split(/\n{2,}/).map((p) => <p>{typo(p)}</p>)}</div>
       )}
 
-      {ph === "before" && (s?.intro_fr || s?.intro_en) && (
-        <div class="section">
-          <div class="prose voice">{(l === "en" && s?.intro_en) || s?.intro_fr}</div>
-        </div>
-      )}
+      {latest && <Feature d={latest} />}
 
-      {latest.length > 0 && (
-        <div class="section">
-          <div class="section__head">
-            <h2 class="section__title">{t("latestDays")}</h2>
+      {earlier.length > 0 && (
+        <section class="block">
+          <div class="block__head">
+            <h2 class="h-section">{t("earlierDays")}</h2>
             <a class="link" href="#/journal" onClick={(e) => { e.preventDefault(); go({ name: "journal" }); }}>{t("fullJournal")}</a>
           </div>
-          <div class="list">{latest.map((d) => <DayRow d={d} />)}</div>
-        </div>
+          <div class="rows">{earlier.map((d) => <DayRow d={d} />)}</div>
+        </section>
       )}
 
-      <div class="section">
-        <div class="list">
-          <a class="row row--plain" style={{ minHeight: "52px" }} href="#/stats" onClick={(e) => { e.preventDefault(); go({ name: "stats" }); }}>
-            <span class="row__main"><span class="row__title" style={{ display: "block" }}>{t("stats")}</span></span>
-            <ChevronRight class="row__chev" width={18} height={18} />
-          </a>
-          <a class="row row--plain" style={{ minHeight: "52px" }} href="#/apropos" onClick={(e) => { e.preventDefault(); go({ name: "about" }); }}>
-            <span class="row__main"><span class="row__title" style={{ display: "block" }}>{t("about")}</span></span>
-            <ChevronRight class="row__chev" width={18} height={18} />
-          </a>
-        </div>
-      </div>
-
-      <HutBook dayId={null} />
+      <div class="block"><HutBook dayId={null} /></div>
+      <Footer />
     </div>
   );
 }
