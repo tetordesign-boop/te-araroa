@@ -130,3 +130,20 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 .auth h1 { text-align: center; font-size: 28px; margin: 0 0 6px; letter-spacing: -0.02em; }
 .auth p { text-align: center; color: var(--ink-2); margin: 0 0 22px; font-size: 15px; line-height: 1.4; }
 .msg-hidden { opacity: .5; }
+
+/* "Add to home screen" hint (iPhone, Safari tab only) */
+.hint {
+  display: grid; gap: 4px; margin: 0 0 18px; padding: 14px 16px; border-radius: 14px; text-align: left;
+  background: color-mix(in srgb, var(--marker) 12%, var(--card)); font-size: 15px; line-height: 1.4;
+}
+.hint strong { font-weight: 650; }
+.hint span { color: var(--ink-2); }
+.hint__glyph { display: inline-block; vertical-align: -2px; color: var(--marker); margin: 0 1px; }
+
+/* help page */
+.help h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin: 26px 4px 8px; }
+.help p, .help li { font-size: 16px; line-height: 1.45; }
+.help p { margin: 0 4px 12px; color: var(--ink); }
+.help .group { padding: 4px 0; }
+.help .steps li { font-size: 16px; }
+.help .key { color: var(--ink-2); }

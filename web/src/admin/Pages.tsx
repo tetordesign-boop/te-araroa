@@ -4,6 +4,7 @@ import { fmtDate, fmtKm, nzToday, relTime } from "../lib/format";
 import type { Settings } from "../types";
 import { ChevronLeft, ChevronRight } from "../ui/icons";
 import { draftForToday, draftFromDay, openDraft } from "./Editor";
+import { InstallHint } from "./InstallHint";
 import { home, open, say } from "./nav";
 import { adminDays, adminRoute, adminSettings, loadServer } from "./server";
 import { sba, signOut } from "./sb";
@@ -53,6 +54,7 @@ export function Dashboard() {
       <h1 class="adm-h1">Carnet</h1>
       <p class="adm-sub">Bonjour {name}, on est le {fmtDate(today, "fr")} en Nouvelle-Zélande.</p>
       <SyncPill />
+      <InstallHint />
 
       <button class="bigbtn bigbtn--primary" type="button" onClick={startToday}>
         {local.some((d) => d.date === today) || adminDays.value.some((d) => d.date === today) ? "Reprendre l'étape du jour" : "Publier l'étape du jour"}
@@ -97,6 +99,7 @@ export function Dashboard() {
         <button class="cell" type="button" onClick={() => open({ name: "messages" })}><span class="cell__main"><span class="cell__title">Livre de refuge</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "tracking" })}><span class="cell__main"><span class="cell__title">Suivi automatique</span><span class="cell__meta">OwnTracks sur ton iPhone</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "settings" })}><span class="cell__main"><span class="cell__title">Réglages</span></span><ChevronRight class="cell__chev" /></button>
+        <button class="cell" type="button" onClick={() => open({ name: "help" })}><span class="cell__main"><span class="cell__title">Mode d'emploi</span><span class="cell__meta">Sans réseau, photos, position, en cas de souci</span></span><ChevronRight class="cell__chev" /></button>
       </div>
       <div class="group">
         <button class="cell danger" type="button" onClick={() => { if (confirm("Se déconnecter ? Les brouillons non envoyés restent sur ce téléphone.")) signOut(); }}>Se déconnecter</button>
@@ -217,7 +220,7 @@ export function Tracking() {
           <li>Installe OwnTracks depuis l'App Store.<br /><a class="textbtn" href="https://apps.apple.com/app/owntracks/id692424691" target="_blank" rel="noopener">Ouvrir l'App Store</a></li>
           <li>Reviens ici et touche le bouton : OwnTracks s'ouvre et se règle tout seul.<br />
             {inline ? <a class="textbtn" href={inline}>Configurer OwnTracks</a> : <span class="cell__meta">Chargement…</span>}</li>
-          <li>Dans OwnTracks, autorise la localisation « Toujours », puis choisis le mode « Significant » (économe en batterie).</li>
+          <li>Dans OwnTracks, autorise la localisation « Toujours », puis choisis le mode « Significant » (économe en batterie).</li>
         </ol>
       </div>
       <div class="group__title">Réglage manuel (si le bouton ne marche pas)</div>
@@ -287,7 +290,7 @@ export function SettingsPage() {
         <label class="cell"><span>Sous-titre (EN)</span><input value={f.site_tagline_en ?? ""} onInput={set("site_tagline_en")} /></label>
         <label class="cell"><span>Départ de Ship Cove</span><input type="date" value={f.start_date ?? ""} onInput={set("start_date")} /></label>
       </div>
-      <div class="group__title">Présentation (page « À propos »)</div>
+      <div class="group__title">Présentation (page « À propos »)</div>
       <div class="group">
         <label class="cell cell--stack"><textarea value={f.intro_fr ?? ""} placeholder="Quelques mots pour tes proches" onInput={set("intro_fr")} /></label>
         <label class="cell cell--stack"><textarea value={f.intro_en ?? ""} placeholder="The same in English (optional)" onInput={set("intro_en")} /></label>
@@ -313,6 +316,46 @@ export function SettingsPage() {
         <div class="cell"><span>Utilisé</span><span class="cell__value num">{usage ? `${fmtKm(mb, "fr", mb < 10 ? 1 : 0)} Mo sur 1 000 Mo, ${usage.files} fichiers` : "…"}</span></div>
       </div>
       <button class="bigbtn bigbtn--primary" type="button" disabled={saving} onClick={save}>Enregistrer</button>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ help (works offline: it's part of the app)
+export function Help() {
+  return (
+    <div class="adm help">
+      <Bar title="Mode d'emploi" />
+
+      <h2>Publier une étape</h2>
+      <div class="group">
+        <ol class="steps">
+          <li>Touche <strong>Publier l'étape du jour</strong>.</li>
+          <li>Arrivée : <strong>📍 Ma position</strong> si tu es au bout de l'étape, sinon <strong>Sur la carte</strong> ou <strong>Lieu de ma dernière photo</strong>. Distance, montée et descente se calculent seules.</li>
+          <li>Écris ou dicte ton récit (le micro du clavier), choisis météo et humeur, ajoute photos et vidéos. ★ choisit la couverture.</li>
+          <li>Touche <strong>Publier</strong>. Tu peux revenir corriger une étape plus tard : touche-la dans la liste, modifie, puis Publier à nouveau.</li>
+        </ol>
+      </div>
+
+      <h2>Sans réseau</h2>
+      <p>Tout s'enregistre sur le téléphone, même en mode avion. Dès que tu captes, l'envoi part tout seul.</p>
+      <p><strong>Important :</strong> l'iPhone n'envoie que quand le carnet est ouvert à l'écran. En arrivant dans un village avec du réseau ou du wifi, ouvre le carnet et laisse-le ouvert jusqu'à voir <span class="key">« Tout est en ligne »</span>. Les grosses vidéos reprennent là où elles s'étaient arrêtées.</p>
+
+      <h2>Photos et vidéos</h2>
+      <p>Dans le sélecteur de photos, touche <strong>Options</strong> en haut et vérifie que <strong>Position</strong> est activée : tes photos apparaîtront à l'endroit exact sur la carte. Sinon elles sont rangées le long de l'étape.</p>
+      <p>Les photos sont allégées avant l'envoi (moins de réseau, et le stockage gratuit de 1 Go tient toute la saison). Garde les vidéos courtes, moins d'une minute ; pour plus long, mets la vidéo sur YouTube et colle le lien.</p>
+
+      <h2>Ta position</h2>
+      <p><strong>Suivi automatique</strong> (OwnTracks) : ta position part en arrière-plan quand tu as du réseau, sans ouvrir le carnet. Les points enregistrés sans réseau partent ensuite.</p>
+      <p><strong>Partager ma position</strong> : un point à la main, avec un petit mot si tu veux.</p>
+      <p>Dans Réglages, tu peux afficher ta position avec du retard (1 h à 24 h).</p>
+
+      <h2>En cas de souci</h2>
+      <div class="group">
+        <div class="cell cell--stack"><span class="cell__title">Pastille rouge « Envoi en échec »</span><span class="cell__meta">Touche-la pour réessayer. Le message sous l'étape dit ce qui coince (date déjà prise, fichier trop lourd…).</span></div>
+        <div class="cell cell--stack"><span class="cell__title">« Session expirée »</span><span class="cell__meta">Se déconnecter puis se reconnecter. Les brouillons restent sur le téléphone.</span></div>
+        <div class="cell cell--stack"><span class="cell__title">Le site ne montre plus rien</span><span class="cell__meta">La base gratuite se met en pause après une semaine sans aucune visite. Va sur supabase.com, ouvre le projet te-araroa et touche « Restore ».</span></div>
+        <div class="cell cell--stack"><span class="cell__title">Stockage presque plein</span><span class="cell__meta">Réglages › Stockage des photos. Retire de vieilles vidéos ou passe-les en lien YouTube.</span></div>
+      </div>
     </div>
   );
 }

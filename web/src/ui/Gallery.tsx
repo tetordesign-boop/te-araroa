@@ -24,7 +24,7 @@ export async function openLightbox(list: Media[], index: number) {
   const l = lang.value;
   const dataSource = list.map((m) => {
     if (m.kind === "video") {
-      return { html: `<div class="pswp__video"><video src="${esc(mediaUrl(m.path))}" poster="${esc(mediaUrl(m.thumb_path))}" controls playsinline preload="metadata"></video></div>` };
+      return { html: `<div class="pswp__video"><video src="${esc(mediaUrl(m.path))}" poster="${esc(mediaUrl(m.thumb_path))}" controls playsinline preload="none"></video></div>` };
     }
     if (m.kind === "embed" && m.embed_url) return { html: `<div class="pswp__video">${embedHtml(m.embed_url)}</div>` };
     return { src: mediaUrl(m.path), msrc: mediaUrl(m.thumb_path ?? m.path), width: m.width ?? 1600, height: m.height ?? 1200, alt: m.caption ?? t("photoBy") };

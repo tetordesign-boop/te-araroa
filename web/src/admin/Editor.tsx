@@ -396,7 +396,7 @@ export function Editor({ id }: { id: string }) {
       {d.status === "error" && d.error && <p class="danger" style={{ margin: "8px 4px 14px" }}>Dernier envoi : {d.error}</p>}
       {(d.status === "syncing" || d.status === "queued") && (
         <p class="adm-sub" style={{ margin: "8px 4px 14px" }}>
-          {d.status === "syncing" ? "Envoi en cours…" : online.value ? "En attente d'envoi…" : "Prêt : part dès que tu as du réseau."} Si tu modifies quelque chose, touche à nouveau « Publier ».
+          {d.status === "syncing" ? "Envoi en cours…" : online.value ? "En attente d'envoi…" : "Prêt : part dès que tu as du réseau."} Si tu modifies quelque chose, touche à nouveau « Publier ».
         </p>
       )}
 

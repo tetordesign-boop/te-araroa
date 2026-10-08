@@ -79,7 +79,7 @@ const fr = {
   statsEtaNote: "au rythme actuel, repos compris",
   statsLongest: "Plus longue étape",
   statsSoon: "Les statistiques apparaîtront après les premiers jours de marche.",
-  addHome: "Pour suivre Ewan comme une appli : sur iPhone, touchez Partager puis « Sur l'écran d'accueil ».",
+  addHome: "Pour suivre Ewan comme une appli : sur iPhone, touchez Partager puis « Sur l'écran d'accueil ».",
   credits: "Crédits",
   creditsText: "Tracé officiel 2026-27 : Te Araroa Trust (teararoa.org.nz), licence CC BY 4.0. Imagerie : Esri, Maxar, Earthstar Geographics. Relief : Terrain Tiles (Mapzen, AWS). Météo : Open-Meteo.",
   lightboxClose: "Fermer",

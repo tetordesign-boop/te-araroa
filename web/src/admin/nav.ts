@@ -6,7 +6,8 @@ export type Page =
   | { name: "checkin" }
   | { name: "messages" }
   | { name: "settings" }
-  | { name: "tracking" };
+  | { name: "tracking" }
+  | { name: "help" };
 
 export const page = signal<Page>({ name: "home" });
 export const flash = signal<string | null>(null);

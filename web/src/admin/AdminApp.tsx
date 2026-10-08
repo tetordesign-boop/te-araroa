@@ -3,7 +3,7 @@ import { MOCK } from "../config";
 import { AuthPage } from "./AuthPage";
 import { Editor } from "./Editor";
 import { flash, page } from "./nav";
-import { Checkin, Dashboard, Moderation, SettingsPage, Tracking } from "./Pages";
+import { Checkin, Dashboard, Help, Moderation, SettingsPage, Tracking } from "./Pages";
 import { checkAdmin, isAdmin, session, signOut } from "./sb";
 import { adminDays, adminMedia, adminRoute, adminSettings, loadRoute, loadServer, readAdminCache } from "./server";
 import { afterSync, loadDrafts, startSyncLoop } from "./store";
@@ -70,6 +70,7 @@ export function AdminApp() {
         : p.name === "messages" ? <Moderation />
         : p.name === "settings" ? <SettingsPage />
         : p.name === "tracking" ? <Tracking />
+        : p.name === "help" ? <Help />
         : <Dashboard />}
       <div class={`toast glass${flash.value ? " is-on" : ""}`} role="status" aria-live="polite" style={{ position: "fixed" }}>{flash.value}</div>
     </>

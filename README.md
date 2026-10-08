@@ -15,8 +15,8 @@ Les proches suivent sa position, ses étapes, ses photos et lui laissent des mot
 
 - **Site** : application statique (GitHub Pages). Carte 3D MapLibre GL (imagerie Esri ou LINZ, relief Terrain Tiles), tracé officiel en orange au fil des étapes, panneau type Apple Maps.
 - **Données** : Supabase (projet `te-araroa`, Sydney). Tables `days`, `media`, `positions`, `messages`, `reactions`, `settings`. Lecture publique limitée par RLS, écriture réservée à l'admin.
-- **Photos/vidéos** : redimensionnées sur le téléphone (2048 px + vignette 640 px), vidéos ré-encodées en 720p quand c'est possible, envoi reprenable (TUS) pour les gros fichiers.
-- **Hors ligne** : le Carnet enregistre tout dans IndexedDB et envoie dès que le réseau revient.
+- **Photos/vidéos** : redimensionnées sur le téléphone (1600 px + vignette 640 px) pour tenir dans l'offre gratuite (1 Go de stockage, 5 + 5 Go de bande passante par mois) ; vidéos HEVC ré-encodées en H.264 720p (lisibles partout), son copié tel quel ; envoi reprenable (TUS) pour les gros fichiers.
+- **Hors ligne** : le Carnet enregistre tout dans IndexedDB et envoie dès que le réseau revient (quand l'appli est ouverte : iOS ne fait pas d'envoi en arrière-plan pour une appli web). Le service worker sert les pages depuis le téléphone si le réseau traîne plus de 3,5 s.
 - **Position** : OwnTracks (automatique) + « Partager ma position » (manuel) + géolocalisation des photos. Rien n'est public avant la date de départ ; délai de confidentialité réglable.
 - **Tracé** : GPX officiel 2026-27 du Te Araroa Trust, importé et assemblé en PostGIS (`trail-import`), publié dans `site/trail.json`.
 
@@ -30,6 +30,10 @@ npm run build          # génère web/dist
 ```
 
 `?mock` charge des données fictives et une carte vectorielle simplifiée ; sans ce paramètre le site lit la vraie base.
+
+## Mise en ligne
+
+Chaque push sur `main` déclenche `.github/workflows/deploy.yml` : build avec `SITE_URL` (liens d'aperçu absolus), puis publication du dossier `web/dist` sur la branche `gh-pages`. Dans GitHub, *Settings › Pages* doit pointer sur la branche `gh-pages`, dossier `/`.
 
 ## Crédits
 

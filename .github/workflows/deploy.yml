@@ -1,0 +1,43 @@
+# Builds the site and publishes it on the gh-pages branch (GitHub Pages, "Deploy from a branch").
+name: Mise en ligne du site
+on:
+  push:
+    branches: [main]
+    paths: ["web/**", ".github/workflows/deploy.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install
+        working-directory: web
+        run: npm ci
+      - name: Build
+        working-directory: web
+        run: |
+          OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+          REPO="${GITHUB_REPOSITORY#*/}"
+          if [ "$REPO" = "$OWNER.github.io" ]; then export SITE_URL="https://$OWNER.github.io/"; else export SITE_URL="https://$OWNER.github.io/$REPO/"; fi
+          echo "SITE_URL=$SITE_URL"
+          npm run build
+      - name: Publish to gh-pages
+        working-directory: web/dist
+        run: |
+          touch .nojekyll
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Site ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
