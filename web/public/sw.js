@@ -1,10 +1,14 @@
-// Service worker: instant reloads, offline shell for the admin "Carnet",
+// Service worker: instant reloads, an offline shell for the "Carnet" (Ewan's admin on the trail),
 // and caching of map tiles & photos so repeat visits cost less bandwidth.
-const VERSION = "v1";
-const SHELL = `shell-${VERSION}`;
+const SHELL = "shell-v2"; // the HTML pages (never trimmed: the Carnet must open with no signal)
+const ASSETS = "assets-v1"; // hashed JS/CSS/fonts: safe to keep forever, trimmed by count
 const TILES = "tiles-v1";
 const MEDIA = "media-v1";
+const DATA = "data-v1";
+const KEEP = [SHELL, ASSETS, TILES, MEDIA, DATA];
+const SCOPE = new URL("./", self.location.href).href;
 const SHELL_FILES = ["./", "./index.html", "./admin/", "./admin/index.html", "./manifest.webmanifest", "./admin/manifest.webmanifest"];
+const NAV_TIMEOUT_MS = 3500;
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -14,7 +18,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k.startsWith("shell-") && k !== SHELL).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => !KEEP.includes(k)).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
@@ -25,16 +29,37 @@ async function trim(cacheName, max) {
   for (let i = 0; i < keys.length - max; i++) await cache.delete(keys[i]);
 }
 
-async function networkFirst(req, cacheName) {
-  const cache = await caches.open(cacheName);
-  try {
-    const res = await fetch(req);
-    if (res.ok) cache.put(req, res.clone());
+/**
+ * Pages: fresh from the network when it answers quickly; otherwise (one bar of signal on the trail,
+ * or none) the copy on the phone right away, and the network copy, if it ever arrives, is kept for next time.
+ */
+async function navigate(event) {
+  const req = event.request;
+  const cache = await caches.open(SHELL);
+  const network = fetch(req).then((res) => {
+    if (res.ok && res.type === "basic") cache.put(req, res.clone()).catch(() => {});
     return res;
+  });
+  event.waitUntil(network.then(() => {}, () => {}));
+  const fallback = async () => {
+    const hit = await cache.match(req, { ignoreSearch: true });
+    if (hit) return hit;
+    const admin = new URL(req.url).pathname.includes("/admin");
+    return cache.match(new URL(admin ? "admin/index.html" : "index.html", SCOPE).href);
+  };
+  let timer;
+  const slow = new Promise((resolve) => { timer = setTimeout(resolve, NAV_TIMEOUT_MS, "slow"); });
+  try {
+    const first = await Promise.race([network, slow]);
+    if (first !== "slow") return first;
+    const hit = await fallback();
+    return hit || (await network); // nothing on the phone yet: keep waiting for the network
   } catch (e) {
-    const hit = (await cache.match(req, { ignoreSearch: true })) || (await cache.match(new URL("./index.html", req.url).href));
+    const hit = await fallback();
     if (hit) return hit;
     throw e;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -49,14 +74,19 @@ async function cacheFirst(req, cacheName, max) {
   return res;
 }
 
-async function staleWhileRevalidate(req, cacheName, max) {
+async function staleWhileRevalidate(event, cacheName, max) {
+  const req = event.request;
   const cache = await caches.open(cacheName);
   const hit = await cache.match(req);
   const refresh = fetch(req).then((res) => {
     if (res.ok && res.status === 200) cache.put(req, res.clone()).then(() => max && trim(cacheName, max)).catch(() => {});
     return res;
-  }).catch(() => hit);
-  return hit || refresh;
+  });
+  if (hit) {
+    event.waitUntil(refresh.then(() => {}, () => {}));
+    return hit;
+  }
+  return refresh;
 }
 
 self.addEventListener("fetch", (event) => {
@@ -65,22 +95,23 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
 
   if (req.mode === "navigate" && url.origin === self.location.origin) {
-    event.respondWith(networkFirst(req, SHELL));
+    event.respondWith(navigate(event));
     return;
   }
   if (url.origin === self.location.origin) {
-    if (/\/assets\//.test(url.pathname) || /\.(png|svg|webmanifest|woff2|jpg)$/.test(url.pathname)) event.respondWith(cacheFirst(req, SHELL, 120));
+    if (/\/assets\//.test(url.pathname) || /\.(png|svg|webmanifest|woff2|jpg)$/.test(url.pathname)) event.respondWith(cacheFirst(req, ASSETS, 200));
     return;
   }
   if (/server\.arcgisonline\.com$/.test(url.host) || url.pathname.includes("/elevation-tiles-prod/") || url.host === "basemaps.linz.govt.nz") {
-    event.respondWith(staleWhileRevalidate(req, TILES, 1500));
+    // aerial imagery and relief don't change during a season: no need to download a tile twice
+    event.respondWith(cacheFirst(req, TILES, 1500));
     return;
   }
-  if (url.pathname.includes("/storage/v1/object/public/media/") && !/\.mp4$/i.test(url.pathname)) {
-    event.respondWith(cacheFirst(req, MEDIA, 800));
+  if (url.pathname.includes("/storage/v1/object/public/media/") && !/\.(mp4|mov|webm)$/i.test(url.pathname)) {
+    event.respondWith(cacheFirst(req, MEDIA, 600));
     return;
   }
   if (url.pathname.endsWith("/storage/v1/object/public/site/trail.json")) {
-    event.respondWith(staleWhileRevalidate(req, MEDIA));
+    event.respondWith(staleWhileRevalidate(event, DATA));
   }
 });

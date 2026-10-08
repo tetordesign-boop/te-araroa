@@ -1,10 +1,10 @@
 import { useEffect } from "preact/hooks";
+import { MOCK } from "../config";
 import { AuthPage } from "./AuthPage";
 import { Editor } from "./Editor";
 import { flash, page } from "./nav";
 import { Checkin, Dashboard, Moderation, SettingsPage, Tracking } from "./Pages";
-import { isAdmin, session, signOut } from "./sb";
-import { MOCK } from "../config";
+import { checkAdmin, isAdmin, session, signOut } from "./sb";
 import { adminDays, adminMedia, adminRoute, adminSettings, loadRoute, loadServer, readAdminCache } from "./server";
 import { afterSync, loadDrafts, startSyncLoop } from "./store";
 
@@ -15,6 +15,8 @@ export function AdminApp() {
   useEffect(() => {
     if (!admin || booted) return;
     booted = true;
+    // ask the browser not to evict unsent drafts when the phone runs low on space
+    navigator.storage?.persist?.().catch(() => {});
     if (MOCK) {
       import("../dev/mock").then(async ({ mockData }) => {
         const d = await mockData(adminRoute.value);
@@ -28,10 +30,26 @@ export function AdminApp() {
     loadServer();
     loadRoute();
     afterSync(() => loadServer());
+    // Fetch now, while there is signal, the parts needed later on the trail with none
+    // (reading photo GPS, compressing videos, resumable uploads): the service worker keeps them.
+    const warm = () => { import("exifr").catch(() => {}); import("mediabunny").catch(() => {}); import("tus-js-client").catch(() => {}); };
+    if (navigator.onLine) window.setTimeout(warm, 2500);
+    window.addEventListener("online", () => { loadServer(); loadRoute(); window.setTimeout(warm, 2500); });
   }, [admin]);
 
-  if (admin === null) return <div class="auth"><p class="adm-sub">Chargement…</p></div>;
   if (!session.value) return <AuthPage />;
+  if (admin === null) {
+    return (
+      <div class="auth">
+        <div class="auth__box">
+          <h1>Connexion…</h1>
+          <p>La toute première ouverture du carnet sur ce téléphone a besoin de réseau. Ensuite, il marche aussi hors ligne.</p>
+          <button class="bigbtn bigbtn--primary" type="button" onClick={() => checkAdmin()}>Réessayer</button>
+          <button class="bigbtn bigbtn--secondary" type="button" onClick={signOut}>Changer de compte</button>
+        </div>
+      </div>
+    );
+  }
   if (admin === false) {
     return (
       <div class="auth">

@@ -9,11 +9,14 @@ import { MapPicker, type Pick } from "./MapPicker";
 import { home, say } from "./nav";
 import { prepareVideo, preparePhoto } from "./media";
 import { adminDays, adminMedia, adminRoute, adminSettings, loadServer } from "./server";
-import { dropDraft, drafts, getBlob, kick, online, putBlob, saveDraft, type Draft, type DraftMedia } from "./store";
+import { dropDraft, dropMediaBlobs, drafts, getBlob, kick, online, putBlob, saveDraft, type Draft, type DraftMedia } from "./store";
 import { sba } from "./sb";
 
 const WEATHER = ["☀️", "🌤️", "⛅", "☁️", "🌧️", "⛈️", "🌨️", "🌬️", "🌫️"];
 const MOODS = ["😄", "😊", "😌", "😐", "😩", "🥵", "🥶", "😴", "🤕"];
+
+/** Drafts opened from a published day live here until the first change (nothing is stored for a mere look). */
+export const memDrafts = new Map<string, Draft>();
 
 // ------------------------------------------------------------------ draft factory
 export function dayNumberFor(date: string): number {
@@ -60,7 +63,7 @@ export function draftFromDay(d: Day): Draft {
   };
 }
 
-/** Today's draft, today's published day, or a fresh one. */
+/** Today's draft, today's published day, or a fresh draft. Nothing is stored until Ewan changes something. */
 export function draftForToday(): Draft {
   const today = nzToday();
   const existingDraft = drafts.value.find((d) => d.date === today);
@@ -69,7 +72,13 @@ export function draftForToday(): Draft {
   return published ? draftFromDay(published) : newDraft(today);
 }
 
-// ------------------------------------------------------------------ thumbnails from IndexedDB
+/** Open a draft in the editor (keeps it in memory only if it is not on the phone yet). */
+export function openDraft(d: Draft, open: (id: string) => void) {
+  if (!drafts.value.some((x) => x.id === d.id)) memDrafts.set(d.id, d);
+  open(d.id);
+}
+
+// ------------------------------------------------------------------ small pieces
 function useBlobUrl(key: string | null) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
@@ -81,65 +90,146 @@ function useBlobUrl(key: string | null) {
   return url;
 }
 
-function MediaTile({ m, cover, onCover, onRemove }: { m: DraftMedia; cover: boolean; onCover: () => void; onRemove: () => void }) {
+function MediaTile({ m, cover, progress, onCover, onRemove }: { m: DraftMedia; cover: boolean; progress?: number; onCover: () => void; onRemove: () => void }) {
   const local = useBlobUrl(m.thumbKey);
   const src = local ?? (m.thumb_path ? mediaUrl(m.thumb_path) : null);
-  const state = m.preparing ? "Préparation…" : m.error ? null : !m.uploaded && m.kind !== "embed" ? "En attente" : null;
+  const state = m.preparing ? (progress ? `Compression ${Math.round(progress * 100)} %` : "Préparation…") : m.error ? null : !m.uploaded && m.kind !== "embed" ? "À envoyer" : null;
   return (
     <div class="mitem">
       {src ? <img src={src} alt="" /> : <div style={{ display: "grid", placeItems: "center", height: "100%", fontSize: "26px" }}>{m.kind === "embed" ? "▶︎" : "⏳"}</div>}
       {m.kind !== "photo" && <span class="mitem__badge">{m.kind === "embed" ? "Lien" : m.duration_s ? `${Math.round(m.duration_s)} s` : "Vidéo"}</span>}
-      {m.kind === "photo" && <button type="button" class="mitem__star" aria-pressed={cover} aria-label="Photo de couverture" onClick={onCover}>★</button>}
+      {m.kind === "photo" && !m.error && <button type="button" class="mitem__star" aria-pressed={cover} aria-label="Photo de couverture" onClick={onCover}>★</button>}
       <button type="button" class="mitem__del" aria-label="Retirer" onClick={onRemove}>✕</button>
       {state && <span class="mitem__badge" style={{ top: "auto", bottom: "6px" }}>{state}</span>}
-      {m.progress !== undefined && m.progress > 0 && m.progress < 1 && <div class="mitem__state"><span style={{ width: `${m.progress * 100}%` }} /></div>}
       {m.error && <div class="mitem__err">{m.error}</div>}
     </div>
+  );
+}
+
+/** Number input that keeps what is typed ("12," stays "12,") and commits on blur. */
+function NumField({ value, onCommit, decimals, placeholder }: { value: number | null; onCommit: (v: number | null) => void; decimals: boolean; placeholder?: string }) {
+  const show = (v: number | null) => (v === null || v === undefined ? "" : decimals ? String(Math.round(v * 10) / 10).replace(".", ",") : String(Math.round(v)));
+  const [raw, setRaw] = useState(show(value));
+  const focused = useRef(false);
+  useEffect(() => { if (!focused.current) setRaw(show(value)); }, [value]);
+  const commit = () => {
+    focused.current = false;
+    const v = decimals ? parseFloat(raw.replace(",", ".")) : parseInt(raw, 10);
+    const n = Number.isFinite(v) ? v : null;
+    onCommit(n);
+    setRaw(show(n));
+  };
+  return (
+    <input inputMode={decimals ? "decimal" : "numeric"} value={raw} placeholder={placeholder}
+      onFocus={() => { focused.current = true; }} onInput={(e) => setRaw((e.target as HTMLInputElement).value)} onBlur={commit} />
   );
 }
 
 // ------------------------------------------------------------------ editor
 export function Editor({ id }: { id: string }) {
   const route = adminRoute.value;
-  const [d, setD] = useState<Draft | null>(() => drafts.value.find((x) => x.id === id) ?? null);
+  const initial = drafts.value.find((x) => x.id === id) ?? memDrafts.get(id) ?? null;
+  const dRef = useRef<Draft | null>(initial);
+  const [d, setD] = useState<Draft | null>(initial);
+  const closed = useRef(false);
+  const dirty = useRef(false);
+  const saveTimer = useRef<number>();
   const [picking, setPicking] = useState<null | "end" | "start">(null);
   const [gpsBusy, setGpsBusy] = useState(false);
   const [gpsMsg, setGpsMsg] = useState<string | null>(null);
   const [showEn, setShowEn] = useState(false);
   const [link, setLink] = useState("");
+  const [progress, setProgress] = useState<Record<string, number>>({});
+  const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const saveTimer = useRef<number>();
 
+  // flush a pending save when leaving the screen
+  useEffect(() => () => {
+    if (!closed.current && dirty.current && dRef.current) { clearTimeout(saveTimer.current); saveDraft(dRef.current); }
+    memDrafts.delete(id);
+  }, []);
+
+  // Stay in step with the sync engine while this screen is open: files already sent, status, and
+  // once the day is safely online (the draft leaves the phone) go back to the list.
+  const stored = drafts.value.find((x) => x.id === id) ?? null;
+  const wasStored = useRef(false);
   useEffect(() => {
-    if (!d) {
-      const found = drafts.value.find((x) => x.id === id);
-      if (found) setD(found);
+    const cur = dRef.current;
+    if (!cur || closed.current) return;
+    if (!stored) {
+      if (wasStored.current && cur.status !== "editing") {
+        closed.current = true;
+        say(`Jour ${cur.day_number} publié.`);
+        home();
+      }
+      return;
     }
-  }, [drafts.value]);
-
-  const update = (patch: Partial<Draft>, immediate = false) => {
-    setD((cur) => {
-      if (!cur) return cur;
-      const next = { ...cur, ...patch, status: cur.status === "done" ? "editing" : cur.status } as Draft;
-      if (next.status !== "editing" && !patch.status) next.status = "editing";
-      clearTimeout(saveTimer.current);
-      if (immediate) saveDraft(next);
-      else saveTimer.current = window.setTimeout(() => saveDraft(next), 350);
-      return next;
+    wasStored.current = true;
+    let changed = false;
+    const media = cur.media.map((m) => {
+      const s = stored.media.find((x) => x.id === m.id);
+      if (s?.uploaded && !m.uploaded) { changed = true; return { ...m, uploaded: true, path: s.path, thumb_path: s.thumb_path, bytes: s.bytes }; }
+      if (s?.error && !m.error) { changed = true; return { ...m, error: s.error }; }
+      return m;
     });
+    const next: Draft = { ...cur, media };
+    if (stored.isNew === false && cur.isNew) { next.isNew = false; changed = true; }
+    // Ewan's own edits win; otherwise mirror what the sync engine reports
+    if (cur.status !== "editing" && (stored.status !== cur.status || stored.error !== cur.error)) {
+      next.status = stored.status; next.error = stored.error; changed = true;
+    }
+    if (changed) { dRef.current = next; setD(next); }
+  }, [stored]);
+
+  const commit = (next: Draft, immediate = false) => {
+    if (closed.current) return;
+    dRef.current = next;
+    dirty.current = true;
+    setD(next);
+    clearTimeout(saveTimer.current);
+    if (immediate) saveDraft(next);
+    else saveTimer.current = window.setTimeout(() => { if (!closed.current && dRef.current) saveDraft(dRef.current); }, 350);
+  };
+  /** Every change by Ewan turns the draft back into "editing" (it goes out again on the next "Publier"). */
+  const update = (patch: Partial<Draft>, immediate = false) => {
+    const cur = dRef.current;
+    if (!cur) return;
+    commit({ ...cur, ...patch, status: "editing", error: null }, immediate);
+  };
+  const patchMedia = (mid: string, fn: (m: DraftMedia) => DraftMedia) => {
+    const cur = dRef.current;
+    if (!cur) return;
+    commit({ ...cur, media: cur.media.map((m) => (m.id === mid ? fn({ ...m }) : m)) }, true);
   };
 
-  const setEnd = async (km: number, point: [number, number], nameHint?: string | null) => {
-    if (!d) return;
-    const start = d.start_km ?? 0;
+  const recomputeElevation = async (k0: number | null, k1: number | null) => {
+    if (!navigator.onLine || k0 === null || k1 === null || k1 - k0 < 0.2 || dRef.current?.kind !== "hike") return;
+    const prof = await profileFor(route, k0, k1, adminSettings.value?.linz_api_key).catch(() => null);
+    const cur = dRef.current;
+    if (!prof || !cur || closed.current || cur.start_km !== k0 || cur.end_km !== k1) return;
+    commit({ ...cur, track: { p: prof.p }, ascent_m: prof.up, descent_m: prof.down }, true);
+  };
+
+  const setEnd = (km: number, point: [number, number]) => {
+    const cur = dRef.current;
+    if (!cur) return;
+    const start = cur.start_km ?? 0;
     const near = route.places().reduce((b, p) => (Math.abs(p.km - km) < Math.abs(b.km - km) ? p : b));
-    const name = nameHint ?? (Math.abs(near.km - km) < 2.5 ? shortPlace(near.n) : d.end_name);
+    const name = Math.abs(near.km - km) < 2.5 ? shortPlace(near.n) : cur.end_name;
     const dist = Math.max(0, Math.round((km - start) * 10) / 10);
     update({ end_km: km, end_lng: point[0], end_lat: point[1], end_name: name ?? null, distance_km: dist, track: null, ascent_m: null, descent_m: null }, true);
-    if (navigator.onLine && d.kind === "hike" && km - start > 0.2) {
-      const prof = await profileFor(route, start, km, adminSettings.value?.linz_api_key).catch(() => null);
-      if (prof) update({ track: { p: prof.p }, ascent_m: prof.up, descent_m: prof.down }, true);
-    }
+    recomputeElevation(start, km);
+  };
+
+  const setStart = (p: Pick) => {
+    const cur = dRef.current;
+    if (!cur) return;
+    update({
+      start_km: p.km, start_lng: p.lng, start_lat: p.lat,
+      distance_km: cur.end_km !== null ? Math.max(0, Math.round((cur.end_km - p.km) * 10) / 10) : cur.distance_km,
+      track: null, ascent_m: null, descent_m: null,
+    }, true);
+    recomputeElevation(p.km, cur.end_km);
   };
 
   const useGps = () => {
@@ -149,12 +239,12 @@ export function Editor({ id }: { id: string }) {
       (pos) => {
         setGpsBusy(false);
         const s = route.nearest([pos.coords.longitude, pos.coords.latitude]);
-        if (s.dist > 5000) setGpsMsg(`Tu es à ${fmtKm(s.dist / 1000, "fr", 1)} km du sentier : j'ai placé l'arrivée sur le point le plus proche.`);
+        if (s.dist > 5000) setGpsMsg(`Tu es à ${fmtKm(s.dist / 1000, "fr", 1)} km du sentier : l'arrivée est placée sur le point du sentier le plus proche.`);
         setEnd(s.km, s.dist < 400 ? [pos.coords.longitude, pos.coords.latitude] : s.point);
       },
       (err) => {
         setGpsBusy(false);
-        setGpsMsg(err.code === 1 ? "Autorise la localisation pour ce site dans les réglages de Safari." : "Position introuvable. Réessaie à découvert ou choisis sur la carte.");
+        setGpsMsg(err.code === 1 ? "Autorise la localisation pour ce site dans Réglages › Safari › Localisation." : "Position introuvable. Réessaie à découvert ou choisis sur la carte.");
       },
       { enableHighAccuracy: true, timeout: 25000, maximumAge: 120000 },
     );
@@ -166,80 +256,116 @@ export function Editor({ id }: { id: string }) {
   }, [d?.media]);
 
   const addFiles = async (files: FileList | null) => {
-    if (!files || !d) return;
-    let cur = d;
-    for (const file of Array.from(files)) {
+    if (!files || !dRef.current) return;
+    const list = Array.from(files);
+    if (fileRef.current) fileRef.current.value = "";
+    for (const file of list) {
       const isVideo = file.type.startsWith("video/");
+      const mid = crypto.randomUUID();
+      const cur = dRef.current;
+      if (!cur) return;
       const m: DraftMedia = {
-        id: crypto.randomUUID(), kind: isVideo ? "video" : "photo", mainKey: null, thumbKey: null, mime: isVideo ? "video/mp4" : "image/jpeg",
+        id: mid, kind: isVideo ? "video" : "photo", mainKey: null, thumbKey: null, mime: isVideo ? "video/mp4" : "image/jpeg",
         width: null, height: null, duration_s: null, taken_at: null, lat: null, lng: null, caption: null, embed_url: null,
         bytes: null, path: null, thumb_path: null, uploaded: false, sort: cur.media.length, preparing: true,
       };
-      cur = { ...cur, media: [...cur.media, m] };
-      setD(cur); await saveDraft(cur);
+      update({ media: [...cur.media, m] }, true);
       try {
-        const p = isVideo ? await prepareVideo(file, (f) => { m.progress = f; setD((x) => (x ? { ...x } : x)); }) : await preparePhoto(file);
-        m.mainKey = `${m.id}:main`; m.thumbKey = `${m.id}:thumb`;
-        await putBlob(m.mainKey, p.main); await putBlob(m.thumbKey, p.thumb);
-        Object.assign(m, {
-          width: p.width, height: p.height, duration_s: p.duration, taken_at: p.takenAt, lat: p.lat, lng: p.lng,
-          bytes: p.main.size + p.thumb.size, preparing: false, progress: undefined, mime: p.kind === "video" ? p.main.type || "video/mp4" : "image/jpeg",
-        });
+        const p = isVideo
+          ? await prepareVideo(file, (f) => setProgress((x) => ({ ...x, [mid]: f })))
+          : await preparePhoto(file);
+        const mainKey = `${mid}:main`, thumbKey = `${mid}:thumb`;
+        await putBlob(mainKey, p.main);
+        await putBlob(thumbKey, p.thumb);
+        patchMedia(mid, (x) => ({
+          ...x, mainKey, thumbKey, width: p.width, height: p.height, duration_s: p.duration, taken_at: p.takenAt, lat: p.lat, lng: p.lng,
+          bytes: p.main.size + p.thumb.size, preparing: false, error: null, mime: p.kind === "video" ? p.main.type || "video/mp4" : "image/jpeg",
+        }));
+        const now = dRef.current;
+        if (now && !now.cover_media_id && p.kind === "photo") commit({ ...now, cover_media_id: mid }, true);
       } catch (e) {
-        m.preparing = false; m.error = (e as Error).message?.slice(0, 120) || "Fichier illisible";
+        patchMedia(mid, (x) => ({ ...x, preparing: false, error: (e as Error).message?.slice(0, 140) || "Fichier illisible" }));
       }
-      cur = { ...cur, media: cur.media.map((x) => (x.id === m.id ? { ...m } : x)) };
-      if (!cur.cover_media_id && m.kind === "photo" && !m.error) cur.cover_media_id = m.id;
-      setD(cur); await saveDraft(cur);
     }
-    if (fileRef.current) fileRef.current.value = "";
   };
 
   const addLink = () => {
-    if (!d || !/^https:\/\//.test(link.trim())) { say("Colle un lien qui commence par https://"); return; }
+    const cur = dRef.current;
+    if (!cur || !/^https:\/\//.test(link.trim())) { say("Colle un lien qui commence par https://"); return; }
     const m: DraftMedia = {
       id: crypto.randomUUID(), kind: "embed", mainKey: null, thumbKey: null, mime: null, width: null, height: null, duration_s: null,
-      taken_at: null, lat: null, lng: null, caption: null, embed_url: link.trim(), bytes: null, path: null, thumb_path: null, uploaded: true, sort: d.media.length,
+      taken_at: null, lat: null, lng: null, caption: null, embed_url: link.trim(), bytes: null, path: null, thumb_path: null, uploaded: true, sort: cur.media.length,
     };
-    update({ media: [...d.media, m] }, true);
+    update({ media: [...cur.media, m] }, true);
     setLink("");
   };
 
   const removeMedia = (m: DraftMedia) => {
-    if (!d) return;
-    const remote = !d.isNew && m.uploaded && (m.path || m.kind === "embed") && !m.mainKey;
+    const cur = dRef.current;
+    if (!cur) return;
+    // anything already sent (or a link that may already be live) must also be removed from the server
+    const maybeOnServer = m.uploaded && (!!m.path || m.kind === "embed");
     update({
-      media: d.media.filter((x) => x.id !== m.id),
-      removedMedia: remote ? [...d.removedMedia, { id: m.id, path: m.path, thumb_path: m.thumb_path }] : d.removedMedia,
-      cover_media_id: d.cover_media_id === m.id ? null : d.cover_media_id,
+      media: cur.media.filter((x) => x.id !== m.id),
+      removedMedia: maybeOnServer ? [...cur.removedMedia, { id: m.id, path: m.path, thumb_path: m.thumb_path }] : cur.removedMedia,
+      cover_media_id: cur.cover_media_id === m.id ? null : cur.cover_media_id,
     }, true);
+    dropMediaBlobs(m).catch(() => {});
   };
 
   const publish = async () => {
-    if (!d) return;
-    if (d.kind !== "rest" && d.end_km === null) { say("Indique d'abord ton point d'arrivée."); return; }
-    const preparing = d.media.some((m) => m.preparing);
-    if (preparing) { say("Attends la fin de la préparation des photos."); return; }
-    const end = d.kind === "rest" ? { end_km: d.start_km, end_lng: d.start_lng, end_lat: d.start_lat, end_name: d.end_name ?? d.start_name, distance_km: 0 } : {};
-    const next = { ...d, ...end, status: "queued" as const, error: null };
-    await saveDraft(next);
-    kick();
+    const cur = dRef.current;
+    if (!cur) return;
+    if (cur.kind !== "rest" && cur.end_km === null) { say("Indique d'abord ton point d'arrivée."); return; }
+    if (cur.media.some((m) => m.preparing)) { say("Attends la fin de la préparation des photos."); return; }
+    if (cur.media.some((m) => m.error)) { say("Retire d'abord les fichiers en erreur (en rouge)."); return; }
+    const end = cur.kind === "rest"
+      ? { end_km: cur.start_km, end_lng: cur.start_lng, end_lat: cur.start_lat, end_name: cur.end_name ?? cur.start_name, distance_km: 0 } : {};
+    clearTimeout(saveTimer.current);
+    closed.current = true;
+    await saveDraft({ ...cur, ...end, status: "queued", error: null, attempts: 0, nextTryAt: 0 });
+    kick(true);
     say(online.value ? "Publication en cours…" : "Enregistré. Publication dès que tu as du réseau.");
     home();
   };
 
+  const discard = async () => {
+    const cur = dRef.current;
+    if (!cur) return;
+    if (dirty.current && !confirm("Annuler tes modifications ? La version en ligne ne change pas.")) return;
+    clearTimeout(saveTimer.current);
+    closed.current = true;
+    await dropDraft(cur.id);
+    home();
+  };
+
   const remove = async () => {
-    if (!d) return;
-    if (!confirm(d.isNew ? "Supprimer ce brouillon ?" : `Supprimer définitivement le jour ${d.day_number} et ses photos ?`)) return;
-    if (!d.isNew) {
+    const cur = dRef.current;
+    if (!cur) return;
+    if (!confirm(cur.isNew ? "Supprimer ce brouillon ?" : `Supprimer définitivement le jour ${cur.day_number} et ses photos ?`)) return;
+    if (!cur.isNew) {
       if (!navigator.onLine) { say("Il faut du réseau pour supprimer une étape publiée."); return; }
-      const paths = adminMedia.value.filter((m) => m.day_id === d.id).flatMap((m) => [m.path, m.thumb_path]).filter(Boolean) as string[];
-      if (paths.length) await sba.storage.from("media").remove(paths);
-      const { error } = await sba.from("days").delete().eq("id", d.id);
-      if (error) { say(`Suppression impossible : ${error.message}`); return; }
-      await loadServer();
+      setBusy(true);
+      try {
+        const { data: rows } = await sba.from("media").select("path,thumb_path").eq("day_id", cur.id);
+        const paths = [...(rows ?? []), ...cur.removedMedia].flatMap((m) => [m.path, m.thumb_path]).filter(Boolean) as string[];
+        if (paths.length) {
+          const { error: es } = await sba.storage.from("media").remove(paths);
+          if (es) throw es;
+        }
+        const { error } = await sba.from("days").delete().eq("id", cur.id);
+        if (error) throw error;
+      } catch (e) {
+        setBusy(false);
+        say(`Suppression impossible : ${(e as Error).message}`);
+        return;
+      }
+      setBusy(false);
+      loadServer();
     }
-    await dropDraft(d.id);
+    clearTimeout(saveTimer.current);
+    closed.current = true;
+    await dropDraft(cur.id);
     say("Étape supprimée.");
     home();
   };
@@ -251,16 +377,13 @@ export function Editor({ id }: { id: string }) {
       : d.start_lng !== null && d.start_lat !== null ? [d.start_lng, d.start_lat] : route.pointAt(d.start_km ?? 0)) as [number, number];
     return (
       <MapPicker route={route} around={around} onClose={() => setPicking(null)}
-        onPick={(p: Pick) => {
-          setPicking(null);
-          if (picking === "end") setEnd(p.km, [p.lng, p.lat]);
-          else update({ start_km: p.km, start_lng: p.lng, start_lat: p.lat, distance_km: d.end_km !== null ? Math.max(0, Math.round((d.end_km - p.km) * 10) / 10) : d.distance_km }, true);
-        }} />
+        onPick={(p: Pick) => { const which = picking; setPicking(null); if (which === "end") setEnd(p.km, [p.lng, p.lat]); else setStart(p); }} />
     );
   }
 
   const leg = d.end_km !== null ? route.legAt(d.end_km) : null;
   const kinds: [DayKind, string][] = [["hike", "Marche"], ["rest", "Repos"], ["transport", "Transfert"]];
+  const publishedVersion = !d.isNew;
 
   return (
     <div class="adm">
@@ -271,11 +394,16 @@ export function Editor({ id }: { id: string }) {
       </div>
 
       {d.status === "error" && d.error && <p class="danger" style={{ margin: "8px 4px 14px" }}>Dernier envoi : {d.error}</p>}
+      {(d.status === "syncing" || d.status === "queued") && (
+        <p class="adm-sub" style={{ margin: "8px 4px 14px" }}>
+          {d.status === "syncing" ? "Envoi en cours…" : online.value ? "En attente d'envoi…" : "Prêt : part dès que tu as du réseau."} Si tu modifies quelque chose, touche à nouveau « Publier ».
+        </p>
+      )}
 
       <div class="group" style={{ marginTop: "8px" }}>
         <label class="cell">
           <span>Date</span>
-          <input type="date" value={d.date} onInput={(e) => {
+          <input type="date" value={d.date} onChange={(e) => {
             const date = (e.target as HTMLInputElement).value;
             if (!date) return;
             const prev = previousEnd(date, d.id);
@@ -312,7 +440,7 @@ export function Editor({ id }: { id: string }) {
               {photoGps && (
                 <button class="textbtn" type="button" style={{ textAlign: "left" }} onClick={() => {
                   const s = route.nearest([photoGps.lng!, photoGps.lat!]);
-                  setEnd(s.km, [photoGps.lng!, photoGps.lat!]);
+                  setEnd(s.km, s.dist < 400 ? [photoGps.lng!, photoGps.lat!] : s.point);
                 }}>Utiliser le lieu de ma dernière photo</button>
               )}
               {gpsMsg && <span class="warn">{gpsMsg}</span>}
@@ -326,26 +454,23 @@ export function Editor({ id }: { id: string }) {
           <div class="group">
             <label class="cell">
               <span>Distance (km)</span>
-              <input inputMode="decimal" value={d.distance_km ?? ""} placeholder="auto"
-                onInput={(e) => { const v = parseFloat((e.target as HTMLInputElement).value.replace(",", ".")); update({ distance_km: Number.isFinite(v) ? v : null }); }} />
+              <NumField value={d.distance_km} decimals placeholder="auto" onCommit={(v) => { if (v !== dRef.current?.distance_km) update({ distance_km: v }); }} />
             </label>
             <label class="cell">
               <span>Montée (m)</span>
-              <input inputMode="numeric" value={d.ascent_m ?? ""} placeholder="auto"
-                onInput={(e) => { const v = parseInt((e.target as HTMLInputElement).value, 10); update({ ascent_m: Number.isFinite(v) ? v : null }); }} />
+              <NumField value={d.ascent_m} decimals={false} placeholder="auto" onCommit={(v) => { if (v !== dRef.current?.ascent_m) update({ ascent_m: v }); }} />
             </label>
             <label class="cell">
               <span>Descente (m)</span>
-              <input inputMode="numeric" value={d.descent_m ?? ""} placeholder="auto"
-                onInput={(e) => { const v = parseInt((e.target as HTMLInputElement).value, 10); update({ descent_m: Number.isFinite(v) ? v : null }); }} />
+              <NumField value={d.descent_m} decimals={false} placeholder="auto" onCommit={(v) => { if (v !== dRef.current?.descent_m) update({ descent_m: v }); }} />
             </label>
             <label class="cell">
               <span>Durée de marche</span>
               <input type="time" value={d.moving_time_min ? `${String(Math.floor(d.moving_time_min / 60)).padStart(2, "0")}:${String(d.moving_time_min % 60).padStart(2, "0")}` : ""}
-                onInput={(e) => { const [h, m] = (e.target as HTMLInputElement).value.split(":").map(Number); update({ moving_time_min: Number.isFinite(h) ? h * 60 + (m || 0) : null }); }} />
+                onChange={(e) => { const [h, m] = (e.target as HTMLInputElement).value.split(":").map(Number); update({ moving_time_min: Number.isFinite(h) ? h * 60 + (m || 0) : null }); }} />
             </label>
           </div>
-          <p class="group__foot">Montée et descente sont calculées automatiquement depuis le relief si tu les laisses vides.</p>
+          <p class="group__foot">Montée et descente sont calculées depuis le relief si tu les laisses vides.</p>
         </>
       )}
 
@@ -394,7 +519,8 @@ export function Editor({ id }: { id: string }) {
       <div class="group">
         <div class="mgrid">
           {d.media.map((m) => (
-            <MediaTile m={m} cover={d.cover_media_id === m.id} onCover={() => update({ cover_media_id: m.id }, true)} onRemove={() => removeMedia(m)} />
+            <MediaTile m={m} cover={d.cover_media_id === m.id} progress={progress[m.id]}
+              onCover={() => update({ cover_media_id: m.id }, true)} onRemove={() => removeMedia(m)} />
           ))}
           <button type="button" class="mitem mitem--add" onClick={() => fileRef.current?.click()}>+ Ajouter</button>
         </div>
@@ -405,10 +531,11 @@ export function Editor({ id }: { id: string }) {
           <button class="textbtn" type="button" onClick={addLink}>Ajouter</button>
         </div>
       </div>
-      <p class="group__foot">★ choisit la photo de couverture. Les photos sont allégées sur ton téléphone avant l'envoi.</p>
+      <p class="group__foot">★ choisit la photo de couverture. Les photos sont allégées sur ton téléphone avant l'envoi ; les vidéos de plus de 2 minutes passent mieux en lien YouTube.</p>
 
       <button class="bigbtn bigbtn--primary" type="button" onClick={publish}>Publier le jour {d.day_number}</button>
-      <button class="bigbtn bigbtn--secondary danger" type="button" onClick={remove}>{d.isNew ? "Supprimer le brouillon" : "Supprimer l'étape"}</button>
+      {publishedVersion && <button class="bigbtn bigbtn--secondary" type="button" onClick={discard}>Annuler mes modifications</button>}
+      <button class="bigbtn bigbtn--secondary danger" type="button" disabled={busy} onClick={remove}>{d.isNew ? "Supprimer le brouillon" : "Supprimer l'étape"}</button>
     </div>
   );
 }

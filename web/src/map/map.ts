@@ -46,6 +46,7 @@ export class TrailMap {
   private liveMarker: maplibregl.Marker | null = null;
   private placeMarkers: maplibregl.Marker[] = [];
   private photoMarkers = new Map<string, maplibregl.Marker>();
+  private photoGen = 0;
   private padding = { top: 80, right: 24, bottom: 220, left: 24 };
   private ready: Promise<void>;
   private resolveReady!: () => void;
@@ -147,7 +148,8 @@ export class TrailMap {
   // ------------------------------------------------------------- data
   setData(data: MapData) {
     this.data = data;
-    if (this.map.isStyleLoaded() && this.map.getSource("route")) this.pushData();
+    // (not isStyleLoaded(): that stays false while tiles load, and the data would be dropped)
+    if (this.src("route")) this.pushData();
   }
 
   private src(id: string) { return this.map.getSource(id) as GeoJSONSource | undefined; }
@@ -185,6 +187,7 @@ export class TrailMap {
     const key = shown.map(({ m, c }) => `${m.id}@${c[0].toFixed(5)},${c[1].toFixed(5)}`).join("|");
     if (key !== this.photosKey) {
       this.photosKey = key;
+      this.photoGen++; // any marker pass still running belongs to the old photos
       for (const mk of this.photoMarkers.values()) mk.remove();
       this.photoMarkers.clear();
       this.src("photos")!.setData({
@@ -248,6 +251,8 @@ export class TrailMap {
   private async updatePhotoMarkers() {
     const m = this.map;
     if (!m.getSource("photos") || this.replaying) return;
+    // passes can overlap (moveend + idle) and await below: only the latest one may add or remove markers
+    const gen = ++this.photoGen;
     const feats = m.querySourceFeatures("photos");
     const seen = new Set<string>();
     const src = this.src("photos")!;
@@ -270,6 +275,8 @@ export class TrailMap {
           const thumb = leaves[0]?.properties?.thumb;
           if (thumb) el.insertAdjacentHTML("afterbegin", `<img alt="" loading="lazy" decoding="async" src="${thumb}">`);
         } catch (_) { /* cluster vanished */ }
+        if (gen !== this.photoGen) return;
+        if (this.photoMarkers.has(key)) continue;
         el.addEventListener("click", async (e) => {
           e.stopPropagation();
           const zoom = await src.getClusterExpansionZoom(Number(p.cluster_id));
@@ -282,6 +289,7 @@ export class TrailMap {
       }
       this.photoMarkers.set(key, new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(coords).addTo(m));
     }
+    if (gen !== this.photoGen) return;
     for (const [key, mk] of this.photoMarkers) {
       if (!seen.has(key)) { mk.remove(); this.photoMarkers.delete(key); }
     }

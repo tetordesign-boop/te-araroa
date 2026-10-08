@@ -3,11 +3,11 @@ import { FUNCTIONS_URL } from "../config";
 import { fmtDate, fmtKm, nzToday, relTime } from "../lib/format";
 import type { Settings } from "../types";
 import { ChevronLeft, ChevronRight } from "../ui/icons";
-import { draftForToday, draftFromDay } from "./Editor";
+import { draftForToday, draftFromDay, openDraft } from "./Editor";
 import { home, open, say } from "./nav";
 import { adminDays, adminRoute, adminSettings, loadServer } from "./server";
 import { sba, signOut } from "./sb";
-import { drafts, online, outbox, queuePosition, saveDraft, syncAll, syncing } from "./store";
+import { drafts, online, outbox, queuePosition, syncAll, syncing } from "./store";
 
 const siteUrl = () => new URL("../", location.href).toString();
 
@@ -26,7 +26,7 @@ export function SyncPill() {
   const waiting = drafts.value.filter((d) => d.status === "queued" || d.status === "error" || d.status === "syncing").length + outbox.value;
   const failed = drafts.value.find((d) => d.status === "error");
   if (s) return <div class="syncpill is-busy" role="status"><span class="syncpill__dot" />Envoi de {s.label}… {Math.round(s.progress * 100)} %</div>;
-  if (failed && online.value) return <button class="syncpill is-error" type="button" onClick={() => syncAll()}><span class="syncpill__dot" />Envoi en échec, toucher pour réessayer</button>;
+  if (failed && online.value) return <button class="syncpill is-error" type="button" onClick={() => syncAll(true)}><span class="syncpill__dot" />Envoi en échec, toucher pour réessayer</button>;
   if (waiting && !online.value) return <div class="syncpill is-waiting" role="status"><span class="syncpill__dot" />{waiting} en attente de réseau</div>;
   if (waiting) return <div class="syncpill is-busy" role="status"><span class="syncpill__dot" />{waiting} en cours d'envoi</div>;
   return <div class="syncpill" role="status"><span class="syncpill__dot" />{online.value ? "Tout est en ligne" : "Hors ligne, rien en attente"}</div>;
@@ -39,11 +39,13 @@ export function Dashboard() {
   const local = drafts.value;
   const name = s?.hiker_name || "Ewan";
 
-  const startToday = async () => {
-    const d = draftForToday();
-    await saveDraft(d);
-    open({ name: "editor", id: d.id });
-  };
+  const edit = (id: string) => open({ name: "editor", id });
+  const startToday = () => openDraft(draftForToday(), edit);
+  const statusLine = (d: (typeof local)[number]) =>
+    d.status === "editing" ? (d.isNew ? "Brouillon, pas encore publié" : "Modifications pas encore publiées")
+      : d.status === "queued" ? (online.value ? "En attente d'envoi" : "Prêt, part dès qu'il y a du réseau")
+        : d.status === "syncing" ? "Envoi en cours…"
+          : d.status === "error" ? `Échec : ${d.error ?? ""}` : "";
 
   return (
     <div class="adm">
@@ -62,12 +64,12 @@ export function Dashboard() {
           <div class="group__title" style={{ marginTop: "18px" }}>Sur ce téléphone</div>
           <div class="group">
             {local.map((d) => (
-              <button class="cell" type="button" onClick={() => open({ name: "editor", id: d.id })}>
+              <button class="cell" type="button" onClick={() => edit(d.id)}>
                 <span class="cell__main">
                   <span class="cell__title">Jour {d.day_number}{d.title ? `, ${d.title}` : ""}</span>
-                  <span class="cell__meta">
-                    {d.status === "editing" ? "Brouillon, pas encore publié" : d.status === "queued" ? "Prêt, part dès qu'il y a du réseau" : d.status === "syncing" ? "Envoi en cours…" : d.status === "error" ? `Échec : ${d.error ?? ""}` : ""}
-                    {d.media.length ? `, ${d.media.length} médias` : ""}
+                  <span class={`cell__meta${d.status === "error" ? " danger" : ""}`}>
+                    {statusLine(d)}
+                    {d.media.length ? `, ${d.media.length} média${d.media.length > 1 ? "s" : ""}` : ""}
                   </span>
                 </span>
                 <ChevronRight class="cell__chev" />
@@ -81,12 +83,7 @@ export function Dashboard() {
       <div class="group">
         {days.length === 0 && <div class="cell"><span class="cell__meta">Rien pour l'instant. Ta première étape apparaîtra ici.</span></div>}
         {days.map((d) => (
-          <button class="cell" type="button" onClick={async () => {
-            const existing = drafts.value.find((x) => x.id === d.id);
-            const dr = existing ?? draftFromDay(d);
-            if (!existing) await saveDraft(dr);
-            open({ name: "editor", id: dr.id });
-          }}>
+          <button class="cell" type="button" onClick={() => openDraft(drafts.value.find((x) => x.id === d.id) ?? draftFromDay(d), edit)}>
             <span class="cell__main">
               <span class="cell__title">Jour {d.day_number}{d.title ? `, ${d.title}` : d.end_name ? `, ${d.end_name}` : ""}</span>
               <span class="cell__meta">{fmtDate(d.date, "fr", { day: "numeric", month: "short" })}{d.distance_km ? `, ${fmtKm(d.distance_km, "fr", 1)} km` : ""}{d.published ? "" : ", masquée"}</span>
@@ -304,7 +301,7 @@ export function SettingsPage() {
           </select>
         </label>
       </div>
-      <p class="group__foot">Ta position n'apparaît sur le site qu'à partir de la date de départ. Le site n'est pas référencé sur Google : seules les personnes qui ont le lien le voient.</p>
+      <p class="group__foot">Le retard s'applique à ta position en direct. Une étape publiée montre tout de suite son point d'arrivée et le lieu de ses photos. Ta position n'apparaît qu'à partir de la date de départ, et le site n'est pas référencé sur Google : seules les personnes qui ont le lien le voient.</p>
       <div class="group__title">Carte</div>
       <div class="group">
         <label class="cell cell--stack"><span class="cell__meta">Clé LINZ Basemaps (imagerie aérienne néo-zélandaise, facultatif)</span>
