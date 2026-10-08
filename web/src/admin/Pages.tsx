@@ -1,0 +1,321 @@
+import { useEffect, useState } from "preact/hooks";
+import { FUNCTIONS_URL } from "../config";
+import { fmtDate, fmtKm, nzToday, relTime } from "../lib/format";
+import type { Settings } from "../types";
+import { ChevronLeft, ChevronRight } from "../ui/icons";
+import { draftForToday, draftFromDay } from "./Editor";
+import { home, open, say } from "./nav";
+import { adminDays, adminRoute, adminSettings, loadServer } from "./server";
+import { sba, signOut } from "./sb";
+import { drafts, online, outbox, queuePosition, saveDraft, syncAll, syncing } from "./store";
+
+const siteUrl = () => new URL("../", location.href).toString();
+
+function Bar({ title, back = true, right }: { title: string; back?: boolean; right?: preact.ComponentChildren }) {
+  return (
+    <div class="adm-bar">
+      <span class="adm-bar__left">{back && <button class="textbtn" type="button" onClick={home}><ChevronLeft />Carnet</button>}</span>
+      <span class="adm-bar__title">{title}</span>
+      <span class="adm-bar__right">{right}</span>
+    </div>
+  );
+}
+
+export function SyncPill() {
+  const s = syncing.value;
+  const waiting = drafts.value.filter((d) => d.status === "queued" || d.status === "error" || d.status === "syncing").length + outbox.value;
+  const failed = drafts.value.find((d) => d.status === "error");
+  if (s) return <div class="syncpill is-busy" role="status"><span class="syncpill__dot" />Envoi de {s.label}… {Math.round(s.progress * 100)} %</div>;
+  if (failed && online.value) return <button class="syncpill is-error" type="button" onClick={() => syncAll()}><span class="syncpill__dot" />Envoi en échec, toucher pour réessayer</button>;
+  if (waiting && !online.value) return <div class="syncpill is-waiting" role="status"><span class="syncpill__dot" />{waiting} en attente de réseau</div>;
+  if (waiting) return <div class="syncpill is-busy" role="status"><span class="syncpill__dot" />{waiting} en cours d'envoi</div>;
+  return <div class="syncpill" role="status"><span class="syncpill__dot" />{online.value ? "Tout est en ligne" : "Hors ligne, rien en attente"}</div>;
+}
+
+export function Dashboard() {
+  const s = adminSettings.value;
+  const today = nzToday();
+  const days = [...adminDays.value].reverse();
+  const local = drafts.value;
+  const name = s?.hiker_name || "Ewan";
+
+  const startToday = async () => {
+    const d = draftForToday();
+    await saveDraft(d);
+    open({ name: "editor", id: d.id });
+  };
+
+  return (
+    <div class="adm">
+      <Bar title="" back={false} right={<a class="textbtn" href={siteUrl()} target="_blank" rel="noopener">Voir le site</a>} />
+      <h1 class="adm-h1">Carnet</h1>
+      <p class="adm-sub">Bonjour {name}, on est le {fmtDate(today, "fr")} en Nouvelle-Zélande.</p>
+      <SyncPill />
+
+      <button class="bigbtn bigbtn--primary" type="button" onClick={startToday}>
+        {local.some((d) => d.date === today) || adminDays.value.some((d) => d.date === today) ? "Reprendre l'étape du jour" : "Publier l'étape du jour"}
+      </button>
+      <button class="bigbtn bigbtn--secondary" type="button" onClick={() => open({ name: "checkin" })}>📍 Partager ma position</button>
+
+      {local.length > 0 && (
+        <>
+          <div class="group__title" style={{ marginTop: "18px" }}>Sur ce téléphone</div>
+          <div class="group">
+            {local.map((d) => (
+              <button class="cell" type="button" onClick={() => open({ name: "editor", id: d.id })}>
+                <span class="cell__main">
+                  <span class="cell__title">Jour {d.day_number}{d.title ? `, ${d.title}` : ""}</span>
+                  <span class="cell__meta">
+                    {d.status === "editing" ? "Brouillon, pas encore publié" : d.status === "queued" ? "Prêt, part dès qu'il y a du réseau" : d.status === "syncing" ? "Envoi en cours…" : d.status === "error" ? `Échec : ${d.error ?? ""}` : ""}
+                    {d.media.length ? `, ${d.media.length} médias` : ""}
+                  </span>
+                </span>
+                <ChevronRight class="cell__chev" />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div class="group__title" style={{ marginTop: "18px" }}>Étapes publiées</div>
+      <div class="group">
+        {days.length === 0 && <div class="cell"><span class="cell__meta">Rien pour l'instant. Ta première étape apparaîtra ici.</span></div>}
+        {days.map((d) => (
+          <button class="cell" type="button" onClick={async () => {
+            const existing = drafts.value.find((x) => x.id === d.id);
+            const dr = existing ?? draftFromDay(d);
+            if (!existing) await saveDraft(dr);
+            open({ name: "editor", id: dr.id });
+          }}>
+            <span class="cell__main">
+              <span class="cell__title">Jour {d.day_number}{d.title ? `, ${d.title}` : d.end_name ? `, ${d.end_name}` : ""}</span>
+              <span class="cell__meta">{fmtDate(d.date, "fr", { day: "numeric", month: "short" })}{d.distance_km ? `, ${fmtKm(d.distance_km, "fr", 1)} km` : ""}{d.published ? "" : ", masquée"}</span>
+            </span>
+            <ChevronRight class="cell__chev" />
+          </button>
+        ))}
+      </div>
+
+      <div class="group">
+        <button class="cell" type="button" onClick={() => open({ name: "messages" })}><span class="cell__main"><span class="cell__title">Livre de refuge</span></span><ChevronRight class="cell__chev" /></button>
+        <button class="cell" type="button" onClick={() => open({ name: "tracking" })}><span class="cell__main"><span class="cell__title">Suivi automatique</span><span class="cell__meta">OwnTracks sur ton iPhone</span></span><ChevronRight class="cell__chev" /></button>
+        <button class="cell" type="button" onClick={() => open({ name: "settings" })}><span class="cell__main"><span class="cell__title">Réglages</span></span><ChevronRight class="cell__chev" /></button>
+      </div>
+      <div class="group">
+        <button class="cell danger" type="button" onClick={() => { if (confirm("Se déconnecter ? Les brouillons non envoyés restent sur ce téléphone.")) signOut(); }}>Se déconnecter</button>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ check-in
+export function Checkin() {
+  const [pos, setPos] = useState<GeolocationPosition | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!("geolocation" in navigator)) { setErr("Localisation indisponible."); return; }
+    const id = navigator.geolocation.watchPosition(
+      (p) => { setPos(p); setErr(null); },
+      (e) => setErr(e.code === 1 ? "Autorise la localisation pour ce site (Réglages › Safari › Localisation)." : "Recherche du signal GPS…"),
+      { enableHighAccuracy: true, maximumAge: 30000, timeout: 30000 },
+    );
+    return () => navigator.geolocation.clearWatch(id);
+  }, []);
+
+  const snap = pos ? adminRoute.value.nearest([pos.coords.longitude, pos.coords.latitude]) : null;
+
+  const send = async () => {
+    if (!pos) return;
+    setBusy(true);
+    await queuePosition({
+      recorded_at: new Date(pos.timestamp).toISOString(), lat: pos.coords.latitude, lng: pos.coords.longitude,
+      acc: Math.round(pos.coords.accuracy), note: note.trim() || null,
+    });
+    setBusy(false);
+    say(online.value ? "Position envoyée." : "Position enregistrée, envoi dès que tu as du réseau.");
+    home();
+  };
+
+  return (
+    <div class="adm">
+      <Bar title="Ma position" />
+      <div class="group" style={{ marginTop: "8px" }}>
+        <div class="cell cell--stack">
+          {pos ? (
+            <>
+              <span class="cell__title">{snap && snap.dist < 3000 ? `Sur le sentier, km ${fmtKm(snap.km, "fr", 1)}` : `À ${fmtKm((snap?.dist ?? 0) / 1000, "fr", 1)} km du sentier`}</span>
+              <span class="cell__meta num">{pos.coords.latitude.toFixed(5)}, {pos.coords.longitude.toFixed(5)}, précision {Math.round(pos.coords.accuracy)} m</span>
+            </>
+          ) : <span class="cell__meta">{err ?? "Recherche de ta position…"}</span>}
+        </div>
+        <label class="cell cell--stack">
+          <input value={note} maxLength={280} placeholder="Petit mot (facultatif) : bien arrivé au refuge !" onInput={(e) => setNote((e.target as HTMLInputElement).value)} />
+        </label>
+      </div>
+      <button class="bigbtn bigbtn--primary" type="button" disabled={!pos || busy} onClick={send}>Envoyer ma position</button>
+      <p class="note">Sans réseau, ta position est gardée sur le téléphone et part toute seule dès que tu captes. Pour un suivi sans y penser, active le suivi automatique.</p>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ hut book moderation
+interface Msg { id: string; day_id: string | null; author: string; body: string; hidden: boolean; created_at: string }
+export function Moderation() {
+  const [list, setList] = useState<Msg[] | null>(null);
+  const load = async () => {
+    const { data } = await sba.from("messages").select("id,day_id,author,body,hidden,created_at").order("created_at", { ascending: false }).limit(300);
+    setList((data ?? []) as Msg[]);
+  };
+  useEffect(() => { load(); }, []);
+  const dayOf = (id: string | null) => adminDays.value.find((d) => d.id === id);
+  return (
+    <div class="adm">
+      <Bar title="Livre de refuge" />
+      <p class="adm-sub" style={{ marginTop: "8px" }}>Les mots laissés par tes proches. Tu peux masquer ou supprimer un message.</p>
+      {list === null ? <p class="adm-sub">Chargement…</p> : list.length === 0 ? <p class="adm-sub">Aucun message pour l'instant.</p> : (
+        <div class="group">
+          {list.map((m) => {
+            const d = dayOf(m.day_id);
+            return (
+              <div class={`cell cell--stack${m.hidden ? " msg-hidden" : ""}`}>
+                <span class="cell__title"><strong>{m.author}</strong> <span class="cell__meta" style={{ display: "inline" }}>{relTime(m.created_at, "fr")}{d ? `, jour ${d.day_number}` : ", page d'accueil"}</span></span>
+                <span class="voice" style={{ whiteSpace: "pre-wrap" }}>{m.body}</span>
+                <div class="pickrow">
+                  <button class="btn" type="button" onClick={async () => { await sba.from("messages").update({ hidden: !m.hidden }).eq("id", m.id); load(); }}>{m.hidden ? "Réafficher" : "Masquer"}</button>
+                  <button class="btn danger" type="button" onClick={async () => { if (confirm("Supprimer ce message ?")) { await sba.from("messages").delete().eq("id", m.id); load(); } }}>Supprimer</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ automatic tracking (OwnTracks)
+export function Tracking() {
+  const [pw, setPw] = useState<string | null>(null);
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    sba.rpc("admin_tracking_config").then(({ data }) => setPw((data as { owntracks_password?: string } | null)?.owntracks_password ?? null));
+  }, []);
+  const url = `${FUNCTIONS_URL}/owntracks`;
+  const config = pw ? {
+    _type: "configuration", mode: 3, url, auth: true, username: "ewan", password: pw, deviceId: "iphone", tid: "EW",
+    monitoring: 1, locatorInterval: 600, locatorDisplacement: 300, ranging: false, cmd: false, allowRemoteLocation: false,
+  } : null;
+  const inline = config ? `owntracks:///config?inline=${btoa(unescape(encodeURIComponent(JSON.stringify(config))))}` : null;
+  return (
+    <div class="adm">
+      <Bar title="Suivi automatique" />
+      <p class="adm-sub" style={{ marginTop: "8px" }}>
+        L'appli gratuite OwnTracks envoie ta position en arrière-plan quand tu as du réseau, et garde les points en mémoire quand tu n'en as pas. Tes proches voient alors ta progression sans que tu y penses.
+      </p>
+      <div class="group">
+        <ol class="steps">
+          <li>Installe OwnTracks depuis l'App Store.<br /><a class="textbtn" href="https://apps.apple.com/app/owntracks/id692424691" target="_blank" rel="noopener">Ouvrir l'App Store</a></li>
+          <li>Reviens ici et touche le bouton : OwnTracks s'ouvre et se règle tout seul.<br />
+            {inline ? <a class="textbtn" href={inline}>Configurer OwnTracks</a> : <span class="cell__meta">Chargement…</span>}</li>
+          <li>Dans OwnTracks, autorise la localisation « Toujours », puis choisis le mode « Significant » (économe en batterie).</li>
+        </ol>
+      </div>
+      <div class="group__title">Réglage manuel (si le bouton ne marche pas)</div>
+      <div class="group">
+        <div class="cell"><span>Mode</span><span class="cell__value">HTTP</span></div>
+        <div class="cell cell--stack"><span>URL</span><span class="code">{url}</span></div>
+        <div class="cell"><span>Identifiant</span><span class="cell__value">ewan</span></div>
+        <div class="cell"><span>Mot de passe</span>
+          <button class="textbtn" type="button" onClick={() => setShow(!show)}>{show ? <span class="code">{pw ?? "…"}</span> : "Afficher"}</button>
+        </div>
+      </div>
+      <p class="note">Garde ce mot de passe pour toi : il permet d'écrire des positions sur ton site.</p>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ settings
+export function SettingsPage() {
+  const s = adminSettings.value;
+  const [f, setF] = useState<Partial<Settings>>(() => ({ ...s }));
+  const [saving, setSaving] = useState(false);
+  const [usage, setUsage] = useState<{ bytes: number; files: number } | null>(null);
+  const [trailMsg, setTrailMsg] = useState<string | null>(null);
+  useEffect(() => { sba.rpc("admin_storage_usage").then(({ data }) => data && setUsage(data as { bytes: number; files: number })); }, []);
+  const set = (k: keyof Settings) => (e: Event) => setF({ ...f, [k]: ((e.target as HTMLInputElement).value || null) as never });
+
+  const save = async () => {
+    setSaving(true);
+    const { site_title, site_tagline_fr, site_tagline_en, hiker_name, intro_fr, intro_en, start_date, position_delay_minutes, linz_api_key } = f;
+    const { error } = await sba.from("settings").update({
+      site_title: site_title || "Te Araroa", site_tagline_fr: site_tagline_fr || "", site_tagline_en: site_tagline_en || "",
+      hiker_name, intro_fr, intro_en, start_date, position_delay_minutes: Number(position_delay_minutes) || 0, linz_api_key,
+    }).eq("id", 1);
+    setSaving(false);
+    if (error) { say(`Erreur : ${error.message}`); return; }
+    await loadServer();
+    say("Réglages enregistrés.");
+  };
+
+  const refreshTrail = async () => {
+    setTrailMsg("Téléchargement du tracé officiel…");
+    const { data } = await sba.auth.getSession();
+    const call = (action: string) => fetch(`${FUNCTIONS_URL}/trail-import`, {
+      method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session?.access_token}` }, body: JSON.stringify({ action }),
+    }).then((r) => r.json());
+    try {
+      const a = await call("ingest");
+      if (a.error) throw new Error(a.error);
+      setTrailMsg("Construction du parcours…");
+      const b = await call("build");
+      if (b.error) throw new Error(b.error);
+      setTrailMsg(`Tracé à jour : ${fmtKm(b.meta.total_km, "fr", 1)} km (saison ${b.meta.version}).`);
+    } catch (e) {
+      setTrailMsg(`Échec : ${(e as Error).message}`);
+    }
+  };
+
+  const mb = usage ? usage.bytes / 1024 / 1024 : 0;
+  return (
+    <div class="adm">
+      <Bar title="Réglages" right={<button class="textbtn textbtn--strong" type="button" disabled={saving} onClick={save}>{saving ? "…" : "OK"}</button>} />
+      <div class="group__title" style={{ marginTop: "12px" }}>Le site</div>
+      <div class="group">
+        <label class="cell"><span>Ton prénom</span><input value={f.hiker_name ?? ""} onInput={set("hiker_name")} /></label>
+        <label class="cell"><span>Titre</span><input value={f.site_title ?? ""} onInput={set("site_title")} /></label>
+        <label class="cell"><span>Sous-titre</span><input value={f.site_tagline_fr ?? ""} onInput={set("site_tagline_fr")} /></label>
+        <label class="cell"><span>Sous-titre (EN)</span><input value={f.site_tagline_en ?? ""} onInput={set("site_tagline_en")} /></label>
+        <label class="cell"><span>Départ de Ship Cove</span><input type="date" value={f.start_date ?? ""} onInput={set("start_date")} /></label>
+      </div>
+      <div class="group__title">Présentation (page « À propos »)</div>
+      <div class="group">
+        <label class="cell cell--stack"><textarea value={f.intro_fr ?? ""} placeholder="Quelques mots pour tes proches" onInput={set("intro_fr")} /></label>
+        <label class="cell cell--stack"><textarea value={f.intro_en ?? ""} placeholder="The same in English (optional)" onInput={set("intro_en")} /></label>
+      </div>
+      <div class="group__title">Confidentialité</div>
+      <div class="group">
+        <label class="cell"><span>Afficher ma position avec</span>
+          <select value={String(f.position_delay_minutes ?? 0)} onChange={set("position_delay_minutes")}>
+            <option value="0">aucun délai</option><option value="60">1 h de retard</option><option value="180">3 h de retard</option>
+            <option value="720">12 h de retard</option><option value="1440">24 h de retard</option>
+          </select>
+        </label>
+      </div>
+      <p class="group__foot">Ta position n'apparaît sur le site qu'à partir de la date de départ. Le site n'est pas référencé sur Google : seules les personnes qui ont le lien le voient.</p>
+      <div class="group__title">Carte</div>
+      <div class="group">
+        <label class="cell cell--stack"><span class="cell__meta">Clé LINZ Basemaps (imagerie aérienne néo-zélandaise, facultatif)</span>
+          <input value={f.linz_api_key ?? ""} placeholder="c01…" autoCapitalize="off" spellcheck={false} onInput={set("linz_api_key")} /></label>
+        <button class="cell" type="button" onClick={refreshTrail}><span class="cell__main"><span class="cell__title">Mettre à jour le tracé officiel</span>{trailMsg && <span class="cell__meta">{trailMsg}</span>}</span></button>
+      </div>
+      <div class="group__title">Stockage des photos</div>
+      <div class="group">
+        <div class="cell"><span>Utilisé</span><span class="cell__value num">{usage ? `${fmtKm(mb, "fr", mb < 10 ? 1 : 0)} Mo sur 1 000 Mo, ${usage.files} fichiers` : "…"}</span></div>
+      </div>
+      <button class="bigbtn bigbtn--primary" type="button" disabled={saving} onClick={save}>Enregistrer</button>
+    </div>
+  );
+}
