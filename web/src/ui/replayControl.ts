@@ -9,12 +9,16 @@ export function startReplay(d: Day) {
   replayState.value?.stop();
   const before = detent.value;
   if (!isDesktop.value) detent.value = "peek";
+  let ended = false;
+  replayState.value = { n: d.day_number, progress: 0, stop: () => {} };
   const stop = replayDay(tm, route.value, d,
     (f) => { if (replayState.value) replayState.value = { ...replayState.value, progress: f }; },
     () => {
+      ended = true;
       replayState.value = null;
       if (!isDesktop.value) detent.value = before === "peek" ? "half" : before;
       tm.flyToDay(d, route.value);
     });
-  replayState.value = { n: d.day_number, progress: 0, stop };
+  // a day with nothing to fly over ends at once: never leave the progress bar behind
+  if (!ended && replayState.value) replayState.value = { ...replayState.value, stop };
 }

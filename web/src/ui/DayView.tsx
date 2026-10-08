@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
 import { lang, t } from "../i18n";
-import { coverOf, dayByNumber, days, mediaByDay, route } from "../lib/data";
+import { coverOf, dayByNumber, dayTitle, days, mediaByDay, route } from "../lib/data";
 import { fmtDate, fmtDuration, fmtInt, fmtKm, typo } from "../lib/format";
 import type { Day } from "../types";
 import { Gallery } from "./Gallery";
@@ -45,7 +45,7 @@ function Figures({ d }: { d: Day }) {
   const l = lang.value;
   const km = dayKm(d);
   const items: [string, preact.ComponentChildren][] = [];
-  if (km !== null) items.push([d.kind === "transport" ? t("transport") : t("distance"), <>{fmtKm(km, l, 1)}<small>km</small></>]);
+  if (km && d.kind !== "rest") items.push([d.kind === "transport" ? t("transport") : t("distance"), <>{fmtKm(km, l, 1)}<small>km</small></>]);
   if (d.ascent_m) items.push([t("ascent"), <>{fmtInt(d.ascent_m, l)}<small>m</small></>]);
   if (d.descent_m) items.push([t("descent"), <>{fmtInt(d.descent_m, l)}<small>m</small></>]);
   if (d.moving_time_min) items.push([t("duration"), fmtDuration(d.moving_time_min, l)]);
@@ -135,7 +135,8 @@ export function DayView({ n, photo }: { n: number; photo?: string }) {
 
   const share = async () => {
     const url = `${location.origin}${location.pathname}#/jour/${d.day_number}`;
-    const text = t("shareText", { title: `${t("day", { n: d.day_number })}${title ? ` : ${title}` : ""}` });
+    const real = dayTitle(d, l);
+    const text = t("shareText", { title: `${t("day", { n: d.day_number })}${real ? ` : ${real}` : ""}` });
     try {
       if (navigator.share) { await navigator.share({ title: text, url }); return; }
       await navigator.clipboard.writeText(url);
@@ -157,12 +158,13 @@ export function DayView({ n, photo }: { n: number; photo?: string }) {
         </div>
       </div>
 
+      <div class="view" key={d.id}>
       <div class="kicker" style={{ marginTop: "14px" }}>
         <span class="kicker__n">{t("day", { n: d.day_number })}</span>
         <span>{fmtDate(d.date, l)}</span>
         {(d.weather || d.mood) && <span aria-hidden="true">{d.weather}{d.mood ? ` ${d.mood}` : ""}</span>}
       </div>
-      <h1 class="dtitle voice">{title}</h1>
+      <h1 class="dtitle voice" tabIndex={-1} data-autofocus>{title}</h1>
       {leg && d.kind !== "rest" && <p class="dsub">{leg}</p>}
 
       <Figures d={d} />
@@ -180,6 +182,7 @@ export function DayView({ n, photo }: { n: number; photo?: string }) {
           {next ? <PagerItem d={next} dir="next" /> : <span />}
         </nav>
       )}
+      </div>
     </article>
   );
 }

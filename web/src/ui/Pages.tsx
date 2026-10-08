@@ -12,7 +12,7 @@ import { TrailStrip } from "./TrailStrip";
 export function PageHead({ title }: { title: string }) {
   return (
     <header class="phead">
-      <h1 class="h-page">{title}</h1>
+      <h1 class="h-page" tabIndex={-1} data-autofocus>{title}</h1>
       <button class="iconbtn" type="button" aria-label={t("close")} onClick={goBack}><Close /></button>
     </header>
   );
@@ -84,11 +84,17 @@ export function Journal() {
 }
 
 // ------------------------------------------------------------------ stats
-/** Kilometres per day: one column per day, rest days as dots on the baseline. */
+/**
+ * Kilometres per day: one column per day, rest days as dots on the baseline.
+ * Mouse: hover shows the day, click opens it. Touch: first tap shows the day, second tap (or the
+ * button in the tooltip) opens it. Keyboard: one tab stop, arrows move between days, Enter opens.
+ */
 function DayBars({ list }: { list: Day[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(340);
-  const [tip, setTip] = useState<{ x: number; d: Day } | null>(null);
+  const [sel, setSel] = useState<number | null>(null);
+  const [pinned, setPinned] = useState(false);
+  const pointer = useRef<string>("mouse");
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -102,9 +108,9 @@ function DayBars({ list }: { list: Day[] }) {
   const max = Math.max(10, ...kms);
   const top = Math.ceil(max / 10) * 10;
   const ticks = [0, top / 2, top];
-  const plotW = w - LEFT;
+  const plotW = Math.max(1, w - LEFT);
   const band = plotW / Math.max(1, list.length);
-  const bw = Math.max(3, Math.min(24, band - 2));
+  const bw = Math.max(2, Math.min(24, band - 2));
   const y = (v: number) => TOP + (1 - v / top) * (H - TOP - BOTTOM);
   const base = y(0);
   const walking = list.filter((d) => d.kind === "hike" && (dayKm(d) ?? 0) > 0);
@@ -116,10 +122,47 @@ function DayBars({ list }: { list: Day[] }) {
     return `M${x0},${base}V${yt + rr}Q${x0},${yt} ${x0 + rr},${yt}H${x1 - rr}Q${x1},${yt} ${x1},${yt + rr}V${base}Z`;
   };
   const hasTransport = list.some((d) => d.kind === "transport");
+  const cxOf = (i: number) => LEFT + band * (i + 0.5);
+  const idxAt = (clientX: number) => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return 0;
+    return Math.max(0, Math.min(list.length - 1, Math.floor((clientX - rect.left - LEFT) / band)));
+  };
+  const openDay = (i: number) => { const d = list[i]; if (d) go({ name: "day", n: d.day_number }); };
+  const label = (d: Day) => (d.kind === "rest" ? t("rest") : `${fmtKm(dayKm(d) ?? 0, l, 1)} km`);
+  const tipD = sel !== null ? list[sel] : null;
+  const half = Math.min(110, w / 2);
 
   return (
-    <div class="bars" ref={ref} style={{ position: "relative" }} onPointerLeave={() => setTip(null)}>
-      <svg viewBox={`0 0 ${w} ${H}`} height={H} role="group" aria-label={t("kmPerDay")}>
+    <div class="bars" ref={ref} style={{ position: "relative" }}
+      tabindex={0} role="group" aria-label={`${t("kmPerDay")}. ${t("barsKeys")}`}
+      onPointerDown={(e) => { pointer.current = (e as PointerEvent).pointerType || "touch"; }}
+      onPointerMove={(e) => { if ((e as PointerEvent).pointerType === "mouse") { setSel(idxAt(e.clientX)); setPinned(false); } }}
+      onPointerLeave={(e) => { if ((e as PointerEvent).pointerType === "mouse" && !pinned) setSel(null); }}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest(".bars__tip")) return;
+        const i = idxAt(e.clientX);
+        if (pointer.current === "mouse" || (pinned && sel === i)) openDay(i);
+        else { setSel(i); setPinned(true); }
+      }}
+      onKeyDown={(e) => {
+        const n = list.length;
+        if (!n) return;
+        const cur = sel ?? n - 1;
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+          e.preventDefault();
+          setSel(Math.max(0, Math.min(n - 1, sel === null ? n - 1 : cur + (e.key === "ArrowRight" ? 1 : -1))));
+          setPinned(true);
+        } else if (e.key === "Home" || e.key === "End") {
+          e.preventDefault(); setSel(e.key === "Home" ? 0 : n - 1); setPinned(true);
+        } else if (e.key === "Enter" && sel !== null) {
+          e.preventDefault(); openDay(sel);
+        } else if (e.key === "Escape") {
+          setSel(null); setPinned(false);
+        }
+      }}
+      onBlur={(e) => { if (!ref.current?.contains((e as FocusEvent).relatedTarget as Node)) { setSel(null); setPinned(false); } }}>
+      <svg viewBox={`0 0 ${w} ${H}`} height={H} aria-hidden="true">
         {ticks.map((v) => (
           <g>
             <line class="bars__grid" x1={LEFT} x2={w} y1={y(v)} y2={y(v)} />
@@ -127,15 +170,10 @@ function DayBars({ list }: { list: Day[] }) {
           </g>
         ))}
         {list.map((d, i) => {
-          const cx = LEFT + band * (i + 0.5);
+          const cx = cxOf(i);
           const v = kms[i];
           return (
-            <g class="bars__col">
-              <rect class="bars__hit" x={LEFT + band * i} y={TOP - 8} width={band} height={H - TOP - BOTTOM + 16} tabIndex={0} role="link"
-                aria-label={`${t("day", { n: d.day_number })}, ${d.kind === "rest" ? t("rest") : `${fmtKm(v, l, 1)} km`}`}
-                onPointerEnter={() => setTip({ x: cx, d })} onFocus={() => setTip({ x: cx, d })} onBlur={() => setTip(null)}
-                onClick={() => go({ name: "day", n: d.day_number })}
-                onKeyDown={(e) => { if (e.key === "Enter") go({ name: "day", n: d.day_number }); }} />
+            <g class={`bars__col${sel === i ? " is-sel" : ""}`}>
               {d.kind === "rest" || v <= 0
                 ? <circle class="bars__rest" cx={cx} cy={base - 5} r={4} />
                 : <path class={`bars__bar${d.kind === "transport" ? " is-transport" : ""}`} d={col(v, cx)} />}
@@ -149,15 +187,20 @@ function DayBars({ list }: { list: Day[] }) {
             <text class="bars__label bars__label--halo" x={w} y={y(avg) - 5} text-anchor="end">{t("avgLine")} {fmtKm(avg, l, 1)} km</text>
           </g>
         )}
+        {sel !== null && <line class="bars__cursor" x1={cxOf(sel)} x2={cxOf(sel)} y1={TOP - 6} y2={base} />}
         <text class="bars__label" x={LEFT} y={H - 4}>{t("day", { n: list[0]?.day_number ?? 1 })}</text>
         <text class="bars__label" x={w} y={H - 4} text-anchor="end">{t("day", { n: list[list.length - 1]?.day_number ?? 1 })}</text>
       </svg>
-      {tip && (
-        <div class="bars__tip glass" style={{ left: `${Math.min(w - 90, Math.max(90, tip.x))}px` }} role="status">
-          <strong class="num">{tip.d.kind === "rest" ? t("rest") : `${fmtKm(dayKm(tip.d) ?? 0, l, 1)} km`}</strong>
-          <span>{t("day", { n: tip.d.day_number })}, {titleOf(tip.d, l)}</span>
-        </div>
-      )}
+      <div class={`bars__tip glass${tipD ? " is-on" : ""}${pinned ? " is-pinned" : ""}`} role="status"
+        style={{ left: `${Math.min(w - half, Math.max(half, sel !== null ? cxOf(sel) : w / 2))}px` }}>
+        {tipD && (
+          <>
+            <strong class="num">{label(tipD)}</strong>
+            <span>{t("day", { n: tipD.day_number })}, {titleOf(tipD, l)}</span>
+            {pinned && <button class="textbtn" type="button" tabIndex={-1} onClick={() => openDay(sel!)}>{t("openDay")}</button>}
+          </>
+        )}
+      </div>
       <p class="fine" style={{ marginTop: "8px" }}>{t("kmPerDayNote")}{hasTransport ? ` ${t("transportGrey")}` : ""}</p>
     </div>
   );

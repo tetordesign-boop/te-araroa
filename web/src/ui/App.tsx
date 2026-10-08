@@ -89,7 +89,7 @@ const replayable = computed(() => {
   const v = view.value;
   if (v.name !== "day") return null;
   const d = dayByNumber.value.get(v.n);
-  if (!d || d.kind === "rest") return null;
+  if (!d || d.kind === "rest" || d.start_km === null || d.end_km === null || Math.abs(d.end_km - d.start_km) < 0.3) return null;
   const km = dayKm(d);
   return km !== null && km > 0.3 ? d : null;
 });
@@ -153,6 +153,21 @@ export function App() {
     }
   }), []);
 
+  // Keyboard and screen-reader users: when the control they used disappears with the old view,
+  // put focus on the new view's heading instead of dropping it on the page.
+  useEffect(() => {
+    let first = true;
+    return effect(() => {
+      viewKey(view.value);
+      if (first) { first = false; return; }
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const a = document.activeElement;
+        if (a && a !== document.body) return;
+        document.querySelector<HTMLElement>(".sheet [data-autofocus]")?.focus({ preventScroll: true });
+      }));
+    });
+  }, []);
+
   // keep the sheet scrolled to top when the view changes
   useEffect(() => effect(() => {
     view.value;
@@ -195,7 +210,7 @@ export function App() {
             <button class="btn" type="button" style={{ marginTop: "14px" }} onClick={() => location.reload()}>{t("retry")}</button>
           </div>
         ) : status.value === "loading" && !days.value.length && !settings.value ? <Skeleton /> : (
-          <div class="view" key={viewKey(v)}>
+          <div class="view" key={v.name}>
             {v.name === "day" ? <DayView n={v.n} photo={v.photo} />
               : v.name === "journal" ? <Journal />
               : v.name === "stats" ? <Stats />

@@ -22,8 +22,9 @@ export function TrailStrip({ route, walked, here, large }: { route: Route; walke
   const gaps = route.trail.gaps.map((g) => g.km).sort((a, b) => a - b);
   const SW = large ? 8 : 6;
   const R = large ? 9 : 7.5;
-  const GAP = 7, PAD = R, Y = R + 1;
-  const H = large ? Y + SW / 2 + 40 : Y * 2;
+  const GAP = 7, PAD = R;
+  const Y = large ? 24 : R + 1;           // large: room for names above the line
+  const H = large ? Y + SW / 2 + 24 : Y * 2;
   const usable = w - 2 * PAD - gaps.length * GAP;
   const x = (km: number) => PAD + (km / total) * usable + gaps.filter((g) => g < km - 1e-6).length * GAP;
   const bounds = [0, ...gaps, total];
@@ -53,10 +54,8 @@ export function TrailStrip({ route, walked, here, large }: { route: Route; walke
           { x: w - PAD + R - 1, name: "Bluff", end: true },
           ...towns.map((p) => ({ x: x(p.km), name: townName(p.n), end: false })),
         ], w).map(({ x: tx, name, row, anchor, end }) => (
-          <g>
-            {!end && <line class="strip__tick" x1={tx} x2={tx} y1={Y + SW / 2 + 3} y2={Y + SW / 2 + (row ? 20 : 7)} />}
-            <text class={`strip__town${end ? " is-end" : ""}`} x={tx} y={Y + SW / 2 + (row ? 33 : 20)} text-anchor={anchor}>{name}</text>
-          </g>
+          // like a metro map: names alternate below and above the line, each next to its station
+          <text class={`strip__town${end ? " is-end" : ""}`} x={tx} y={row ? Y - SW / 2 - 7 : Y + SW / 2 + 16} text-anchor={anchor}>{name}</text>
         ))}
         {here !== null && <circle class="strip__here" cx={Math.min(w - PAD, Math.max(PAD, x(here)))} cy={Y} r={R} />}
       </svg>
@@ -75,7 +74,7 @@ export function TrailStrip({ route, walked, here, large }: { route: Route; walke
 
 const townName = (n: string) => shortPlace(n).replace("Lake Tekapo", "Tekapo");
 
-/** Two rows of town names under the line; a name that would touch another is left out. */
+/** Town names below the line, or above it when there is no room; a name that would touch another is left out. */
 function placeTowns(items: { x: number; name: string; end: boolean }[], w: number) {
   const width = (s: string) => s.length * 6.2 + 8;
   const rows: [number, number][][] = [[], []];
@@ -85,7 +84,7 @@ function placeTowns(items: { x: number; name: string; end: boolean }[], w: numbe
     const anchor = it.x - tw / 2 < 0 ? "start" : it.x + tw / 2 > w ? "end" : "middle";
     const x0 = anchor === "start" ? it.x : anchor === "end" ? it.x - tw : it.x - tw / 2;
     const x1 = x0 + tw;
-    for (let r = 0; r < 2; r++) {
+    for (let r = 0; r < (it.end ? 1 : 2); r++) {
       if (rows[r].every(([a, b]) => x1 <= a || x0 >= b)) {
         rows[r].push([x0, x1]);
         out.push({ ...it, row: r, anchor });
