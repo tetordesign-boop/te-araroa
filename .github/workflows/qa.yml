@@ -1,0 +1,43 @@
+# Screenshots of the site with the real map tiles (the development sandbox can't reach them).
+# Push a commit to bot/qa to run; results land on the bot/qa-out branch.
+name: Captures de contrôle
+on:
+  push:
+    branches: [bot/qa]
+permissions:
+  contents: write
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install the site
+        working-directory: web
+        run: npm ci
+      - name: Install the browser
+        working-directory: scripts/qa
+        run: npm init -y >/dev/null && npm i --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
+      - name: Start the dev server
+        working-directory: web
+        run: |
+          nohup npx vite --port 5173 --strictPort > /tmp/vite.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:5173/ >/dev/null && break; sleep 1; done
+      - name: Screenshots
+        run: node scripts/qa/shots.mjs /tmp/shots
+      - name: Publish on bot/qa-out
+        if: always()
+        working-directory: /tmp/shots
+        run: |
+          cp /tmp/vite.log . || true
+          git init -q -b bot/qa-out
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Shots ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" bot/qa-out

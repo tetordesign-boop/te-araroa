@@ -18,4 +18,4 @@ export const LIVE_THRESHOLD_MIN = 180;
 /** Dev helpers: `?mock` uses local sample data, `?offline-map` a vector land map (no tile servers). */
 const qs = typeof location !== "undefined" ? new URLSearchParams(location.search) : new URLSearchParams();
 export const MOCK = import.meta.env.DEV && qs.has("mock");
-export const OFFLINE_MAP = import.meta.env.DEV && (qs.has("offline-map") || qs.has("mock"));
+export const OFFLINE_MAP = import.meta.env.DEV && qs.has("offline-map");

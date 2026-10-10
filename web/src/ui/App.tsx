@@ -115,6 +115,7 @@ export function App() {
         onInteract: () => {},
       }, land);
       mapApi.value = tm;
+      if (import.meta.env.DEV) (window as unknown as { __tm: TrailMap }).__tm = tm; // for the screenshot scripts
       const d1 = effect(() => tm!.setData(mapData.value));
       const d2 = effect(() => tm!.setLive(liveData.value));
       disposeData = () => { d1(); d2(); };
