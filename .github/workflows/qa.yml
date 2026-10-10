@@ -29,7 +29,10 @@ jobs:
           nohup npx vite --port 5173 --strictPort > /tmp/vite.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:5173/ >/dev/null && break; sleep 1; done
       - name: Screenshots
-        run: node scripts/qa/shots.mjs /tmp/shots
+        run: |
+          mkdir -p /tmp/shots
+          set -o pipefail
+          node scripts/qa/shots.mjs /tmp/shots 2>&1 | tee /tmp/shots/run.log
       - name: Publish on bot/qa-out
         if: always()
         working-directory: /tmp/shots

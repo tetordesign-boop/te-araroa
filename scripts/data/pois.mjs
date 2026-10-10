@@ -52,7 +52,7 @@ out center tags;`);
 await sleep(3000);
 const peaks = await overpass(`[out:json][timeout:240][bbox:${bb}];
 node["natural"~"^(peak|volcano)$"]["name"];
-out tags;`);
+out body;`);
 console.log(`overpass: ${general.length} general, ${peaks.length} peaks`);
 
 const num = (v) => {
@@ -63,6 +63,8 @@ const num = (v) => {
 const clean = (s) => (s ? String(s).replace(/\s+/g, " ").trim() : null);
 
 function kind(t) {
+  // campsites sometimes carry a hut tag: the name tells the truth
+  if ((t.tourism === "alpine_hut" || t.tourism === "wilderness_hut" || t.amenity === "shelter") && /camp(site|ground)?\b/i.test(t.name ?? "") && !/hut\b/i.test(t.name ?? "")) return "camp";
   if (t.tourism === "alpine_hut" || t.tourism === "wilderness_hut" || t.amenity === "shelter") return "hut";
   if (t.tourism === "camp_site") return "camp";
   if (t.tourism === "viewpoint") return "view";
@@ -96,7 +98,7 @@ for (const el of [...general, ...peaks]) {
   const ele = num(t.ele);
   const { km, d } = locate([lon, lat]);
   if (!keep(k, d, ele, !!name)) continue;
-  if (!name && k !== "camp" && k !== "hut") continue;
+  if (!name) continue;
   const op = clean(t.operator);
   const item = {
     t: k, n: name, c: [Math.round(lon * 1e5) / 1e5, Math.round(lat * 1e5) / 1e5], e: ele, km, d,

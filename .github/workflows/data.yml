@@ -19,9 +19,10 @@ jobs:
         working-directory: scripts/data
         run: npm init -y >/dev/null && npm i --no-save pngjs@7.0.0
       - name: Points of interest
-        run: node scripts/data/pois.mjs /tmp/out/pois.json
+        run: mkdir -p /tmp/out && node scripts/data/pois.mjs /tmp/out/pois.json 2>&1 | tee /tmp/out/pois.log
       - name: Elevation profile
-        run: node scripts/data/profile.mjs /tmp/out/profile.json
+        if: env.SKIP_PROFILE != '1'
+        run: node scripts/data/profile.mjs /tmp/out/profile.json 2>&1 | tee /tmp/out/profile.log
       - name: Publish on bot/data-out
         working-directory: /tmp/out
         run: |
