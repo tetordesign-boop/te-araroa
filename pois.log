@@ -1,0 +1,3 @@
+overpass: 3679 general, 3791 peaks
+kept 486 { peak: 280, camp: 60, view: 27, pass: 24, fall: 8, hut: 87 }
+written /tmp/out/pois.json
