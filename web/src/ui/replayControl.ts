@@ -10,6 +10,7 @@ export function startReplay(d: Day) {
   const before = detent.value;
   if (!isDesktop.value) detent.value = "peek";
   let ended = false;
+  let byHand = false;
   replayState.value = { n: d.day_number, progress: 0, stop: () => {} };
   const stop = replayDay(tm, route.value, d,
     (f) => { if (replayState.value) replayState.value = { ...replayState.value, progress: f }; },
@@ -17,8 +18,8 @@ export function startReplay(d: Day) {
       ended = true;
       replayState.value = null;
       if (!isDesktop.value) detent.value = before === "peek" ? "half" : before;
-      tm.flyToDay(d, route.value);
+      if (!byHand) tm.flyToDay(d, route.value); // the person took the map: leave it where they are
     });
   // a day with nothing to fly over ends at once: never leave the progress bar behind
-  if (!ended && replayState.value) replayState.value = { ...replayState.value, stop };
+  if (!ended && replayState.value) replayState.value = { ...replayState.value, stop: (hand?: boolean) => { byHand = !!hand; stop(); } };
 }

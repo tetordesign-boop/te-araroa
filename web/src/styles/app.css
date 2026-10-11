@@ -615,27 +615,17 @@ textarea.field { min-height: 108px; line-height: 1.45; font-family: var(--font-v
 }
 .is-replaying .photo-pin { opacity: 0; pointer-events: none; }
 
-.place { pointer-events: none; }
-.place-label {
-  display: block; position: relative;
-  font-size: 12.5px; font-weight: 650; color: #fff; letter-spacing: -0.01em; white-space: nowrap;
-  text-shadow: 0 0 2px rgba(0, 0, 0, .75), 0 1px 8px rgba(0, 0, 0, .55); pointer-events: none;
-  transition: opacity .3s ease, visibility .3s;
-}
-.place-label::before {
-  content: ""; position: absolute; left: -10px; top: 50%; width: 6px; height: 6px; margin-top: -3px;
-  border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px rgba(0, 0, 0, .35);
-}
-.base-relief .place-label { color: #1c2a36; text-shadow: 0 0 3px #fff, 0 0 8px rgba(255, 255, 255, .9); }
-.z-low .place:not(.tier-1) .place-label,
-.z-mid .place.tier-3 .place-label { opacity: 0; visibility: hidden; }
 
 .maplibregl-ctrl-bottom-right { bottom: calc(var(--sheet-visible) + var(--safe-b) + 12px); transition: bottom .5s var(--ease-sheet); }
 @media (min-width: 900px) {
   .maplibregl-ctrl-bottom-right { bottom: 8px; }
 }
-.maplibregl-ctrl-attrib.maplibregl-compact { background: var(--glass) !important; color: var(--ink-2); border-radius: 12px; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
-.maplibregl-ctrl-attrib a { color: var(--ink-2); }
+/* the map's own stylesheet loads after this one: the extra .map keeps these rules on top */
+.map .maplibregl-ctrl-attrib.maplibregl-compact { background: var(--glass) !important; color: var(--ink-2); border-radius: 12px; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+.map .maplibregl-ctrl-attrib a { color: var(--ink-2); }
+.map .maplibregl-ctrl-attrib-button { background-color: transparent; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .map .maplibregl-ctrl-attrib-button { filter: invert(1); } }
+:root[data-theme="dark"] .map .maplibregl-ctrl-attrib-button { filter: invert(1); }
 
 /* ------------------------------------------------------------------ replay */
 .replay-fab {
@@ -803,6 +793,7 @@ textarea.field { min-height: 108px; line-height: 1.45; font-family: var(--font-v
 /* the place card */
 .pkind { display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 15px; font-weight: 600; color: var(--ink-2); }
 .pkind span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.explore .h-page { font-size: 30px; }
 .ptitle { font-size: 28px; line-height: 1.12; font-weight: 700; letter-spacing: -0.026em; margin-top: 12px; text-wrap: balance; }
 .pmeta { font-size: 15px; color: var(--ink-2); margin-top: 6px; line-height: 1.4; }
 .pmeta .num { color: var(--ink); font-weight: 600; }

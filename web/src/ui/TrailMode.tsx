@@ -132,8 +132,12 @@ export function TrailMode() {
     window.addEventListener("resize", onResize);
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") trailMode.value = null; };
     document.addEventListener("keydown", onKey);
-    // start flying on its own after the approach, unless the person grabs the profile first
-    const auto = window.setTimeout(() => { if (cam.current === c && !c.playing && Math.abs(c.target - mode.startKm) < 0.01) c.play(); }, 3200);
+    // start flying on its own after the approach, unless the person took the profile or the map first
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const auto = still ? 0 : window.setTimeout(() => { if (cam.current === c && !c.playing && !c.grabbed && Math.abs(c.target - mode.startKm) < 0.01) c.play(); }, 3200);
+    // keyboard and screen readers: into the flyover, and back where they were afterwards
+    const before = document.activeElement as HTMLElement | null;
+    card.current?.querySelector<HTMLElement>(".trail-hud__profile")?.focus({ preventScroll: true });
     return () => {
       clearTimeout(auto);
       window.removeEventListener("resize", onResize);
@@ -144,6 +148,7 @@ export function TrailMode() {
       hud.value = null;
       document.documentElement.classList.remove("is-trail-mode");
       tm.map.flyTo({ center: route.peek().pointAt(km), zoom: 10.4, pitch: 50, padding: tm.viewPadding, duration: 1600, essential: true });
+      requestAnimationFrame(() => { if (before?.isConnected) before.focus({ preventScroll: true }); });
     };
   }, [mode?.startKm]);
 

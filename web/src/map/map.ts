@@ -36,6 +36,8 @@ export interface MapCallbacks {
   onStation: (index: number) => void;
   /** the person moved the map themselves */
   onInteract?: () => void;
+  /** the person touched, clicked or scrolled the map (camera shows give way) */
+  onUserInput?: () => void;
 }
 
 type Padding = { top: number; right: number; bottom: number; left: number };
@@ -124,10 +126,20 @@ export class TrailMap {
         if (ev === "dragstart") this.cb.onInteract?.();
       });
     }
+    // Camera shows move the map every frame, which resets MapLibre's gesture handlers: a finger would never
+    // become a "drag". So the first touch, click or wheel on the map itself is what makes a show give way.
+    const cc = this.map.getCanvasContainer();
+    cc.addEventListener("pointerdown", this.onRawInput, { capture: true, passive: true });
+    cc.addEventListener("wheel", this.onRawInput, { capture: true, passive: true });
     this.map.on("moveend", () => {
       if (this.gesturing) {
         this.gesturing = false;
-        if (this.pendingPadding) { const p = this.pendingPadding; this.pendingPadding = null; this.paddingInPlace(p); }
+        if (this.pendingPadding) {
+          const p = this.pendingPadding;
+          this.pendingPadding = null;
+          // not from inside the event: a camera call there can tangle with the move that just ended
+          requestAnimationFrame(() => { if (!this.gesturing && !this.map.isEasing()) this.paddingInPlace(p); });
+        }
       }
       this.updatePhotoMarkers();
     });
@@ -137,13 +149,43 @@ export class TrailMap {
       const hit = this.map.queryRenderedFeatures([[e.point.x - 6, e.point.y - 6], [e.point.x + 6, e.point.y + 6]], { layers }).length > 0;
       this.map.getCanvas().style.cursor = hit ? "pointer" : "";
     });
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
-      this.dark = e.matches;
-      this.applyStyle();
-    });
+    this.schemeQuery.addEventListener("change", this.onScheme);
+  }
+
+  private schemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  private onScheme = (e: MediaQueryListEvent) => {
+    this.dark = e.matches;
+    this.applyStyle();
+  };
+  private onRawInput = (e: Event) => {
+    if (e.type === "pointerdown" && (e as PointerEvent).button > 0) return;
+    this.stopShow();
+    this.cb.onUserInput?.();
+  };
+
+  /** Everything the map set up outside itself, then the map. */
+  destroy() {
+    clearInterval(this.sunTimer);
+    this.schemeQuery.removeEventListener("change", this.onScheme);
+    const cc = this.map.getCanvasContainer();
+    cc.removeEventListener("pointerdown", this.onRawInput, { capture: true });
+    cc.removeEventListener("wheel", this.onRawInput, { capture: true });
+    this.stopShow();
+    this.map.remove();
   }
 
   whenReady() { return this.ready; }
+
+  /**
+   * Start a camera move and run `then` once that very move has ended, even when it ends at once
+   * (reduced motion makes moves instant, and their "moveend" comes before a listener added afterwards).
+   */
+  private moveThen(start: () => void, then: () => void) {
+    const m = this.map;
+    m.stop(); // whatever was moving ends now, so its "moveend" isn't taken for this one's
+    m.once("moveend", then);
+    start();
+  }
 
   // ------------------------------------------------------------- style
   private styleOpts() {
@@ -535,10 +577,12 @@ export class TrailMap {
     if (this.map.isEasing()) {
       if (!this.paddingAfterFlight) {
         this.paddingAfterFlight = true;
-        this.map.once("moveend", () => {
+        // never start an ease from inside "moveend": when that event comes from a new flight stopping the old
+        // one, two animations end up running at once and the map stops drawing
+        this.map.once("moveend", () => requestAnimationFrame(() => {
           this.paddingAfterFlight = false;
-          if (!this.gesturing && !this.replaying) this.map.easeTo({ padding: this.padding, duration: reduceMotion() ? 0 : 350 });
-        });
+          if (!this.gesturing && !this.replaying && !this.map.isEasing()) this.map.easeTo({ padding: this.padding, duration: reduceMotion() ? 0 : 350 });
+        }));
       }
       return;
     }
@@ -608,17 +652,26 @@ export class TrailMap {
     f?.();
   }
 
-  /** Slowly circle a place in 3D, until stopped or the person touches the map. */
-  orbit(c: LngLat, onEnd: () => void, opts: { zoom?: number; pitch?: number; period?: number } = {}): () => void {
+  /**
+   * Slowly circle a place in 3D, until stopped or the person touches the map. Returns the stop function,
+   * or null when nothing turns (reduced motion: the camera just takes a 3D view of the place).
+   */
+  orbit(c: LngLat, onEnd: () => void, opts: { zoom?: number; pitch?: number; period?: number } = {}): (() => void) | null {
     this.stopShow();
     const m = this.map;
+    const view = { center: c, zoom: opts.zoom ?? Math.max(12, Math.min(13.4, m.getZoom())), pitch: opts.pitch ?? 66, padding: this.padding };
+    if (reduceMotion()) { m.jumpTo(view); return null; }
     let raf = 0, stopped = false, t0 = 0, b0 = m.getBearing();
     const period = opts.period ?? 40_000;
     const stop = () => {
       if (stopped) return;
       stopped = true;
       cancelAnimationFrame(raf);
-      this.replaying = false;
+      if (this.replaying) {
+        this.replaying = false;
+        // settle into the padding the sheet may have asked for meanwhile (not while a finger is down)
+        requestAnimationFrame(() => { if (!this.gesturing && !this.map.isEasing()) this.paddingInPlace(this.padding); });
+      }
       if (this.stopShowFn === stop) this.stopShowFn = null;
       onEnd();
     };
@@ -635,9 +688,7 @@ export class TrailMap {
       this.replaying = true; // no photo marker passes while the camera turns
       raf = requestAnimationFrame(frame);
     };
-    if (reduceMotion()) { stop(); return stop; }
-    m.flyTo({ center: c, zoom: opts.zoom ?? Math.max(12, Math.min(13.4, m.getZoom())), pitch: opts.pitch ?? 66, padding: this.padding, duration: 1600, essential: true });
-    m.once("moveend", begin);
+    this.moveThen(() => m.flyTo({ ...view, duration: 1600, essential: true }), begin);
     return stop;
   }
 
@@ -655,6 +706,7 @@ export class TrailMap {
       if (this.stopShowFn === cancel) this.stopShowFn = null;
     };
     this.stopShowFn = cancel;
+    const instant = reduceMotion();
     const descend = () => {
       if (cancelled) return;
       const ex = m.getTerrain()?.exaggeration ?? 1;
@@ -670,11 +722,13 @@ export class TrailMap {
         const c = m.calculateCameraOptionsFromCameraLngLatAltRotation(behind, alt, brg, 80);
         if (c.center && Number.isFinite(c.zoom)) cam = { center: c.center, zoom: c.zoom, pitch: 80, bearing: brg };
       } catch (_) { /* keep the fallback */ }
-      m.easeTo({ ...cam, padding: this.padding, duration: reduceMotion() ? 0 : 3200, easing: easeInOut, essential: true });
-      m.once("moveend", cancel);
+      this.moveThen(() => m.easeTo({ ...cam, padding: this.padding, duration: instant ? 0 : 3200, easing: easeInOut, essential: true }), cancel);
     };
-    m.flyTo({ center: at, zoom: 13.4, pitch: 62, bearing: brg, padding: this.padding, duration: reduceMotion() ? 0 : 2600, curve: 1.3, essential: true });
-    m.once("moveend", () => { if (!cancelled) window.setTimeout(descend, 250); });
+    this.moveThen(
+      () => m.flyTo({ center: at, zoom: 13.4, pitch: 62, bearing: brg, padding: this.padding, duration: instant ? 0 : 2600, curve: 1.3, essential: true }),
+      // a moment for the relief tiles there to arrive (they set the ground height)
+      () => { if (!cancelled) window.setTimeout(descend, instant ? 600 : 250); },
+    );
     return cancel;
   }
 

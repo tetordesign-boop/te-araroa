@@ -13,6 +13,8 @@ export class TrailCam {
   km: number;
   target: number;
   playing = false;
+  /** the person took the map in hand at some point (no automatic start after that) */
+  grabbed = false;
   /** km per second while playing */
   speed = 0.8;
   private center: LngLat;
@@ -35,26 +37,37 @@ export class TrailCam {
     tm.stopShow();
     tm.replaying = true;
     document.documentElement.classList.add("is-replaying");
-    // someone grabs the map: stop steering it until they scrub or press play again, and keep their zoom and tilt
-    const grab = (e: { originalEvent?: Event }) => {
-      if (!e.originalEvent) return;
+
+    // Someone takes the map in hand: stop steering until they scrub or press play again, and keep their zoom
+    // and tilt. Watched on the raw events: while the camera moves every frame, MapLibre never sees a drag start.
+    const grab = (e: Event) => {
+      if (e.type === "pointerdown" && (e as PointerEvent).button > 0) return;
+      this.grabbed = true;
       this.following = false;
       if (this.playing) { this.playing = false; this.onChange(); }
     };
+    const cc = m.getCanvasContainer();
+    cc.addEventListener("pointerdown", grab, { capture: true, passive: true });
+    cc.addEventListener("wheel", grab, { capture: true, passive: true });
+    this.off.push(() => {
+      cc.removeEventListener("pointerdown", grab, { capture: true });
+      cc.removeEventListener("wheel", grab, { capture: true });
+    });
     const settle = () => { if (!this.following) { this.zoom = m.getZoom(); this.pitch = m.getPitch(); } };
-    for (const ev of ["dragstart", "zoomstart", "rotatestart", "pitchstart"] as const) { m.on(ev, grab); this.off.push(() => m.off(ev, grab)); }
     m.on("moveend", settle);
     this.off.push(() => m.off("moveend", settle));
 
-    m.flyTo({ center: this.center, zoom: this.zoom, pitch: this.pitch, bearing: this.bearing, padding: this.padding, duration: reduceMotion() ? 0 : 2400, curve: 1.3, essential: true });
+    // the approach; the loop starts when it lands (or at once with reduced motion)
+    m.stop();
     m.once("moveend", () => {
       if (this.dead) return;
       this.center = m.getCenter().toArray() as LngLat;
       this.bearing = m.getBearing();
-      this.following = true;
+      if (!this.grabbed) this.following = true;
       this.last = 0;
       this.raf = requestAnimationFrame(this.frame);
     });
+    m.flyTo({ center: this.center, zoom: this.zoom, pitch: this.pitch, bearing: this.bearing, padding: this.padding, duration: reduceMotion() ? 0 : 2400, curve: 1.3, essential: true });
   }
 
   setPadding(p: Padding) { this.padding = p; }
@@ -62,6 +75,7 @@ export class TrailCam {
   scrubTo(km: number) {
     this.target = clampKm(km, this.route);
     this.resume();
+    this.onChange();
   }
 
   play() {
@@ -96,17 +110,24 @@ export class TrailCam {
         this.target = Math.min(this.route.total, this.target + this.speed * dt);
         if (this.target >= this.route.total) { this.playing = false; this.onChange(); }
       }
-      const a = 1 - Math.exp(-dt / (this.playing ? 0.12 : 0.32));
+      // reduced motion: no gliding, the camera is simply where the finger says
+      const instant = reduceMotion();
+      const a = instant ? 1 : 1 - Math.exp(-dt / (this.playing ? 0.12 : 0.32));
       this.km += (this.target - this.km) * a;
       if (Math.abs(this.target - this.km) < 0.002) this.km = this.target;
       const want = this.route.pointAt(this.km);
-      const b = 1 - Math.exp(-dt / 0.22);
-      this.center = [this.center[0] + (want[0] - this.center[0]) * b, this.center[1] + (want[1] - this.center[1]) * b];
+      const b = instant ? 1 : 1 - Math.exp(-dt / 0.22);
+      const dx = want[0] - this.center[0], dy = want[1] - this.center[1];
+      this.center = [this.center[0] + dx * b, this.center[1] + dy * b];
       const heading = this.route.bearingAt(Math.min(this.route.total, this.km + 1.2), 3);
       const delta = ((heading - this.bearing + 540) % 360) - 180;
-      this.bearing = (this.bearing + delta * (1 - Math.exp(-dt / 1.4)) + 360) % 360;
-      this.tm.map.jumpTo({ center: this.center, bearing: this.bearing, zoom: this.zoom, pitch: this.pitch, padding: this.padding });
-      this.onChange();
+      this.bearing = (this.bearing + delta * (instant ? 1 : 1 - Math.exp(-dt / 1.4)) + 360) % 360;
+      // once everything has arrived, leave the map alone (it stays free for the person's fingers)
+      const still = !this.playing && this.km === this.target && Math.abs(dx) < 1e-7 && Math.abs(dy) < 1e-7 && Math.abs(delta) < 0.05;
+      if (!still) {
+        this.tm.map.jumpTo({ center: this.center, bearing: this.bearing, zoom: this.zoom, pitch: this.pitch, padding: this.padding });
+        this.onChange();
+      }
     }
     this.raf = requestAnimationFrame(this.frame);
   };

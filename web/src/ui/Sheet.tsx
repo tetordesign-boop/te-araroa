@@ -5,7 +5,7 @@ import { detent, isDesktop, mapApi, type Detent } from "./state";
 
 const PEEK = 230;
 
-export function Sheet({ children, label }: { children: ComponentChildren; label: string }) {
+export function Sheet({ children, label, inert }: { children: ComponentChildren; label: string; inert?: boolean }) {
   const ref = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const [sheetH, setSheetH] = useState(() => window.innerHeight - 90);
@@ -100,6 +100,7 @@ export function Sheet({ children, label }: { children: ComponentChildren; label:
       style={{ "--sheet-y": `${y}px` }}
       aria-label={label}
       data-detent={current}
+      inert={inert}
       onPointerDown={onDown as unknown as (e: Event) => void}
       onPointerMove={onMove as unknown as (e: Event) => void}
       onPointerUp={onUp as unknown as (e: Event) => void}

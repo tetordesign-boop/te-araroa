@@ -12,7 +12,7 @@ import { mapPois, placeById, places, poiGroups, searchPlaces } from "../lib/plac
 import { TrailMap, type LiveData, type MapData } from "../map/map";
 import { DayView } from "./DayView";
 import { ExploreView, openSearch } from "./Explore";
-import { endEyeView } from "./eye";
+import { endEyeView, startEyeView } from "./eye";
 import { Home } from "./Home";
 import { dayKm } from "./Home";
 import { Close, Compass, Eye, Locate, MapIcon, Marker, Orbit, Replay, Search } from "./icons";
@@ -24,7 +24,7 @@ import { Sheet } from "./Sheet";
 import {
   cameraShow, detent, go, isDesktop, mapApi, mapBearing, replayState, searchQuery, toastMsg, trailMode, view,
 } from "./state";
-import { TrailMode } from "./TrailMode";
+import { startTrailMode, TrailMode } from "./TrailMode";
 
 const mapData = computed<MapData>(() => {
   const byId = new Map(days.value.map((d) => [d.id, d]));
@@ -102,10 +102,10 @@ function Controls() {
   const open = modesOpen.value;
   const is3d = map3d.value;
   const b = mapBearing.value;
-  const turned = Math.abs(((b + 540) % 360) - 180) < 177; // |bearing| > 3°
+  const turned = Math.abs(((b + 540) % 360) - 180) > 3; // the map is turned more than 3° off north
   return (
     <nav class="controls" aria-label={t("mapModes")}>
-      <div class="controls__group glass">
+      <div class="controls__group glass" inert={!!trailMode.value}>
         <button type="button" data-modes-toggle onClick={() => (modesOpen.value = !open)} aria-expanded={open} aria-label={t("mapModes")} title={t("mapModes")} class={open ? "is-on" : ""}>
           <MapIcon />
         </button>
@@ -183,9 +183,13 @@ export function App() {
           modesOpen.value = false;
           if (!isDesktop.value && detent.value === "half") detent.value = "peek";
         },
+        onUserInput: () => replayState.peek()?.stop(true),
       }, land, { base: prefs.base, contours: prefs.contours, sun: prefs.sun, groups: poiGroups.peek() });
       mapApi.value = tm;
-      if (import.meta.env.DEV) (window as unknown as { __tm: TrailMap }).__tm = tm; // for the screenshot scripts
+      if (import.meta.env.DEV) {
+        // for the screenshot scripts: the map, and the few switches a visitor would flip
+        Object.assign(window, { __tm: tm, __ui: { detent, go, startTrailMode, startEyeView, modesOpen } });
+      }
       const m = tm.map;
       let raf = 0;
       m.on("rotate", () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; mapBearing.value = m.getBearing(); }); });
@@ -203,7 +207,7 @@ export function App() {
       });
       disposeData = () => { d1(); d2(); d3(); d4(); d5(); };
     })();
-    return () => { disposeData?.(); tm?.map.remove(); mapApi.value = null; };
+    return () => { disposeData?.(); tm?.destroy(); mapApi.value = null; };
   }, []);
 
   // LINZ imagery when a key is configured
@@ -260,18 +264,19 @@ export function App() {
   useEffect(() => {
     let timer: number | undefined;
     let lastFit = "";
-    return effect(() => {
+    const dispose = effect(() => {
       const tm = mapApi.value;
       const v = view.value;
       const q = searchQuery.value.trim();
+      clearTimeout(timer); // a framing still waiting belongs to an older search (or to a view left since)
       if (!tm) return;
       if (v.name !== "explore" || !q) { tm.setPoiFilter(null); lastFit = ""; return; }
       const res = searchPlaces(q, places.value);
       tm.setPoiFilter(res.filter((p) => p.t !== "town").map((p) => p.id));
-      clearTimeout(timer);
       if (!res.length || lastFit === q) return;
       timer = window.setTimeout(() => { lastFit = q; tm.fitPlaces(res.slice(0, 30).map((p) => p.c)); }, 650);
     });
+    return () => { clearTimeout(timer); dispose(); };
   }, []);
 
   // Keyboard and screen-reader users: when the control they used disappears with the old view,
@@ -302,7 +307,7 @@ export function App() {
     <>
       <div class="map" ref={mapEl} />
 
-      <header class="topbar">
+      <header class="topbar" inert={!!trailMode.value}>
         <Brand />
         <button class="topbtn glass" type="button" onClick={openSearch} aria-label={t("searchLabel")} title={t("searchLabel")}><Search /></button>
       </header>
@@ -310,7 +315,7 @@ export function App() {
       <Controls />
       {modesOpen.value && <MapModes />}
 
-      <Sheet label={t("whereNow")}>
+      <Sheet label={t("whereNow")} inert={!!trailMode.value}>
         {isDesktop.value && <Brand inPanel />}
         {status.value === "error" && !days.value.length ? (
           <div>

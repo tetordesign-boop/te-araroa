@@ -87,8 +87,13 @@ export function MapModes() {
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onDown, true);
-    ref.current?.querySelector<HTMLElement>("button[aria-pressed='true']")?.focus({ preventScroll: true });
-    return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("pointerdown", onDown, true); };
+    const card = ref.current;
+    card?.querySelector<HTMLElement>("button[aria-pressed='true']")?.focus({ preventScroll: true });
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown, true);
+      if (card?.contains(document.activeElement)) document.querySelector<HTMLElement>("[data-modes-toggle]")?.focus({ preventScroll: true });
+    };
   }, []);
 
   const base = (b: BaseStyle) => (

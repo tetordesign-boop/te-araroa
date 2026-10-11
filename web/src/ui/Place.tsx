@@ -217,8 +217,11 @@ export function PlaceView({ id }: { id: string }) {
     if (!tm) return;
     if (orbiting) { tm.stopShow(); return; }
     if (!isDesktop.value) detent.value = "peek";
-    const stop = tm.orbit(p.c, () => { if (cameraShow.peek()?.id === p.id) cameraShow.value = null; }, { zoom: p.t === "peak" ? 12.6 : 13.2 });
-    cameraShow.value = { kind: "orbit", id: p.id, stop };
+    // once the sheet is down (it changes the map's framing), then fly and turn
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const stop = tm.orbit(p.c, () => { if (cameraShow.peek()?.id === p.id) cameraShow.value = null; }, { zoom: p.t === "peak" ? 12.6 : 13.2 });
+      if (stop) cameraShow.value = { kind: "orbit", id: p.id, stop };
+    }));
   };
   const share = async () => {
     const url = `${location.origin}${location.pathname}#/lieu/${encodeURIComponent(p.id)}`;

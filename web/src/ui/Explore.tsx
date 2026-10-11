@@ -9,7 +9,7 @@ import { GROUPS, groupLabel, type PoiGroup } from "../map/pois";
 import { PageHead } from "./Pages";
 import { altText, openPlace, PlaceBadge, placeKindLabel, placeName, relationShort } from "./Place";
 import { Check, ChevronRight, Close, Play, Search } from "./icons";
-import { go, searchQuery } from "./state";
+import { detent, go, searchQuery, view } from "./state";
 import { startTrailMode } from "./TrailMode";
 
 const GROUP_KIND = { huts: "hut", camps: "camp", summits: "pass", sights: "fall" } as const;
@@ -18,6 +18,12 @@ let wantFocus = false;
 let standIn: HTMLInputElement | null = null;
 /** Open the explorer with the keyboard up, ready to type. */
 export function openSearch() {
+  if (view.peek().name === "explore") {
+    // already here: just bring the field up (the sheet may have been lowered)
+    detent.value = "full";
+    document.querySelector<HTMLInputElement>(".explore .search input")?.focus({ preventScroll: true });
+    return;
+  }
   wantFocus = true;
   // iOS only opens the keyboard for a focus made during the tap itself: a stand-in field holds it
   // until the real one is on screen, and focus then moves over without the keyboard closing
@@ -136,8 +142,8 @@ export function ExploreView() {
       </label>
 
       {results ? (
-        <section class="block block--tight" aria-live="polite">
-          <p class="sub">{results.length ? (results.length === 1 ? t("resultOne") : t("resultsN", { n: results.length })) : t("noResults", { q: q.trim() })}</p>
+        <section class="block block--tight">
+          <p class="sub" aria-live="polite">{results.length ? (results.length === 1 ? t("resultOne") : t("resultsN", { n: results.length })) : t("noResults", { q: q.trim() })}</p>
           {results.length > 0 && <div class="rows" style={{ marginTop: "10px" }}>{results.map((p) => <PlaceRow p={p} />)}</div>}
         </section>
       ) : (

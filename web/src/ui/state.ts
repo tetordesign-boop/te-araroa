@@ -33,7 +33,7 @@ window.matchMedia("(min-width: 900px)").addEventListener("change", (e) => (isDes
 export const view = signal<View>(parse(location.hash));
 export const detent = signal<Detent>(detentFor(view.value, isDesktop.value));
 export const toastMsg = signal<string | null>(null);
-export const replayState = signal<{ n: number; progress: number; stop: () => void } | null>(null);
+export const replayState = signal<{ n: number; progress: number; stop: (byHand?: boolean) => void } | null>(null);
 export const mapApi = signal<TrailMap | null>(null);
 /** what the search field in the explore view holds (kept while browsing places) */
 export const searchQuery = signal("");

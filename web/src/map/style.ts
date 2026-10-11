@@ -43,7 +43,7 @@ const LIGHT: Palette = {
   reliefOpacity: 1,
   wood: "#c9e0b7", woodOpacity: 0.62, grass: "#e2ecd4", ice: "#fbfdff", iceLine: "#cfe1f0", rock: "#e4e1db", sand: "#f0e9d8", wetland: "#d3e6dc",
   parkFill: "rgba(96, 160, 72, 0.07)", parkLine: "rgba(76, 140, 56, 0.38)", parkLabel: "#3f7a2c",
-  shadow: "#3f4d5c", highlight: "#ffffff", accent: "#55606c", hsExaggeration: 0.5,
+  shadow: "#465567", highlight: "#ffffff", accent: "#55606c", hsExaggeration: 0.44,
   contour: "rgba(118, 98, 72, 0.2)", contourMajor: "rgba(118, 98, 72, 0.4)", contourLabel: "#8a7558",
   water: "#a8d0ee", waterway: "#95c4e8", waterLabel: "#3a73a3",
   road: "#ffffff", roadCasing: "#d6d4cc", roadMajor: "#fffdf7", roadMajorCasing: "#cdc6b4", path: "#9a8b76", building: "#e6e3dd",
@@ -157,8 +157,8 @@ function exploreLayers(p: Palette, o: StyleOptions) {
   ];
   if (o.contours !== false) {
     L.push(
-      { id: "contour", type: "line", source: "contours", "source-layer": "contours", minzoom: 10, filter: ["==", ["get", "level"], 0], paint: { "line-color": p.contour, "line-width": z([[10, 0.4], [14, 0.8]]) } },
-      { id: "contour-major", type: "line", source: "contours", "source-layer": "contours", minzoom: 10, filter: [">", ["get", "level"], 0], paint: { "line-color": p.contourMajor, "line-width": z([[10, 0.7], [14, 1.3]]) } },
+      { id: "contour", type: "line", source: "contours", "source-layer": "contours", minzoom: 11.5, filter: ["==", ["get", "level"], 0], paint: { "line-color": p.contour, "line-width": z([[11.5, 0.4], [14, 0.8]]), "line-opacity": z([[11.5, 0], [12.3, 1]]) } },
+      { id: "contour-major", type: "line", source: "contours", "source-layer": "contours", minzoom: 10.5, filter: [">", ["get", "level"], 0], paint: { "line-color": p.contourMajor, "line-width": z([[10.5, 0.6], [14, 1.3]]), "line-opacity": z([[10.5, 0], [11.3, 1]]) } },
     );
   }
   L.push(
