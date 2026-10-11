@@ -1,14 +1,19 @@
 import { mediaUrl } from "../config";
-import { hikerName, lang, setLang, t } from "../i18n";
+import { hikerName, lang, setLang, t, type Key } from "../i18n";
 import {
   clock, coverOf, dayOnTrail, dayTitle, days, latestPosition, livePlacement, liveState, mediaByDay,
   phase, progressKm, route, settings, walked,
 } from "../lib/data";
 import { addDays, daysBetween, fmtDate, fmtInt, fmtKm, nzHour, nzTime, nzToday, relTimeShort, typo } from "../lib/format";
+import { nextPlace, places, type Place } from "../lib/places";
 import type { Day, Lang } from "../types";
+import { startEyeView } from "./eye";
+import { openSearch } from "./Explore";
 import { HutBook } from "./HutBook";
-import { ChevronRight, Trail } from "./icons";
-import { go, hrefFor } from "./state";
+import { ChevronRight, Eye, Play, Search, Trail } from "./icons";
+import { altText, openPlace, PlaceBadge, placeName } from "./Place";
+import { go, hrefFor, isDesktop } from "./state";
+import { startTrailMode } from "./TrailMode";
 import { shortPlace, TrailStrip } from "./TrailStrip";
 import { useWeather } from "./WeatherClock";
 
@@ -93,6 +98,58 @@ function Now() {
       </div>
       <TrailStrip route={r} walked={walked.value.hike} here={km} />
       {latestPosition.value && <Conditions />}
+      <Actions />
+    </section>
+  );
+}
+
+/** The two ways to feel the trail: Ewan's own view right now, and the whole trail from the air. */
+function Actions() {
+  const ph = phase.value;
+  const eye = !!latestPosition.value && ph !== "before";
+  return (
+    <div class="actions actions--home">
+      {eye && <button class="action" type="button" onClick={startEyeView}><Eye />{t("seeWhatHeSees")}</button>}
+      <button class="action" type="button" onClick={() => startTrailMode(ph === "before" ? 0 : progressKm.value)}><Play />{t("flyover")}</button>
+    </div>
+  );
+}
+
+/** Next hut, next pass, next town (and the next road or boat crossing when it's close). */
+function OnHisWay() {
+  const l = lang.value;
+  const ph = phase.value;
+  const list = places.value;
+  if (ph === "after" || !list.length) return null;
+  const from = ph === "before" ? 0 : progressKm.value;
+  const picks: [Key, Place | null][] = [
+    ["nextHut", nextPlace(from, ["hut"], list)],
+    ["nextPass", nextPlace(from, ["pass"], list)],
+    ["nextTown", nextPlace(from, ["town"], list)],
+  ];
+  const gap = nextPlace(from, ["gap"], list);
+  if (gap && gap.km - from < 150) picks.push(["nextTransfer", gap]);
+  const items = picks.filter((x): x is [Key, Place] => !!x[1]).sort((a, b) => a[1].km - b[1].km);
+  if (!items.length) return null;
+  return (
+    <section class="block">
+      <div class="block__head">
+        <h2 class="h-section">{ph === "before" ? t("onTheWayBefore") : t("onHisWay")}</h2>
+        <a class="link" href="#/explorer" onClick={(e) => { e.preventDefault(); go({ name: "explore" }); }}>{t("exploreLink")}</a>
+      </div>
+      <div class="hscroll nexts" role="list">
+        {items.map(([key, p]) => {
+          const alt = altText(p, l);
+          const dist = p.km - from;
+          return (
+            <a role="listitem" class="next" href={`#/lieu/${encodeURIComponent(p.id)}`} onClick={(e) => { e.preventDefault(); openPlace(p.id); }}>
+              <span class="next__top"><PlaceBadge kind={p.t} size={24} /><span class="next__label">{t(key)}</span></span>
+              <span class="next__name">{placeName(p, l)}</span>
+              <span class="next__meta num">{ph === "before" ? `km ${fmtKm(p.km, l, p.km < 10 ? 1 : 0)}` : t("inKm", { km: fmtKm(dist, l, dist < 10 ? 1 : 0) })}{alt ? `, ${alt}` : ""}</span>
+            </a>
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -116,6 +173,7 @@ function Before() {
       ) : <h2 class="before__big">{n === 0 ? t("countdownToday") : t("notStarted")}</h2>}
       <TrailStrip route={route.value} walked={[]} here={null} />
       {date && <p class="conditions">{t("startsOn", { date })}</p>}
+      <Actions />
     </section>
   );
 }
@@ -187,6 +245,7 @@ function Footer() {
   return (
     <footer class="foot">
       <nav class="foot__links">
+        <a href="#/explorer" onClick={(e) => { e.preventDefault(); go({ name: "explore" }); }}>{t("explore")}</a>
         <a href="#/stats" onClick={(e) => { e.preventDefault(); go({ name: "stats" }); }}>{t("stats")}</a>
         <a href="#/apropos" onClick={(e) => { e.preventDefault(); go({ name: "about" }); }}>{t("about")}</a>
       </nav>
@@ -206,6 +265,9 @@ export function Home() {
 
   return (
     <div class="home">
+      {isDesktop.value && (
+        <button class="searchbtn" type="button" onClick={openSearch}><Search />{t("searchPlaceholder")}</button>
+      )}
       {ph === "before" ? <Before /> : <Now />}
 
       {ph === "before" && intro && (
@@ -213,6 +275,8 @@ export function Home() {
       )}
 
       {latest && <Feature d={latest} />}
+
+      <OnHisWay />
 
       {earlier.length > 0 && (
         <section class="block">

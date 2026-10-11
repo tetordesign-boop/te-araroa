@@ -12,24 +12,42 @@ const mobile = (dark, locale = "fr-FR") => ({ viewport: { width: 393, height: 85
 const desktop = (dark) => ({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, colorScheme: dark ? "dark" : "light", locale: "fr-FR", timezoneId: "Pacific/Auckland" });
 
 const grip = async (p, n = 1) => { for (let i = 0; i < n; i++) { await p.click(".sheet__grip"); await p.waitForTimeout(700); } };
-const scrollSheet = (p, y) => p.evaluate((y) => { const b = document.querySelector(".sheet__body"); if (b) b.scrollTop = y; }, y);
 /** wait until the map has loaded what it needs for the current view */
-async function settle(p, extra = 1500) {
-  await p.waitForFunction(() => { const m = window.__tm?.map; return !!m && m.loaded() && m.areTilesLoaded(); }, null, { timeout: 30000 }).catch(() => {});
+async function settle(p, extra = 1500, timeout = 40000) {
+  await p.waitForFunction(() => { const m = window.__tm?.map; return !!m && m.loaded() && m.areTilesLoaded(); }, null, { timeout }).catch(() => {});
   await p.waitForTimeout(extra);
 }
 const camera = (p, c) => p.evaluate((c) => window.__tm?.map.jumpTo(c), c);
+const prefs = (v) => (p) => p.addInitScript((v) => { try { localStorage.setItem("map-prefs-v1", JSON.stringify(v)); } catch (_) {} }, v);
+const click = (sel) => (p) => p.click(sel);
+const wait = (ms) => (p) => p.waitForTimeout(ms);
+const seq = (...fs) => async (p) => { for (const f of fs) await f(p); };
+
+const RAKAIA_GAP = "gap-rakaia";
+const UPPER_TRAVERS = process.env.HUT_ID || "";
 
 const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "m-home-peek", ctx: mobile(false), url: "?mock" },
   { id: "m-home-half", ctx: mobile(false), url: "?mock", act: (p) => grip(p, 1) },
+  { id: "m-home-full", ctx: mobile(false), url: "?mock", act: seq((p) => grip(p, 2), (p) => p.evaluate(() => { const b = document.querySelector(".sheet__body"); if (b) b.scrollTop = 520; })) },
   { id: "m-day-half", ctx: mobile(false), url: "?mock#/jour/12" },
-  { id: "m-dark-day-half", ctx: mobile(true), url: "?mock#/jour/5" },
+  { id: "m-place-hut", ctx: mobile(false), url: `?mock#/lieu/${UPPER_TRAVERS || "w1133817447"}` },
+  { id: "m-place-gap", ctx: mobile(false), url: `?mock#/lieu/${RAKAIA_GAP}` },
+  { id: "m-explore", ctx: mobile(false), url: "?mock#/explorer" },
+  { id: "m-search", ctx: mobile(false), url: "?mock#/explorer", act: seq((p) => p.fill(".search input", "saddle"), wait(1500)) },
+  { id: "m-modes", ctx: mobile(false), url: "?mock", act: seq(click("[data-modes-toggle]"), wait(600)), noSettle: true },
   { id: "m-alps-3d", ctx: mobile(false), url: "?mock", act: (p) => camera(p, { center: [172.62, -42.13], zoom: 11.6, pitch: 62, bearing: 160 }) },
+  { id: "m-pois-close", ctx: mobile(false), url: "?mock", act: (p) => camera(p, { center: [172.73, -42.0], zoom: 12.6, pitch: 50, bearing: 190 }) },
+  { id: "m-dark-pois", ctx: mobile(true), url: "?mock", act: (p) => camera(p, { center: [172.73, -42.0], zoom: 12.4, pitch: 55, bearing: 190 }) },
+  { id: "m-satellite", ctx: mobile(false), url: "?mock", pre: prefs({ base: "satellite", contours: true, sun: false }), act: (p) => camera(p, { center: [172.62, -42.13], zoom: 11.6, pitch: 62, bearing: 160 }) },
+  { id: "m-eye", ctx: mobile(false), url: "?mock", act: seq(wait(5000), click(".actions--home .action:first-child"), wait(9000)) },
+  { id: "m-trail", ctx: mobile(false), url: "?mock", act: seq(wait(5000), click(".actions--home .action:last-child"), wait(9000)), noSettle: true },
   { id: "d-home", ctx: desktop(false), url: "?mock" },
-  { id: "d-day", ctx: desktop(false), url: "?mock#/jour/12" },
-  { id: "d-nelson-lakes", ctx: desktop(false), url: "?mock", act: (p) => camera(p, { center: [172.75, -42.0], zoom: 11.2, pitch: 55, bearing: 200 }) },
+  { id: "d-place-peak", ctx: desktop(false), url: "?mock#/lieu/n5697804356" },
+  { id: "d-explore-search", ctx: desktop(false), url: "?mock#/explorer", act: seq((p) => p.fill(".search input", "hut"), wait(2500)) },
   { id: "d-aoraki", ctx: desktop(false), url: "?mock", act: (p) => camera(p, { center: [170.2, -43.75], zoom: 10.4, pitch: 60, bearing: 300 }) },
+  { id: "d-sun", ctx: desktop(false), url: "?mock", pre: prefs({ base: "explore", contours: true, sun: true }), act: (p) => camera(p, { center: [172.62, -42.13], zoom: 11.2, pitch: 60, bearing: 160 }) },
+  { id: "d-trail", ctx: desktop(false), url: "?mock", act: seq(wait(5000), click(".actions--home .action:last-child"), wait(10000)), noSettle: true },
   { id: "d-dark-home", ctx: desktop(true), url: "?mock" },
 ];
 
@@ -42,12 +60,19 @@ for (const s of shots) {
   page.on("pageerror", (e) => errs.push(e.message));
   page.on("console", (m) => { if (m.type() === "error") errs.push(m.text().slice(0, 200)); });
   const t0 = Date.now();
-  await page.goto(BASE + s.url, { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(3000);
-  await settle(page, 800);
-  if (s.act) { await s.act(page); await settle(page, 1800); }
-  await page.screenshot({ path: `${OUT}/${s.id}.png` });
-  const line = `${s.id} ${Date.now() - t0}ms ${errs.length ? "ERR " + [...new Set(errs)].slice(0, 5).join(" | ") : "ok"}`;
+  let status = "ok";
+  try {
+    if (s.pre) await s.pre(page);
+    await page.goto(BASE + s.url, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(3000);
+    await settle(page, 800);
+    if (s.act) { await s.act(page); if (!s.noSettle) await settle(page, 1800); }
+    await page.screenshot({ path: `${OUT}/${s.id}.png`, timeout: 120000 });
+  } catch (e) {
+    status = `FAIL ${String(e.message || e).split("\n")[0]}`;
+    await page.screenshot({ path: `${OUT}/${s.id}.png`, timeout: 120000 }).catch(() => {});
+  }
+  const line = `${s.id} ${Date.now() - t0}ms ${status}${errs.length ? " ERR " + [...new Set(errs)].slice(0, 5).join(" | ") : ""}`;
   console.log(line); log.push(line);
   await ctx.close();
 }

@@ -5,6 +5,8 @@ export type View =
   | { name: "home" }
   | { name: "journal" }
   | { name: "day"; n: number; photo?: string }
+  | { name: "place"; id: string }
+  | { name: "explore" }
   | { name: "stats" }
   | { name: "about" };
 
@@ -15,24 +17,40 @@ function parse(hash: string): View {
   const [a, b, c] = h.split("/");
   if (a === "journal") return { name: "journal" };
   if ((a === "jour" || a === "day") && b && /^\d+$/.test(b)) return { name: "day", n: parseInt(b, 10), photo: c || undefined };
+  if ((a === "lieu" || a === "place") && b) return { name: "place", id: decodeURIComponent(b) };
+  if (a === "explorer" || a === "explore") return { name: "explore" };
   if (a === "stats") return { name: "stats" };
   if (a === "apropos" || a === "about") return { name: "about" };
   return { name: "home" };
 }
 
+const detentFor = (v: View, desktop: boolean): Detent =>
+  v.name === "home" ? "peek" : v.name === "day" || v.name === "place" ? (desktop ? "full" : "half") : "full";
+
+export const isDesktop = signal(window.matchMedia("(min-width: 900px)").matches);
+window.matchMedia("(min-width: 900px)").addEventListener("change", (e) => (isDesktop.value = e.matches));
+
 export const view = signal<View>(parse(location.hash));
-export const detent = signal<Detent>(view.value.name === "home" ? "peek" : view.value.name === "day" ? "half" : "full");
+export const detent = signal<Detent>(detentFor(view.value, isDesktop.value));
 export const toastMsg = signal<string | null>(null);
 export const replayState = signal<{ n: number; progress: number; stop: () => void } | null>(null);
 export const mapApi = signal<TrailMap | null>(null);
-export const isDesktop = signal(window.matchMedia("(min-width: 900px)").matches);
-window.matchMedia("(min-width: 900px)").addEventListener("change", (e) => (isDesktop.value = e.matches));
+/** what the search field in the explore view holds (kept while browsing places) */
+export const searchQuery = signal("");
+/** the map's bearing, for the compass */
+export const mapBearing = signal(0);
+/** a camera show in progress (orbit around a place, Ewan's eye view): what it is, and how to stop it */
+export const cameraShow = signal<{ kind: "orbit" | "eye"; id?: string; stop: () => void } | null>(null);
+/** the whole-trail flyover with its elevation profile */
+export const trailMode = signal<{ startKm: number } | null>(null);
 
 export function hrefFor(v: View): string {
   switch (v.name) {
     case "home": return "#/";
     case "journal": return "#/journal";
     case "day": return `#/jour/${v.n}${v.photo ? `/${v.photo}` : ""}`;
+    case "place": return `#/lieu/${encodeURIComponent(v.id)}`;
+    case "explore": return "#/explorer";
     case "stats": return "#/stats";
     case "about": return "#/apropos";
   }
@@ -51,7 +69,7 @@ export function go(v: View, opts: { replace?: boolean } = {}) {
   if (opts.replace) history.replaceState(null, "", href);
   else if (location.hash !== href) { history.pushState(null, "", href); depth++; }
   view.value = v;
-  if (v.name === "day") detent.value = isDesktop.value ? "full" : detent.value === "full" ? "full" : "half";
+  if (v.name === "day" || v.name === "place") detent.value = isDesktop.value ? "full" : detent.value === "full" && v.name === "day" ? "full" : "half";
   else if (v.name === "home") detent.value = detent.value === "full" ? "half" : detent.value;
   else detent.value = "full";
 }
@@ -61,6 +79,8 @@ window.addEventListener("popstate", () => {
   const v = parse(location.hash);
   view.value = v;
   if (v.name === "home" && detent.value === "full") detent.value = "half";
+  else if ((v.name === "place" || v.name === "day") && !isDesktop.value && detent.value === "peek") detent.value = "half";
+  else if (v.name === "explore" || v.name === "journal" || v.name === "stats" || v.name === "about") detent.value = "full";
 });
 
 let toastTimer: number | undefined;

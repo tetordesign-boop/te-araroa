@@ -4,10 +4,12 @@ import "@fontsource-variable/literata/opsz-italic.css";
 import "./styles/app.css";
 import { lang } from "./i18n";
 import { startData } from "./lib/data";
+import { loadPlaces } from "./lib/places";
 import { App } from "./ui/App";
 
 document.documentElement.lang = lang.value;
 startData();
+loadPlaces();
 render(<App />, document.getElementById("app")!);
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {

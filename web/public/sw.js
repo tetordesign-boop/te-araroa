@@ -101,12 +101,19 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (url.origin === self.location.origin) {
+    if (/\/data\/[^/]+\.json$/.test(url.pathname)) { event.respondWith(staleWhileRevalidate(event, DATA)); return; }
     if (/\/assets\//.test(url.pathname) || /\.(png|svg|webmanifest|woff2|jpg)$/.test(url.pathname)) event.respondWith(cacheFirst(req, ASSETS, 200));
     return;
   }
   if (/server\.arcgisonline\.com$/.test(url.host) || url.pathname.includes("/elevation-tiles-prod/") || url.host === "basemaps.linz.govt.nz") {
     // aerial imagery and relief don't change during a season: no need to download a tile twice
-    event.respondWith(cacheFirst(req, TILES, 1500));
+    event.respondWith(cacheFirst(req, TILES, 3000));
+    return;
+  }
+  if (url.host === "tiles.openfreemap.org") {
+    // the map's description changes with each weekly build; its tiles and fonts live at versioned addresses
+    if (/\.(pbf|mvt)$/.test(url.pathname)) event.respondWith(cacheFirst(req, TILES, 3000));
+    else event.respondWith(staleWhileRevalidate(event, DATA));
     return;
   }
   if (url.pathname.includes("/storage/v1/object/public/media/") && !/\.(mp4|mov|webm)$/i.test(url.pathname)) {
