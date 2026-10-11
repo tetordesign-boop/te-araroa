@@ -6,7 +6,7 @@ import type { Day, Media } from "../types";
 import { installIcons } from "./icons";
 import { fold, GROUP_OF, KIND_COLOR, PRIORITY, type Poi, type PoiGroup, type PoiKind } from "./pois";
 import { flyAlong } from "./replay";
-import { buildStyle, FONT, OFFLINE_FONT, sky, SKY_DAY, SKY_NIGHT, type BaseStyle } from "./style";
+import { buildStyle, FONT, OFFLINE_FONT, shadeColors, sky, SKY_DAY, SKY_NIGHT, sunLight, type BaseStyle } from "./style";
 import { skyFor, sunPosition } from "./sun";
 
 export const ORANGE = "#FF6B12";
@@ -157,8 +157,13 @@ export class TrailMap {
     this.dark = e.matches;
     this.applyStyle();
   };
+  /** someone (or something they asked for) has moved the camera: the arrival flight must not take it back */
+  private cameraClaimed = false;
+  claimCamera() { this.cameraClaimed = true; }
+
   private onRawInput = (e: Event) => {
     if (e.type === "pointerdown" && (e as PointerEvent).button > 0) return;
+    this.cameraClaimed = true;
     this.stopShow();
     this.cb.onUserInput?.();
   };
@@ -188,11 +193,26 @@ export class TrailMap {
   }
 
   // ------------------------------------------------------------- style
+  /**
+   * With "light right now" on, the map follows the hour in New Zealand: sunlit relief by day, dark at
+   * night (like Apple Maps does at night), whatever the visitor's own clock says.
+   */
+  private sunState(): { sun: { azimuth: number; altitude: number } | null; night: boolean } {
+    if (!this.sunOn) return { sun: null, night: false };
+    const s = this.sunNow();
+    return s.altitude < -6 ? { sun: null, night: true } : { sun: s, night: false };
+  }
+  /** what the map is drawn in right now (the overlays follow it) */
+  private mapDark = this.dark;
+  private sunNight = false;
+
   private styleOpts() {
-    const sun = this.sunOn ? this.sunNow() : null;
+    const { sun, night } = this.sunState();
+    this.sunNight = night;
+    this.mapDark = this.dark || night;
     return {
-      dark: this.dark, linzKey: this.linzKey, land: this.land, contours: this.contours,
-      sun, sky: sun ? skyFor(sun.altitude, this.dark) : null,
+      dark: this.mapDark, linzKey: this.linzKey, land: this.land, contours: this.contours,
+      sun, sky: night ? SKY_NIGHT : sun ? skyFor(sun.altitude, this.mapDark) : null,
     };
   }
 
@@ -233,12 +253,18 @@ export class TrailMap {
 
   private applySun() {
     const m = this.map;
+    const { sun, night } = this.sunState();
+    // night falls (or day breaks) in New Zealand: the map changes palette
+    if (night !== this.sunNight) { this.applyStyle(); return; }
     if (!m.getLayer("hillshade")) return;
-    const sun = this.sunOn ? this.sunNow() : null;
-    m.setPaintProperty("hillshade", "hillshade-illumination-anchor", sun ? "map" : "viewport");
-    m.setPaintProperty("hillshade", "hillshade-illumination-direction", sun ? sun.azimuth : 315);
-    m.setPaintProperty("hillshade", "hillshade-illumination-altitude", sun ? Math.max(18, Math.min(60, sun.altitude)) : 45);
-    m.setSky(sky(sun ? skyFor(sun.altitude, this.dark) : this.dark ? SKY_NIGHT : SKY_DAY));
+    const light = sunLight(sun);
+    const tint = shadeColors(this.mapDark, this.base === "satellite" && !OFFLINE_MAP, sun?.altitude ?? null);
+    m.setPaintProperty("hillshade", "hillshade-illumination-anchor", light.anchor);
+    m.setPaintProperty("hillshade", "hillshade-illumination-direction", light.direction);
+    m.setPaintProperty("hillshade", "hillshade-illumination-altitude", light.altitude);
+    m.setPaintProperty("hillshade", "hillshade-shadow-color", tint.shadow);
+    m.setPaintProperty("hillshade", "hillshade-highlight-color", tint.highlight);
+    m.setSky(sky(sun ? skyFor(sun.altitude, this.mapDark) : this.mapDark ? SKY_NIGHT : SKY_DAY));
   }
 
   private applyStyle() {
@@ -255,8 +281,9 @@ export class TrailMap {
     if (!m.getSource("photos")) {
       m.addSource("photos", { type: "geojson", data: empty, cluster: true, clusterRadius: 70, clusterMaxZoom: 14 });
     }
-    const routeColor = sat ? "#ffffff" : this.dark ? "#e3e7ec" : "#2c3640";
-    const casing = sat ? "rgba(0,0,0,0.45)" : this.dark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.95)";
+    const dark = this.mapDark;
+    const routeColor = sat ? "#ffffff" : dark ? "#e3e7ec" : "#2c3640";
+    const casing = sat ? "rgba(0,0,0,0.45)" : dark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.95)";
     const w = (a: number, b: number) => zi([[5, a], [12, b]]);
     // trail lines sit under the place names, like roads do
     const before = ["contour-label", "water-name"].find((l) => m.getLayer(l));
@@ -289,12 +316,12 @@ export class TrailMap {
     m.addLayer({ id: "photos-probe", type: "circle", source: "photos", paint: { "circle-radius": 1, "circle-opacity": 0 } });
 
     // points of interest and the trail's own stations: icons need to exist before their layers
-    await installIcons(m, this.dark || sat);
+    await installIcons(m, dark || sat);
     if (gen !== this.styleGen || !m.getSource("pois")) return; // the style changed again meanwhile
-    const halo = sat ? "rgba(0,0,0,0.7)" : this.dark ? "rgba(14,16,19,0.9)" : "rgba(255,255,255,0.95)";
+    const halo = sat ? "rgba(0,0,0,0.7)" : dark ? "rgba(14,16,19,0.9)" : "rgba(255,255,255,0.95)";
     m.addLayer({ id: "poi-ring", type: "symbol", source: "poi-selected", layout: { "icon-image": "poi-ring", "icon-allow-overlap": true, "icon-ignore-placement": true } });
     for (const L of POI_LAYERS) {
-      const color = KIND_COLOR[L.kind][this.dark || sat ? "dark" : "light"];
+      const color = KIND_COLOR[L.kind][dark || sat ? "dark" : "light"];
       const isPeak = L.kind === "peak";
       const label: unknown = isPeak
         ? ["case", ["has", "e"], ["format", ["get", "n"], {}, "\n", {}, ["concat", ["number-format", ["get", "e"], { locale: "fr-FR" }], " m"], { "font-scale": 0.86, "text-font": ["literal", F.regular] }], ["get", "n"]]
@@ -317,7 +344,7 @@ export class TrailMap {
           visibility: this.poiFilter || this.visibleKind(L.kind) ? "visible" : "none",
         } as maplibregl.SymbolLayerSpecification["layout"],
         paint: {
-          "text-color": isPeak ? (this.dark || sat ? "#f2f2f7" : "#3a3a3c") : color,
+          "text-color": isPeak ? (dark || sat ? "#f2f2f7" : "#3a3a3c") : color,
           "text-halo-color": halo, "text-halo-width": 1.4,
         },
       } as maplibregl.LayerSpecification);
@@ -330,7 +357,7 @@ export class TrailMap {
         "text-field": ["get", "n"], "text-font": F.bold, "text-size": zi([[5, 12], [10, 13.5]]),
         "text-anchor": "left", "text-offset": [0.8, 0], "text-optional": tier !== 1, "text-max-width": 9,
       },
-      paint: { "text-color": sat || this.dark ? "#ffffff" : "#16191d", "text-halo-color": halo, "text-halo-width": 1.6 },
+      paint: { "text-color": sat || dark ? "#ffffff" : "#16191d", "text-halo-color": halo, "text-halo-width": 1.6 },
     });
     stationLayer(3, 8.6);
     stationLayer(2, 6.8);
@@ -604,6 +631,7 @@ export class TrailMap {
   }
 
   flyToDay(day: Day, route: Route) {
+    this.cameraClaimed = true;
     if (day.start_km === null || day.end_km === null) return;
     const lines = route.slice(day.start_km, day.end_km);
     if (!lines.length) {
@@ -625,6 +653,7 @@ export class TrailMap {
 
   /** Frame a set of places (search results). */
   fitPlaces(cs: LngLat[]) {
+    this.cameraClaimed = true;
     if (!cs.length) return;
     if (cs.length === 1) { this.flyTo(cs[0], 12.4, 50); return; }
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -635,11 +664,13 @@ export class TrailMap {
   }
 
   flyTo(c: LngLat, zoom = 12.5, pitch = 55) {
+    this.cameraClaimed = true;
     this.map.flyTo({ center: c, zoom, pitch, padding: this.padding, duration: reduceMotion() ? 0 : 2000, essential: true });
   }
 
   /** Close-up on a place, looking along the trail (peaks from a little further, to see the mountain). */
   flyToPlace(c: LngLat, route: Route, km: number | null, kind?: string) {
+    this.cameraClaimed = true;
     const brg = km !== null ? route.bearingAt(km, 3) : this.map.getBearing();
     const zoom = kind === "peak" ? 12.4 : kind === "town" ? 12.6 : kind === "gap" ? 11.2 : kind === "pass" ? 13 : 13.4;
     this.map.flyTo({ center: c, zoom, pitch: kind === "peak" ? 64 : 58, bearing: brg, padding: this.padding, duration: reduceMotion() ? 0 : 2200, curve: 1.4, essential: true });
@@ -658,6 +689,7 @@ export class TrailMap {
    */
   orbit(c: LngLat, onEnd: () => void, opts: { zoom?: number; pitch?: number; period?: number } = {}): (() => void) | null {
     this.stopShow();
+    this.cameraClaimed = true;
     const m = this.map;
     const view = { center: c, zoom: opts.zoom ?? Math.max(12, Math.min(13.4, m.getZoom())), pitch: opts.pitch ?? 66, padding: this.padding };
     if (reduceMotion()) { m.jumpTo(view); return null; }
@@ -699,6 +731,7 @@ export class TrailMap {
    */
   eyeLevel(at: LngLat, brg: number, groundM: number | null): () => void {
     this.stopShow();
+    this.cameraClaimed = true;
     const m = this.map;
     let cancelled = false;
     const cancel = () => {
@@ -748,6 +781,7 @@ export class TrailMap {
   }
 
   overview(route: Route) {
+    this.cameraClaimed = true;
     const lines = route.parts.map((p) => Array.from(p.lng, (x, i) => [x, p.lat[i]] as LngLat));
     const b = route.bounds(lines)!;
     try {
@@ -760,6 +794,7 @@ export class TrailMap {
   /** First arrival: from the whole island down to where Ewan is. */
   async intro(target: LngLat | null, route: Route) {
     await this.whenReady();
+    if (this.cameraClaimed) return; // the visitor was quicker than the map: their view wins
     if (!target || reduceMotion()) {
       if (target) this.map.jumpTo({ center: target, zoom: 10.5, pitch: 50, padding: this.padding });
       else this.overview(route);
@@ -773,6 +808,7 @@ export class TrailMap {
   }
 
   toggle3d(): boolean {
+    this.cameraClaimed = true;
     const flat = this.map.getPitch() > 5;
     this.map.easeTo({ pitch: flat ? 0 : 58, bearing: flat ? 0 : this.map.getBearing(), duration: reduceMotion() ? 0 : 700 });
     return !flat;

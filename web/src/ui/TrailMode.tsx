@@ -2,14 +2,18 @@
 // Slide a finger along the profile and the camera travels there; press play and it flies on by itself.
 import { signal } from "@preact/signals";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
+import { computed } from "@preact/signals";
+import { mediaUrl } from "../config";
 import { lang, t } from "../i18n";
-import { latestPosition, phase, progressKm, route, walked } from "../lib/data";
+import { days, latestPosition, media, mediaPositions, phase, progressKm, route, walked } from "../lib/data";
 import { fmtInt, fmtKm } from "../lib/format";
+import type { Day, Media } from "../types";
+import { titleOf } from "./Home";
 import { places, profile, shortStation, trailElevation, type Place } from "../lib/places";
 import { TrailCam } from "../map/trailcam";
 import { Close, Pause, Play } from "./icons";
 import { placeName } from "./Place";
-import { cameraShow, detent, isDesktop, mapApi, replayState, trailMode } from "./state";
+import { cameraShow, closeTrailMode, detent, go, isDesktop, mapApi, pushFlyoverHash, replayState, trailMode } from "./state";
 
 const hud = signal<{ km: number; target: number; playing: boolean } | null>(null);
 
@@ -20,7 +24,35 @@ export function startTrailMode(km: number) {
   tm.stopShow();
   cameraShow.value = null;
   if (!isDesktop.value) detent.value = "peek";
-  trailMode.value = { startKm: Math.max(0, Math.min(route.value.total, km)) };
+  const k = Math.max(0, Math.min(route.value.total, km));
+  pushFlyoverHash(k);
+  trailMode.value = { startKm: k };
+}
+
+/** Ewan's photos placed along the trail (km), for the flyover to show them as it passes. */
+const photosAlong = computed(() => {
+  const r = route.value;
+  const pos = mediaPositions.value;
+  const byDay = new Map(days.value.map((d) => [d.id, d]));
+  const out: { km: number; m: Media; day: Day }[] = [];
+  for (const m of media.value) {
+    const c = pos.get(m.id);
+    const day = byDay.get(m.day_id);
+    if (!c || !day || m.kind === "embed") continue;
+    const snap = r.nearest(c);
+    if (snap.dist < 3000) out.push({ km: snap.km, m, day });
+  }
+  return out.sort((a, b) => a.km - b.km);
+});
+
+/** The day Ewan walked a km on (the latest, if he went through twice). */
+function dayAt(km: number): Day | null {
+  let found: Day | null = null;
+  for (const d of days.value) {
+    if (d.kind === "rest" || d.start_km === null || d.end_km === null) continue;
+    if (km >= Math.min(d.start_km, d.end_km) && km <= Math.max(d.start_km, d.end_km)) found = d;
+  }
+  return found;
 }
 
 const TOWNS = new Set(["Havelock", "St Arnaud", "Arthur's Pass (Klondyke Corner)", "Lake Tekapo", "Wānaka", "Queenstown", "Invercargill"]);
@@ -130,14 +162,14 @@ export function TrailMode() {
     hud.value = { km: c.km, target: c.target, playing: false };
     const onResize = () => c.setPadding(pad());
     window.addEventListener("resize", onResize);
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") trailMode.value = null; };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") closeTrailMode(); };
     document.addEventListener("keydown", onKey);
     // start flying on its own after the approach, unless the person took the profile or the map first
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const auto = still ? 0 : window.setTimeout(() => { if (cam.current === c && !c.playing && !c.grabbed && Math.abs(c.target - mode.startKm) < 0.01) c.play(); }, 3200);
     // keyboard and screen readers: into the flyover, and back where they were afterwards
     const before = document.activeElement as HTMLElement | null;
-    card.current?.querySelector<HTMLElement>(".trail-hud__profile")?.focus({ preventScroll: true });
+    card.current?.querySelector<HTMLElement>(".trail-hud__profile")?.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
     return () => {
       clearTimeout(auto);
       window.removeEventListener("resize", onResize);
@@ -162,21 +194,43 @@ export function TrailMode() {
   const toggle = () => { const c = cam.current; if (!c) return; if (c.playing) c.pause(); else c.play(); };
   const scrub = (km: number) => { const c = cam.current; if (!c) return; c.pause(); c.scrubTo(km); };
   const ewan = latestPosition.value && phase.value !== "before" ? progressKm.value : null;
+  const day = dayAt(target);
+  // the photo taken closest to where the camera is, within a couple of km
+  let photo: { km: number; m: Media; day: Day } | null = null;
+  for (const x of photosAlong.value) {
+    const d = Math.abs(x.km - target);
+    if (d < 1.5 && (!photo || d < Math.abs(photo.km - target))) photo = x;
+  }
+  const openPhoto = () => {
+    if (!photo) return;
+    const { m, day: pd } = photo;
+    trailMode.value = null;
+    // the flyover's address gives way to the day's (back then returns to where the flyover started)
+    go({ name: "day", n: pd.day_number, photo: m.id }, { replace: true });
+  };
 
   return (
     <div class="trail-hud glass" ref={card} role="region" aria-label={t("trailModeTitle")}>
       <div class="trail-hud__top">
+        {photo && (
+          <button class="trail-hud__photo" type="button" key={photo.m.id} onClick={openPhoto}
+            aria-label={`${t("day", { n: photo.day.day_number })}, ${t("photoBy")}`}>
+            <img src={mediaUrl(photo.m.thumb_path ?? photo.m.path)} alt="" decoding="async" />
+          </button>
+        )}
         <div class="trail-hud__where">
           <span class="trail-hud__name">{where}</span>
           <span class="trail-hud__meta num">
             km {fmtKm(target, l, 0)}{e !== null ? `, ${fmtInt(e, l)} m` : ""}
-            {ewan !== null && Math.abs(ewan - target) > 1 ? <span class="trail-hud__ewan">, {t(target < ewan ? "kmBehindEwan" : "kmAheadEwan", { km: fmtKm(Math.abs(ewan - target), l, 0) })}</span> : null}
+            {/* where Ewan walked, the day says it better than a distance */}
+            {!day && ewan !== null && Math.abs(ewan - target) > 1 ? <span class="trail-hud__ewan">, {t(target < ewan ? "kmBehindEwan" : "kmAheadEwan", { km: fmtKm(Math.abs(ewan - target), l, 0) })}</span> : null}
           </span>
+          {day && <span class="trail-hud__day"><span class="kicker__n">{t("day", { n: day.day_number })}</span> <span class="voice">{titleOf(day, l)}</span></span>}
         </div>
         <button class={`trail-hud__play${playing ? " is-playing" : ""}`} type="button" onClick={toggle} aria-label={playing ? t("pause") : t("play")}>
           {playing ? <Pause /> : <Play />}
         </button>
-        <button class="iconbtn" type="button" aria-label={t("closeFlyover")} onClick={() => (trailMode.value = null)}><Close /></button>
+        <button class="iconbtn" type="button" aria-label={t("closeFlyover")} onClick={closeTrailMode}><Close /></button>
       </div>
       <div class="trail-hud__profile" ref={wrap}
         role="slider" tabIndex={0} aria-label={t("profileLabel")}

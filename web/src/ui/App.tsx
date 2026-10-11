@@ -3,8 +3,8 @@ import { useEffect, useRef } from "preact/hooks";
 import { OFFLINE_MAP } from "../config";
 import { hikerName, lang, t } from "../i18n";
 import {
-  dayByNumber, days, latestDay, latestPosition, liveState, media, mediaPositions, positions,
-  route, settings, status, walked, offline,
+  dayByNumber, days, latestDay, latestPosition, liveState, media, mediaPositions, phase, positions,
+  progressKm, route, settings, status, walked, offline,
 } from "../lib/data";
 import { relTime } from "../lib/format";
 import type { LngLat } from "../lib/geo";
@@ -22,7 +22,7 @@ import { PlaceView, placeName } from "./Place";
 import { startReplay } from "./replayControl";
 import { Sheet } from "./Sheet";
 import {
-  cameraShow, detent, go, isDesktop, mapApi, mapBearing, replayState, searchQuery, toastMsg, trailMode, view,
+  cameraShow, detent, FLYOVER_RE, go, isDesktop, mapApi, mapBearing, replayState, searchQuery, toastMsg, trailMode, view,
 } from "./state";
 import { startTrailMode, TrailMode } from "./TrailMode";
 
@@ -218,6 +218,13 @@ export function App() {
     const tm = mapApi.value;
     if (!tm || introDone.current || status.value !== "ready") return;
     introDone.current = true;
+    const fly = FLYOVER_RE.exec(location.hash);
+    if (fly) {
+      // a flyover link: straight into it, from its km (or from where Ewan is)
+      const km = fly[1] !== undefined ? parseFloat(fly[1]) : phase.peek() === "before" ? 0 : progressKm.peek();
+      tm.whenReady().then(() => startTrailMode(km));
+      return;
+    }
     const v = view.peek();
     if (v.name === "day" || v.name === "place") return; // the view effect frames it
     const target = focusTarget();

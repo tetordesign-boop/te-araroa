@@ -58,6 +58,22 @@ export function hrefFor(v: View): string {
 
 let depth = 0;
 
+/** The flyover has its own address (#/survol), so the back gesture closes it and a link can open it. */
+export const FLYOVER_RE = /^#\/(?:survol|flyover)(?:\/(\d+(?:\.\d+)?))?\/?$/;
+export function pushFlyoverHash(km: number) {
+  if (FLYOVER_RE.test(location.hash)) return;
+  history.pushState(null, "", `#/survol/${Math.round(km)}`);
+  depth++;
+}
+export function closeTrailMode() {
+  if (!trailMode.value) return;
+  if (FLYOVER_RE.test(location.hash)) {
+    if (depth > 0) { history.back(); return; } // the popstate below ends the mode
+    history.replaceState(null, "", hrefFor(view.value));
+  }
+  trailMode.value = null;
+}
+
 /** Back inside the site; never leaves it (shared links land without in-site history). */
 export function goBack() {
   if (depth > 0) history.back();
@@ -76,6 +92,8 @@ export function go(v: View, opts: { replace?: boolean } = {}) {
 
 window.addEventListener("popstate", () => {
   depth = Math.max(0, depth - 1);
+  if (trailMode.value && !FLYOVER_RE.test(location.hash)) trailMode.value = null;
+  if (FLYOVER_RE.test(location.hash)) return; // back to a flyover address: the view under it stays
   const v = parse(location.hash);
   view.value = v;
   if (v.name === "home" && detent.value === "full") detent.value = "half";

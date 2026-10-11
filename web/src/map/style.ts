@@ -76,21 +76,39 @@ export function sky(s: { sky: string; horizon: string; fog: string }): SkySpecif
 const z = (stops: [number, number][]) => ["interpolate", ["linear"], ["zoom"], ...stops.flat()] as unknown as number;
 const name = ["coalesce", ["get", "name:latin"], ["get", "name"]];
 
+/**
+ * Shading colours: the palette's, or the light of the hour when the relief follows the real sun
+ * (warm slopes and violet shadows when the sun is low, blue at dusk).
+ */
+export function shadeColors(dark: boolean, satellite: boolean, sunAltitude: number | null) {
+  const p = dark ? DARK : LIGHT;
+  if (satellite) return { shadow: "rgba(0,0,0,0.6)", highlight: sunAltitude !== null && sunAltitude < 10 ? "rgba(255,214,160,0.22)" : "rgba(255,255,255,0.18)" };
+  if (sunAltitude === null || dark) return { shadow: p.shadow, highlight: p.highlight };
+  if (sunAltitude < 0) return { shadow: "#2b3352", highlight: "#e4e9ff" };
+  if (sunAltitude < 10) return { shadow: "#4d3f63", highlight: "#fff0d4" };
+  return { shadow: p.shadow, highlight: p.highlight };
+}
+
+/** Where the light comes from: the real sun, kept a little above the horizon so slopes never vanish. */
+export function sunLight(sun: { azimuth: number; altitude: number } | null | undefined) {
+  return sun
+    ? { anchor: "map" as const, direction: sun.azimuth, altitude: Math.max(18, Math.min(60, sun.altitude)) }
+    : { anchor: "viewport" as const, direction: 315, altitude: 45 };
+}
+
 function hillshade(p: Palette, o: StyleOptions, satellite: boolean) {
-  const sun = o.sun;
-  // the real sun, kept a little above the horizon so slopes never vanish in flat light
-  const direction = sun ? sun.azimuth : 315;
-  const altitude = sun ? Math.max(18, Math.min(60, sun.altitude)) : 45;
+  const light = sunLight(o.sun);
+  const tint = shadeColors(o.dark, satellite, o.sun?.altitude ?? null);
   return {
     id: "hillshade", type: "hillshade", source: "dem-hs",
     paint: {
       "hillshade-method": "igor",
-      "hillshade-illumination-anchor": sun ? "map" : "viewport",
-      "hillshade-illumination-direction": direction,
-      "hillshade-illumination-altitude": altitude,
+      "hillshade-illumination-anchor": light.anchor,
+      "hillshade-illumination-direction": light.direction,
+      "hillshade-illumination-altitude": light.altitude,
       "hillshade-exaggeration": satellite ? 0.32 : p.hsExaggeration,
-      "hillshade-shadow-color": satellite ? "rgba(0,0,0,0.6)" : p.shadow,
-      "hillshade-highlight-color": satellite ? "rgba(255,255,255,0.18)" : p.highlight,
+      "hillshade-shadow-color": tint.shadow,
+      "hillshade-highlight-color": tint.highlight,
       "hillshade-accent-color": p.accent,
     },
   };

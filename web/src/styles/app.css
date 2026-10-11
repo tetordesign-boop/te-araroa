@@ -883,6 +883,13 @@ input[role="switch"]:disabled { cursor: default; }
 .trail-hud__name { display: block; font-size: 17px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .trail-hud__meta { display: block; font-size: 13.5px; color: var(--ink-2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .trail-hud__ewan { color: var(--marker-text); font-family: var(--font-ui); }
+.trail-hud__day { display: block; font-size: 14px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trail-hud__day .voice { color: var(--ink); }
+.trail-hud__photo {
+  width: 54px; height: 54px; flex: none; border-radius: 12px; overflow: hidden; background: var(--fill-2);
+  box-shadow: 0 0 0 2px var(--glass-solid), 0 4px 12px -4px rgba(0, 0, 0, .4); animation: pop-in .3s var(--ease-out) both;
+}
+.trail-hud__photo img { width: 100%; height: 100%; object-fit: cover; }
 .trail-hud__play { width: 44px; height: 44px; border-radius: 50%; background: var(--marker); color: var(--on-marker); display: grid; place-items: center; flex: none; transition: transform .15s ease; }
 .trail-hud__play:active { transform: scale(.93); }
 .trail-hud__play svg { width: 19px; height: 19px; }

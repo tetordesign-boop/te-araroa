@@ -234,9 +234,9 @@ const fr = {
   mapPlan: "Plan",
   contours: "Courbes de niveau",
   realLight: "Lumière du moment",
-  realLightSub: "Le relief éclairé par le soleil, comme en ce moment en Nouvelle-Zélande",
+  realLightSub: "La carte prend la lumière qu'il fait en ce moment en Nouvelle-Zélande\u202f: soleil, crépuscule, nuit",
   sunNow: "Soleil à {alt}°, {dir}",
-  sunNight: "C'est la nuit là-bas",
+  sunNight: "C'est la nuit là-bas\u202f: carte de nuit",
   compass: "Remettre le nord en haut",
 };
 
@@ -472,9 +472,9 @@ const en: Dict = {
   mapPlan: "Map",
   contours: "Contour lines",
   realLight: "Light right now",
-  realLightSub: "The relief lit by the sun as it is right now in New Zealand",
+  realLightSub: "The map takes on the light it is right now in New Zealand: sun, dusk, night",
   sunNow: "Sun {alt}° up, {dir}",
-  sunNight: "It's night over there",
+  sunNight: "It's night over there: night map",
   compass: "Point north up",
 };
 
@@ -504,7 +504,10 @@ export function t(key: Key, vars: Record<string, string | number> = {}): string 
   const name = hikerName.value || "Ewan";
   s = s.replace(/Ewan/g, name);
   for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
-  return s.replace("{name}", name);
+  s = s.replace("{name}", name);
+  // French typography: a narrow no-break space before ? ! : ; and inside « », so no sign is left alone on a line
+  if (lang.value === "fr") s = s.replace(/[ \u00a0]+([?!:;»])/g, "\u202f$1").replace(/«[ \u00a0]+/g, "«\u202f");
+  return s;
 }
 
 /** WMO weather codes → short label. */

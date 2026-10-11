@@ -35,6 +35,7 @@ export class TrailCam {
     this.padding = padding;
     const m = tm.map;
     tm.stopShow();
+    tm.claimCamera();
     tm.replaying = true;
     document.documentElement.classList.add("is-replaying");
 
