@@ -1,9 +1,12 @@
 // Screenshots of the site with the real map (run in GitHub Actions, which can reach the tile servers).
 // Usage: node scripts/qa/shots.mjs <outdir> [only-prefix]
 import { chromium } from "playwright";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-const [, , OUT = "/tmp/shots", only = process.env.ONLY ?? ""] = process.argv;
+// which views to take: all, or the ids starting with one of the prefixes in scripts/qa/only.txt (one per line)
+const onlyFile = new URL("./only.txt", import.meta.url);
+const [, , OUT = "/tmp/shots", only = process.env.ONLY ?? (existsSync(onlyFile) ? readFileSync(onlyFile, "utf8") : "")] = process.argv;
+const prefixes = only.split(/[\s,]+/).filter(Boolean);
 mkdirSync(OUT, { recursive: true });
 const BASE = process.env.BASE || "http://localhost:5173/";
 const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--enable-webgl"] });
@@ -61,7 +64,7 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
 
 const log = [];
 for (const s of shots) {
-  if (only && !s.id.startsWith(only)) continue;
+  if (prefixes.length && !prefixes.some((x) => s.id.startsWith(x))) continue;
   const ctx = await browser.newContext(s.ctx);
   const page = await ctx.newPage();
   const errs = [];

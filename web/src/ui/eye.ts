@@ -3,7 +3,7 @@ import { bearing, type LngLat } from "../lib/geo";
 import { trailElevation } from "../lib/places";
 import { cameraShow, detent, isDesktop, mapApi, replayState, trailMode } from "./state";
 
-/** The camera at eye level just behind Ewan, looking where the trail takes him. */
+/** The camera just behind Ewan, a little above him, looking where the trail takes him. */
 export function startEyeView() {
   const tm = mapApi.value;
   const lp = latestPosition.value;

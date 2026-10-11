@@ -159,11 +159,12 @@ export class TrailMap {
   };
   /** someone (or something they asked for) has moved the camera: the arrival flight must not take it back */
   private cameraClaimed = false;
-  claimCamera() { this.cameraClaimed = true; }
+  claimCamera() { this.cameraClaimed = true; this.flightToken++; }
 
   private onRawInput = (e: Event) => {
     if (e.type === "pointerdown" && (e as PointerEvent).button > 0) return;
     this.cameraClaimed = true;
+    this.flightToken++; // the map is theirs now: no re-centring behind their back
     this.stopShow();
     this.cb.onUserInput?.();
   };
@@ -632,6 +633,7 @@ export class TrailMap {
 
   flyToDay(day: Day, route: Route) {
     this.cameraClaimed = true;
+    this.flightToken++;
     if (day.start_km === null || day.end_km === null) return;
     const lines = route.slice(day.start_km, day.end_km);
     if (!lines.length) {
@@ -654,6 +656,7 @@ export class TrailMap {
   /** Frame a set of places (search results). */
   fitPlaces(cs: LngLat[]) {
     this.cameraClaimed = true;
+    this.flightToken++;
     if (!cs.length) return;
     if (cs.length === 1) { this.flyTo(cs[0], 12.4, 50); return; }
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -665,7 +668,7 @@ export class TrailMap {
 
   flyTo(c: LngLat, zoom = 12.5, pitch = 55) {
     this.cameraClaimed = true;
-    this.map.flyTo({ center: c, zoom, pitch, padding: this.padding, duration: reduceMotion() ? 0 : 2000, essential: true });
+    this.flyAndCentre({ center: c, zoom, pitch, padding: this.padding, duration: reduceMotion() ? 0 : 2000, essential: true }, c);
   }
 
   /** Close-up on a place, looking along the trail (peaks from a little further, to see the mountain). */
@@ -673,7 +676,35 @@ export class TrailMap {
     this.cameraClaimed = true;
     const brg = km !== null ? route.bearingAt(km, 3) : this.map.getBearing();
     const zoom = kind === "peak" ? 12.4 : kind === "town" ? 12.6 : kind === "gap" ? 11.2 : kind === "pass" ? 13 : 13.4;
-    this.map.flyTo({ center: c, zoom, pitch: kind === "peak" ? 64 : 58, bearing: brg, padding: this.padding, duration: reduceMotion() ? 0 : 2200, curve: 1.4, essential: true });
+    this.flyAndCentre({ center: c, zoom, pitch: kind === "peak" ? 64 : 58, bearing: brg, padding: this.padding, duration: reduceMotion() ? 0 : 2200, curve: 1.4, essential: true }, c);
+  }
+
+  /** a newer flight, or the person's hand, makes a pending re-centring obsolete */
+  private flightToken = 0;
+
+  /**
+   * Fly, then make sure the target really is in the middle. In 3D the relief at the destination often
+   * arrives after the camera does; MapLibre then keeps the camera where it is and the place drifts up
+   * the screen (by a lot for a hut at 1 500 m). Once the relief is there, a short glide puts it back.
+   */
+  private flyAndCentre(opts: maplibregl.FlyToOptions, target: LngLat) {
+    const m = this.map;
+    const token = ++this.flightToken;
+    const check = () => {
+      if (token !== this.flightToken || this.gesturing || this.replaying || m.isMoving()) return;
+      let p: maplibregl.Point;
+      try { p = m.project(target); } catch (_) { return; }
+      const el = m.getContainer(), pad = this.padding;
+      const cx = (pad.left + el.clientWidth - pad.right) / 2, cy = (pad.top + el.clientHeight - pad.bottom) / 2;
+      if (Math.hypot(p.x - cx, p.y - cy) > 24) m.easeTo({ center: target, padding: this.padding, duration: reduceMotion() ? 0 : 800, essential: true });
+    };
+    this.moveThen(() => m.flyTo(opts), () => {
+      if (token !== this.flightToken) return;
+      let done = false;
+      const once = () => { if (!done) { done = true; check(); } };
+      m.once("idle", once);
+      window.setTimeout(once, 3000);
+    });
   }
 
   /** Stop the orbit or the eye-level view, if one is running. */
@@ -690,6 +721,7 @@ export class TrailMap {
   orbit(c: LngLat, onEnd: () => void, opts: { zoom?: number; pitch?: number; period?: number } = {}): (() => void) | null {
     this.stopShow();
     this.cameraClaimed = true;
+    this.flightToken++;
     const m = this.map;
     const view = { center: c, zoom: opts.zoom ?? Math.max(12, Math.min(13.4, m.getZoom())), pitch: opts.pitch ?? 66, padding: this.padding };
     if (reduceMotion()) { m.jumpTo(view); return null; }
@@ -725,13 +757,15 @@ export class TrailMap {
   }
 
   /**
-   * "What Ewan sees": a camera a few dozen metres above the ground just behind him, looking down the trail.
-   * First a normal approach, so the relief there is loaded, then down to eye level. Touching the map on the
-   * way cancels the descent; once there, the view is the person's to look around.
+   * "What Ewan sees": a drone just over his shoulder (a few hundred metres behind and above him), looking
+   * down the trail towards the horizon, him in the lower part of the picture. Any lower and the near ground
+   * fills the screen. First a normal approach, so the relief there is loaded, then the descent. Touching the
+   * map on the way cancels the descent; once there, the view is the person's to look around.
    */
   eyeLevel(at: LngLat, brg: number, groundM: number | null): () => void {
     this.stopShow();
     this.cameraClaimed = true;
+    this.flightToken++;
     const m = this.map;
     let cancelled = false;
     const cancel = () => {
@@ -743,17 +777,17 @@ export class TrailMap {
     const descend = () => {
       if (cancelled) return;
       const ex = m.getTerrain()?.exaggeration ?? 1;
-      const behind = destination(at, (brg + 180) % 360, 260);
+      const behind = destination(at, (brg + 180) % 360, 600);
       const ground = (p: LngLat) => {
         const g = m.queryTerrainElevation(p);
         return g !== null && g > 1 ? g : (groundM ?? 0) * ex;
       };
-      const alt = Math.max(ground(behind), ground(at), ground(destination(at, brg, 300))) + 60;
-      let cam: maplibregl.CameraOptions = { center: destination(at, brg, 900), zoom: 15, pitch: 80, bearing: brg };
+      const alt = Math.max(ground(behind), ground(at), ground(destination(at, brg, 400))) + 300;
+      let cam: maplibregl.CameraOptions = { center: destination(at, brg, 900), zoom: 14.4, pitch: 78, bearing: brg };
       try {
         // keep only what the animation understands: an undefined `roll` would turn the matrices into NaN
-        const c = m.calculateCameraOptionsFromCameraLngLatAltRotation(behind, alt, brg, 80);
-        if (c.center && Number.isFinite(c.zoom)) cam = { center: c.center, zoom: c.zoom, pitch: 80, bearing: brg };
+        const c = m.calculateCameraOptionsFromCameraLngLatAltRotation(behind, alt, brg, 78);
+        if (c.center && Number.isFinite(c.zoom)) cam = { center: c.center, zoom: c.zoom, pitch: 78, bearing: brg };
       } catch (_) { /* keep the fallback */ }
       this.moveThen(() => m.easeTo({ ...cam, padding: this.padding, duration: instant ? 0 : 3200, easing: easeInOut, essential: true }), cancel);
     };
@@ -782,6 +816,7 @@ export class TrailMap {
 
   overview(route: Route) {
     this.cameraClaimed = true;
+    this.flightToken++;
     const lines = route.parts.map((p) => Array.from(p.lng, (x, i) => [x, p.lat[i]] as LngLat));
     const b = route.bounds(lines)!;
     try {
@@ -809,6 +844,7 @@ export class TrailMap {
 
   toggle3d(): boolean {
     this.cameraClaimed = true;
+    this.flightToken++;
     const flat = this.map.getPitch() > 5;
     this.map.easeTo({ pitch: flat ? 0 : 58, bearing: flat ? 0 : this.map.getBearing(), duration: reduceMotion() ? 0 : 700 });
     return !flat;

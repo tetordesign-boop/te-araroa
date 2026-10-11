@@ -613,7 +613,8 @@ textarea.field { min-height: 108px; line-height: 1.45; font-family: var(--font-v
   border-left: 10px solid #fff; border-top: 6.5px solid transparent; border-bottom: 6.5px solid transparent;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .5));
 }
-.is-replaying .photo-pin { opacity: 0; pointer-events: none; }
+/* (MapLibre sets an inline opacity on markers when terrain is on, hence the !important) */
+.is-replaying .photo-pin { opacity: 0 !important; visibility: hidden; pointer-events: none; }
 
 
 .maplibregl-ctrl-bottom-right { bottom: calc(var(--sheet-visible) + var(--safe-b) + 12px); transition: bottom .5s var(--ease-sheet); }
