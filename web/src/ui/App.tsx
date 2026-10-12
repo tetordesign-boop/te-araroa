@@ -188,7 +188,7 @@ export function App() {
       mapApi.value = tm;
       if (import.meta.env.DEV) {
         // for the screenshot scripts: the map, and the few switches a visitor would flip
-        Object.assign(window, { __tm: tm, __ui: { detent, go, startTrailMode, startEyeView, modesOpen } });
+        Object.assign(window, { __tm: tm, __ui: { detent, go, startTrailMode, startEyeView, modesOpen }, __maplibre: (await import("maplibre-gl")).default });
       }
       const m = tm.map;
       let raf = 0;

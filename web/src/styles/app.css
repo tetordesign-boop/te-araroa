@@ -781,13 +781,13 @@ textarea.field { min-height: 108px; line-height: 1.45; font-family: var(--font-v
 .sheet.is-full .hscroll { touch-action: pan-x pan-y; }
 .chips.chips--scroll { margin-top: 12px; }
 .next {
-  flex: none; width: 164px; min-height: 112px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 3px;
+  flex: none; width: 178px; min-height: 112px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 3px;
   padding: 12px 13px 12px; border-radius: 18px; background: var(--platter); text-decoration: none; color: inherit;
   transition: background-color .15s ease, transform .15s ease;
 }
 .next:active { background: var(--platter-press); transform: scale(.98); }
 .next__top { display: flex; align-items: center; gap: 7px; }
-.next__label { font-size: 12.5px; font-weight: 600; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.next__label { font-size: 12.5px; font-weight: 600; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .next__name { font-size: 16px; line-height: 1.22; font-weight: 650; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .next__meta { font-size: 13px; color: var(--ink-2); margin-top: auto; padding-top: 4px; }
 
@@ -857,17 +857,18 @@ input[role="switch"]:checked::before { transform: translateX(20px); }
 input[role="switch"]:disabled { cursor: default; }
 
 /* what the camera is doing on its own */
+/* at the top: the camera puts Ewan (or the place) in the lower part of the picture */
 .show-pill {
   position: absolute; z-index: 40; left: 50%; translate: -50% 0;
-  bottom: calc(var(--sheet-visible) + var(--safe-b) + 22px);
+  top: calc(var(--safe-t) + 66px);
   display: flex; align-items: center; gap: 12px; padding: 7px 7px 7px 16px; border-radius: 999px;
-  max-width: calc(100vw - 32px); transition: bottom .5s var(--ease-sheet); animation: hud-in .35s var(--ease-out) both;
+  max-width: calc(100vw - 32px); animation: pop-in .3s var(--ease-out) both;
 }
 .show-pill > svg { width: 22px; height: 22px; color: var(--marker); flex: none; }
 .show-pill__text { min-width: 0; }
 .show-pill__text strong { display: block; font-size: 15px; font-weight: 650; white-space: nowrap; }
 .show-pill__text small { display: block; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (min-width: 900px) { .show-pill { left: calc(50% + 230px); bottom: 28px; } }
+@media (min-width: 900px) { .show-pill { left: calc(50% + 230px); top: 16px; } }
 
 /* the whole-trail flyover */
 .trail-hud {
@@ -891,6 +892,7 @@ input[role="switch"]:disabled { cursor: default; }
   box-shadow: 0 0 0 2px var(--glass-solid), 0 4px 12px -4px rgba(0, 0, 0, .4); animation: pop-in .3s var(--ease-out) both;
 }
 .trail-hud__photo img { width: 100%; height: 100%; object-fit: cover; }
+@media (max-width: 360px) { .trail-hud__photo { width: 44px; height: 44px; } .trail-hud__play { width: 40px; height: 40px; } }
 .trail-hud__play { width: 44px; height: 44px; border-radius: 50%; background: var(--marker); color: var(--on-marker); display: grid; place-items: center; flex: none; transition: transform .15s ease; }
 .trail-hud__play:active { transform: scale(.93); }
 .trail-hud__play svg { width: 19px; height: 19px; }

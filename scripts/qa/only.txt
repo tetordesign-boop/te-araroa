@@ -1,10 +1,7 @@
-m-home-peek
+m-home-half
 m-place-hut
 m-place-pass
 m-orbit
 m-eye
-m-trail
 d-eye
-d-trail
-d-sun
-d-dark-home
+d-place-peak

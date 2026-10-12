@@ -132,6 +132,11 @@ export class TrailMap {
     cc.addEventListener("pointerdown", this.onRawInput, { capture: true, passive: true });
     cc.addEventListener("wheel", this.onRawInput, { capture: true, passive: true });
     this.map.on("moveend", () => {
+      // MapLibre leaves the height of the map's centre frozen after a scripted flight over terrain (only a
+      // gesture unfreezes it), so relief that arrives after the camera never lifts it and the place in the
+      // middle drifts up the screen, by a lot for a hut at 1 500 m. Let the centre follow the ground again.
+      const ml = this.map as unknown as { _elevationFreeze?: boolean };
+      if (!this.gesturing && ml._elevationFreeze && !this.map.isEasing()) ml._elevationFreeze = false;
       if (this.gesturing) {
         this.gesturing = false;
         if (this.pendingPadding) {
