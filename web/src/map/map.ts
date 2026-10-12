@@ -782,17 +782,18 @@ export class TrailMap {
     const descend = () => {
       if (cancelled) return;
       const ex = m.getTerrain()?.exaggeration ?? 1;
-      const behind = destination(at, (brg + 180) % 360, 600);
+      // far and high enough that he stays in the frame above the panel, low enough to see the horizon
+      const behind = destination(at, (brg + 180) % 360, 800);
       const ground = (p: LngLat) => {
         const g = m.queryTerrainElevation(p);
         return g !== null && g > 1 ? g : (groundM ?? 0) * ex;
       };
-      const alt = Math.max(ground(behind), ground(at), ground(destination(at, brg, 400))) + 300;
-      let cam: maplibregl.CameraOptions = { center: destination(at, brg, 900), zoom: 14.4, pitch: 78, bearing: brg };
+      const alt = Math.max(ground(behind), ground(at), ground(destination(at, brg, 400))) + 380;
+      let cam: maplibregl.CameraOptions = { center: destination(at, brg, 900), zoom: 14.2, pitch: 76, bearing: brg };
       try {
         // keep only what the animation understands: an undefined `roll` would turn the matrices into NaN
-        const c = m.calculateCameraOptionsFromCameraLngLatAltRotation(behind, alt, brg, 78);
-        if (c.center && Number.isFinite(c.zoom)) cam = { center: c.center, zoom: c.zoom, pitch: 78, bearing: brg };
+        const c = m.calculateCameraOptionsFromCameraLngLatAltRotation(behind, alt, brg, 76);
+        if (c.center && Number.isFinite(c.zoom)) cam = { center: c.center, zoom: c.zoom, pitch: 76, bearing: brg };
       } catch (_) { /* keep the fallback */ }
       this.moveThen(() => m.easeTo({ ...cam, padding: this.padding, duration: instant ? 0 : 3200, easing: easeInOut, essential: true }), cancel);
     };

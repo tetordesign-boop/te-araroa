@@ -1,7 +1,2 @@
-m-home-half
-m-place-hut
-m-place-pass
-m-orbit
 m-eye
 d-eye
-d-place-peak
