@@ -788,7 +788,9 @@ export class TrailMap {
         const g = m.queryTerrainElevation(p);
         return g !== null && g > 1 ? g : (groundM ?? 0) * ex;
       };
-      const alt = Math.max(ground(behind), ground(at), ground(destination(at, brg, 400))) + 380;
+      // 250 m up and 800 m back: the line of sight to him is ~17° down, about 3° under the middle of the
+      // picture, so he stays in frame even above the phone's panel, and the horizon is still in view
+      const alt = Math.max(ground(behind), ground(at), ground(destination(at, brg, 400))) + 250;
       let cam: maplibregl.CameraOptions = { center: destination(at, brg, 900), zoom: 14.2, pitch: 76, bearing: brg };
       try {
         // keep only what the animation understands: an undefined `roll` would turn the matrices into NaN
