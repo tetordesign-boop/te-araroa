@@ -18,6 +18,8 @@ export function HutBook({ dayId }: { dayId: string | null }) {
   const [body, setBody] = useState("");
   const [trap, setTrap] = useState("");
   const [state, setState] = useState<{ kind: "idle" | "sending" | "ok" | "error"; msg?: string }>({ kind: "idle" });
+  /** the note just signed: it glows a moment at the top of the book */
+  const [fresh, setFresh] = useState<string | null>(null);
   const firstField = useRef<HTMLInputElement>(null);
   const message = useRef<HTMLTextAreaElement>(null);
   const writeBtn = useRef<HTMLButtonElement>(null);
@@ -56,7 +58,9 @@ export function HutBook({ dayId }: { dayId: string | null }) {
     setState({ kind: "sending" });
     try { localStorage.setItem(NAME_KEY, a); } catch (_) { /* ignore */ }
     if (MOCK) {
-      setMsgs([...(msgs ?? []), { id: String(Date.now()), day_id: dayId, author: a, body: b, created_at: new Date().toISOString() }]);
+      const id = String(Date.now());
+      setMsgs([...(msgs ?? []), { id, day_id: dayId, author: a, body: b, created_at: new Date().toISOString() }]);
+      setFresh(id);
       setBody(""); close(); setState({ kind: "ok", msg: t("signed") });
       return;
     }
@@ -68,6 +72,7 @@ export function HutBook({ dayId }: { dayId: string | null }) {
     }
     const row = (Array.isArray(data) ? data[0] : data) as Message;
     setMsgs([...(msgs ?? []), row]);
+    setFresh(row.id);
     if (dayId) messageCounts.value = { ...messageCounts.value, [dayId]: (messageCounts.value[dayId] ?? 0) + 1 };
     setBody(""); close();
     setState({ kind: "ok", msg: t("signed") });
@@ -87,7 +92,7 @@ export function HutBook({ dayId }: { dayId: string | null }) {
       {shown.length > 0 && (
         <ol class="hut__list">
           {shown.map((m, i) => (
-            <li class="hut__entry" ref={all && i === SHOWN ? firstHidden : undefined} tabIndex={all && i === SHOWN ? -1 : undefined}>
+            <li class={`hut__entry${m.id === fresh ? " is-new" : ""}`} ref={all && i === SHOWN ? firstHidden : undefined} tabIndex={all && i === SHOWN ? -1 : undefined}>
               <div class="hut__who"><span>{m.author}</span><time dateTime={m.created_at}>{relTime(m.created_at, l)}</time></div>
               <p class="hut__body">{typo(m.body)}</p>
             </li>

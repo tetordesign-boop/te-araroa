@@ -12,7 +12,7 @@ import { openSearch } from "./Explore";
 import { HutBook } from "./HutBook";
 import { ChevronRight, Eye, Play, Search, Trail } from "./icons";
 import { altText, openPlace, PlaceBadge, placeName } from "./Place";
-import { go, hrefFor, isDesktop } from "./state";
+import { arrival, go, hrefFor, isDesktop } from "./state";
 import { startTrailMode } from "./TrailMode";
 import { shortPlace, TrailStrip } from "./TrailStrip";
 import { useWeather } from "./WeatherClock";
@@ -80,23 +80,34 @@ function Conditions() {
   );
 }
 
+/** Walked ranges cut at a km (the strip follows the map while the trail draws itself). */
+const upTo = (ranges: [number, number][], max: number): [number, number][] =>
+  ranges.flatMap(([a, b]): [number, number][] => (a >= max ? [] : [[a, Math.min(b, max)]]));
+
 function Now() {
   const l = lang.value;
   const r = route.value;
   const km = progressKm.value;
   const ph = phase.value;
   const n = dayOnTrail.value;
+  // the arrival: the kilometres count up with the trail drawing itself on the map
+  const a = arrival.value;
+  const shown = a === null ? km : km * a;
   return (
     <section class="now" aria-label={t("whereNow")}>
       <Status />
       <div class="now__row">
-        <div class="now__km"><span class="num now__big">{fmtKm(km, l, 0)}</span><span class="now__unit">km</span></div>
+        <div class="now__km">
+          <span class="num now__big" aria-hidden={a !== null}>{fmtKm(shown, l, 0)}</span>
+          {a !== null && <span class="sr-only">{fmtKm(km, l, 0)}</span>}
+          <span class="now__unit">km</span>
+        </div>
         <div class="now__side">
           {n ? <span class="now__day">{ph === "after" ? t("finished", { n }) : t("day", { n })}</span> : null}
           <span class="now__of">{t("ofTotal", { total: fmtKm(r.total, l, 0) })}</span>
         </div>
       </div>
-      <TrailStrip route={r} walked={walked.value.hike} here={km} />
+      <TrailStrip route={r} walked={a === null ? walked.value.hike : upTo(walked.value.hike, shown)} here={shown} legendAt={km} />
       {latestPosition.value && <Conditions />}
       <Actions />
     </section>

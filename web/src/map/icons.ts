@@ -19,23 +19,36 @@ export const BADGE_GLYPHS: Record<PoiKind | "town", string> = {
 };
 
 function badge(color: string, glyph: string, dark: boolean, size: number) {
-  const ring = dark ? "rgba(0,0,0,0.55)" : "#ffffff";
   const r = size / 2;
+  const glyphs = `<g transform="translate(${r - size * 0.32} ${r - size * 0.32}) scale(${(size * 0.64) / 24})" fill="${dark ? "#0C1526" : "#fff"}">${glyph}</g>`;
+  if (dark) {
+    // a bright disk with a soft glow of its own colour, ringed with the night so it stands off the relief
+    const m = 5;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size + 2 * m}" height="${size + 2 * m}" viewBox="${-m} ${-m} ${size + 2 * m} ${size + 2 * m}">
+    <defs><filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2"/></filter></defs>
+    <circle cx="${r}" cy="${r}" r="${r}" fill="${color}" opacity="0.6" filter="url(#g)"/>
+    <circle cx="${r}" cy="${r}" r="${r - 0.6}" fill="${color}" stroke="#0C1526" stroke-width="1.6"/>
+    ${glyphs}
+  </svg>`;
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size + 8}" height="${size + 8}" viewBox="${-4} ${-4} ${size + 8} ${size + 8}">
-    <defs><filter id="s" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#000" flood-opacity="${dark ? 0.6 : 0.28}"/></filter></defs>
-    <circle cx="${r}" cy="${r}" r="${r - 0.5}" fill="${color}" stroke="${ring}" stroke-width="2" filter="url(#s)"/>
-    <g transform="translate(${r - size * 0.32} ${r - size * 0.32}) scale(${(size * 0.64) / 24})" fill="#fff">${glyph}</g>
+    <defs><filter id="s" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#000" flood-opacity="0.28"/></filter></defs>
+    <circle cx="${r}" cy="${r}" r="${r - 0.5}" fill="${color}" stroke="#ffffff" stroke-width="2" filter="url(#s)"/>
+    ${glyphs}
   </svg>`;
 }
 
 const peak = (dark: boolean) => `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="13" viewBox="0 0 14 13">
-  <path d="M7 1.4 12.8 11.6H1.2z" fill="${dark ? "#e5e5ea" : "#3a3a3c"}" stroke="${dark ? "rgba(0,0,0,0.6)" : "#fff"}" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
+  <path d="M7 1.4 12.8 11.6H1.2z" fill="${dark ? "#EAF2FF" : "#3a3a3c"}" stroke="${dark ? "#0C1526" : "#fff"}" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
 
 const station = (dark: boolean) => `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-  <circle cx="8" cy="8" r="5.6" fill="${dark ? "#1c1c1e" : "#fff"}" stroke="${dark ? "#f2f2f7" : "#1c1c1e"}" stroke-width="2.4"/></svg>`;
+  <circle cx="8" cy="8" r="5.6" fill="${dark ? "#0C1526" : "#fff"}" stroke="${dark ? "#F3F6FB" : "#1c1c1e"}" stroke-width="2.4"/></svg>`;
 
-const ring = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44">
-  <circle cx="22" cy="22" r="19" fill="rgba(255,107,18,0.16)" stroke="#FF6B12" stroke-width="3"/></svg>`;
+/** around the place whose card is open: the map's turquoise */
+const ring = (dark: boolean) => `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <defs><filter id="g" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.6"/></filter></defs>
+  <circle cx="24" cy="24" r="19" fill="none" stroke="${dark ? "#5CD6E6" : "#FF6B12"}" stroke-width="4" opacity="0.5" filter="url(#g)"/>
+  <circle cx="24" cy="24" r="19" fill="${dark ? "rgba(92,214,230,0.16)" : "rgba(255,107,18,0.16)"}" stroke="${dark ? "#5CD6E6" : "#FF6B12"}" stroke-width="2.6"/></svg>`;
 
 const cache = new Map<string, Promise<ImageData>>();
 function raster(svg: string, scale = 2): Promise<ImageData> {
@@ -72,6 +85,6 @@ export async function installIcons(map: MLMap, dark: boolean) {
   add("poi-peak", peak(dark));
   add("poi-peak-big", peak(dark));
   add("station", station(dark));
-  add("poi-ring", ring);
+  add("poi-ring", ring(dark));
   await Promise.all(jobs);
 }

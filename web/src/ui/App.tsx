@@ -16,13 +16,13 @@ import { endEyeView, startEyeView } from "./eye";
 import { Home } from "./Home";
 import { dayKm } from "./Home";
 import { Close, Compass, Eye, Locate, MapIcon, Marker, Orbit, Replay, Search } from "./icons";
-import { MapModes, mapPrefs, modesOpen } from "./MapModes";
+import { MapModes, mapPrefs, modesClosedAt, modesOpen } from "./MapModes";
 import { About, Journal, Stats } from "./Pages";
 import { PlaceView, placeName } from "./Place";
 import { startReplay } from "./replayControl";
 import { Sheet } from "./Sheet";
 import {
-  cameraShow, detent, FLYOVER_RE, go, isDesktop, mapApi, mapBearing, replayState, searchQuery, toastMsg, trailMode, view,
+  arrival, cameraShow, detent, FLYOVER_RE, go, goBack, isDesktop, mapApi, mapBearing, replayState, searchQuery, toastMsg, trailMode, view,
 } from "./state";
 import { startTrailMode, TrailMode } from "./TrailMode";
 
@@ -70,6 +70,13 @@ function focusTarget(): LngLat | null {
   if (ld?.end_km != null) return route.value.pointAt(ld.end_km);
   return null;
 }
+
+/** Whether this visit opens on the plain map (not a link to a day, a place or the flyover): then the trail draws itself in. */
+function arrivesPlain() {
+  const h = location.hash;
+  return !FLYOVER_RE.test(h) && !/^#\/?(jour|day|lieu|place)\//.test(h);
+}
+const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 /** After the sheet has moved (it changes the map's padding): camera flights start from the new framing. */
 const afterLayout = (fn: () => void) => requestAnimationFrame(() => requestAnimationFrame(fn));
@@ -133,7 +140,7 @@ function ShowPill() {
   if (!s) return null;
   if (s.kind === "eye") {
     return (
-      <div class="show-pill glass" role="status">
+      <div class="show-pill show-pill--eye glass" role="status">
         <Eye />
         <span class="show-pill__text"><strong>{t("eyeTitle")}</strong><small>{t("eyeSub")}</small></span>
         <button class="iconbtn" type="button" aria-label={t("close")} onClick={endEyeView}><Close /></button>
@@ -179,16 +186,19 @@ export function App() {
         onLive: () => { go({ name: "home" }); detent.value = "half"; },
         onPlace: (id) => go({ name: "place", id }),
         onStation: (i) => go({ name: "place", id: `s${i}` }),
-        onInteract: () => {
-          modesOpen.value = false;
-          if (!isDesktop.value && detent.value === "half") detent.value = "peek";
-        },
+        // moving the map leaves the sheet where it is (as in Apple Maps): only the map modes card closes
+        onInteract: () => { modesOpen.value = false; },
         onUserInput: () => replayState.peek()?.stop(true),
-      }, land, { base: prefs.base, contours: prefs.contours, sun: prefs.sun, groups: poiGroups.peek() });
+        // a tap on nothing closes the place card, like tapping beside a pin in Maps
+        onEmptyTap: () => {
+          if (modesOpen.peek() || performance.now() - modesClosedAt < 500) { modesOpen.value = false; return; } // that tap closed the map modes
+          if (view.peek().name === "place") goBack();
+        },
+      }, land, { base: prefs.base, contours: prefs.contours, sun: prefs.sun, groups: poiGroups.peek(), arrival: arrivesPlain() });
       mapApi.value = tm;
       if (import.meta.env.DEV) {
         // for the screenshot scripts: the map, and the few switches a visitor would flip
-        Object.assign(window, { __tm: tm, __ui: { detent, go, startTrailMode, startEyeView, modesOpen }, __maplibre: (await import("maplibre-gl")).default });
+        Object.assign(window, { __tm: tm, __ui: { detent, go, startTrailMode, startEyeView, modesOpen, arrival }, __maplibre: (await import("maplibre-gl")).default });
       }
       const m = tm.map;
       let raf = 0;
@@ -221,14 +231,38 @@ export function App() {
     const fly = FLYOVER_RE.exec(location.hash);
     if (fly) {
       // a flyover link: straight into it, from its km (or from where Ewan is)
+      tm.skipArrival();
       const km = fly[1] !== undefined ? parseFloat(fly[1]) : phase.peek() === "before" ? 0 : progressKm.peek();
       tm.whenReady().then(() => startTrailMode(km));
       return;
     }
     const v = view.peek();
-    if (v.name === "day" || v.name === "place") return; // the view effect frames it
+    if (v.name === "day" || v.name === "place") { tm.skipArrival(); return; } // the view effect frames it
     const target = focusTarget();
-    window.setTimeout(() => tm.intro(target, route.peek()), 350);
+    // The one orchestrated moment: over the whole island, the trail he walked lights up from Ship Cove while his
+    // kilometres count up on the same clock; he lands with a ping and the camera dives to him. It starts once the
+    // map is on screen (or 1.5 s after the data at the latest, so a slow map never holds the page back).
+    const D = 2200;
+    const counting = !window.matchMedia("(prefers-reduced-motion: reduce)").matches && progressKm.peek() > 0.5;
+    if (counting) arrival.value = 0;
+    let started = false;
+    const begin = () => {
+      if (started) return;
+      started = true;
+      const t0 = performance.now();
+      void tm.drawIn(t0, D);
+      if (counting) {
+        const tick = (now: number) => {
+          const k = Math.min(1, (now - t0) / D);
+          arrival.value = k < 1 ? easeInOut(k) : null;
+          if (k < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+      tm.whenReady().then(() => window.setTimeout(() => tm.intro(target, route.peek()), Math.max(0, t0 + 1500 - performance.now())));
+    };
+    tm.whenReady().then(begin);
+    window.setTimeout(begin, 1500);
   }), []);
 
   // ---- react to navigation: select and frame what the view is about (once per view, not on every data refresh)

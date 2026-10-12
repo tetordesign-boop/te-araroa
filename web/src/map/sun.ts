@@ -26,9 +26,18 @@ export function sunPosition(date: Date, lat: number, lng: number): { azimuth: nu
   return { azimuth: (az / rad + 180 + 360) % 360, altitude: altitude / rad };
 }
 
-/** Sky colours for the 3D horizon, by sun altitude: night, blue hour, golden hour, day. */
+/**
+ * Sky colours for the 3D horizon, by sun altitude: night, blue hour, golden hour, day. On the night map the
+ * sky stays dark and only its horizon takes the colour of the hour (violet, then embers, then a deep blue).
+ */
 export function skyFor(altitude: number, dark: boolean) {
-  if (dark || altitude < -6) return { sky: "#0b1322", horizon: "#22324a", fog: "#1a2433" };
+  if (dark) {
+    if (altitude < -6) return { sky: "#040A17", horizon: "#1B3560", fog: "#0C1829" };
+    if (altitude < 0) return { sky: "#0A1530", horizon: "#4A3F86", fog: "#141B37" };
+    if (altitude < 8) return { sky: "#0E2142", horizon: "#C9714A", fog: "#241F36" };
+    return { sky: "#0C254A", horizon: "#3F7FC4", fog: "#132B4A" };
+  }
+  if (altitude < -6) return { sky: "#0b1322", horizon: "#22324a", fog: "#1a2433" };
   if (altitude < 0) return { sky: "#5d6f9c", horizon: "#e9a98a", fog: "#d9c3c0" };
   if (altitude < 8) return { sky: "#8fb0de", horizon: "#f6d3a8", fog: "#efe3d6" };
   return { sky: "#86b8ea", horizon: "#e7eef6", fog: "#edf1f5" };

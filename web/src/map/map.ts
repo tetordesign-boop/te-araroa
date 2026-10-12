@@ -38,6 +38,8 @@ export interface MapCallbacks {
   onInteract?: () => void;
   /** the person touched, clicked or scrolled the map (camera shows give way) */
   onUserInput?: () => void;
+  /** a tap on the map that hit nothing (closes the open card, like in Maps) */
+  onEmptyTap?: () => void;
 }
 
 type Padding = { top: number; right: number; bottom: number; left: number };
@@ -61,10 +63,18 @@ const POI_LAYERS: { id: string; kind: PoiKind; minzoom: number; filter?: unknown
 ];
 const INTERACTIVE = [...POI_LAYERS.map((l) => l.id), "station-1", "station-2", "station-3"];
 
+/** What a place is drawn with on the map, and its colour (the badge, the ripple when touched). */
+function kindLook(kind: string | undefined): { img: string; color: string } {
+  if (!kind || kind === "town") return { img: "station", color: "#F3F6FB" };
+  const k = kind as PoiKind;
+  return { img: k === "peak" ? "poi-peak" : `poi-${k}`, color: KIND_COLOR[k]?.dark ?? "#5CD6E6" };
+}
+
 export class TrailMap {
   map: MLMap;
   private base: BaseStyle = "explore";
-  private dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  /** the site is drawn at night, whatever the visitor's own setting */
+  private dark = true;
   private linzKey: string | null = null;
   private land?: GeoJSON.Feature;
   private contours = true;
@@ -84,7 +94,6 @@ export class TrailMap {
   /** a finger or the mouse is moving the map: camera changes wait until it lets go */
   private gesturing = false;
   private pendingPadding: Padding | null = null;
-  private paddingAfterFlight = false;
   private poiFilter: Set<string> | null = null;
   private stopShowFn: (() => void) | null = null;
   private ready: Promise<void>;
@@ -93,8 +102,13 @@ export class TrailMap {
   replaying = false;
 
   constructor(container: HTMLElement, private cb: MapCallbacks, land?: GeoJSON.Feature,
-    init: { base?: BaseStyle; contours?: boolean; sun?: boolean; groups?: Iterable<PoiGroup> } = {}) {
+    init: { base?: BaseStyle; contours?: boolean; sun?: boolean; groups?: Iterable<PoiGroup>; arrival?: boolean } = {}) {
     this.land = land;
+    if (init.arrival && !reduceMotion()) {
+      // the walked trail and Ewan wait for the arrival to draw them (see drawIn); never longer than this
+      this.drawKm = 0;
+      this.arrivalTimer = window.setTimeout(() => { if (this.drawKm === 0) this.endArrival(); }, 12_000);
+    }
     if (init.base) this.base = init.base;
     if (init.contours !== undefined) this.contours = init.contours;
     if (init.groups) this.groups = new Set(init.groups);
@@ -137,34 +151,44 @@ export class TrailMap {
       // middle drifts up the screen, by a lot for a hut at 1 500 m. Let the centre follow the ground again.
       const ml = this.map as unknown as { _elevationFreeze?: boolean };
       if (!this.gesturing && ml._elevationFreeze && !this.map.isEasing()) ml._elevationFreeze = false;
-      if (this.gesturing) {
-        this.gesturing = false;
-        if (this.pendingPadding) {
+      if (this.gesturing) this.gesturing = false;
+      if (this.pendingPadding) {
+        // not from inside the event: a camera call there can tangle with the move that just ended
+        requestAnimationFrame(() => {
           const p = this.pendingPadding;
+          if (!p || this.gesturing || this.replaying || this.map.isEasing()) return;
           this.pendingPadding = null;
-          // not from inside the event: a camera call there can tangle with the move that just ended
-          requestAnimationFrame(() => { if (!this.gesturing && !this.map.isEasing()) this.paddingInPlace(p); });
-        }
+          this.paddingInPlace(p);
+        });
       }
       this.updatePhotoMarkers();
     });
     this.map.on("click", (e) => this.handleClick(e.point));
+    // with a mouse, the place under the pointer gets a ring before it is clicked
+    let hoverRaf = 0;
     this.map.on("mousemove", (e) => {
-      const layers = [...INTERACTIVE, "day-ends", "days-hit"].filter((l) => this.map.getLayer(l));
-      const hit = this.map.queryRenderedFeatures([[e.point.x - 6, e.point.y - 6], [e.point.x + 6, e.point.y + 6]], { layers }).length > 0;
-      this.map.getCanvas().style.cursor = hit ? "pointer" : "";
+      if (hoverRaf) return;
+      const pt = e.point;
+      hoverRaf = requestAnimationFrame(() => {
+        hoverRaf = 0;
+        const place = this.placeAt(pt, 14);
+        const hit = place || this.map.queryRenderedFeatures([[pt.x - 6, pt.y - 6], [pt.x + 6, pt.y + 6]], { layers: ["day-ends", "days-hit"].filter((l) => this.map.getLayer(l)) }).length > 0;
+        this.map.getCanvas().style.cursor = hit ? "pointer" : "";
+        const c = place ? (place.geometry as GeoJSON.Point).coordinates as LngLat : null;
+        const key = c ? c.join(",") : "";
+        if (key === this.hoverKey) return;
+        this.hoverKey = key;
+        this.src("hover")?.setData(c ? { type: "Feature", properties: { c: kindLook(place!.layer.id.startsWith("station-") ? "town" : String(place!.properties?.t)).color }, geometry: { type: "Point", coordinates: c } } : empty);
+      });
     });
-    this.schemeQuery.addEventListener("change", this.onScheme);
+    this.map.getCanvasContainer().addEventListener("mouseleave", () => { this.hoverKey = ""; this.src("hover")?.setData(empty); });
   }
-
-  private schemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
-  private onScheme = (e: MediaQueryListEvent) => {
-    this.dark = e.matches;
-    this.applyStyle();
-  };
+  private hoverKey = "";
   /** someone (or something they asked for) has moved the camera: the arrival flight must not take it back */
   private cameraClaimed = false;
   claimCamera() { this.cameraClaimed = true; this.flightToken++; }
+  /** whether the visitor (or something they asked for) has already moved the camera */
+  get claimed() { return this.cameraClaimed; }
 
   private onRawInput = (e: Event) => {
     if (e.type === "pointerdown" && (e as PointerEvent).button > 0) return;
@@ -177,7 +201,8 @@ export class TrailMap {
   /** Everything the map set up outside itself, then the map. */
   destroy() {
     clearInterval(this.sunTimer);
-    this.schemeQuery.removeEventListener("change", this.onScheme);
+    clearTimeout(this.arrivalTimer);
+    this.drawGen++;
     const cc = this.map.getCanvasContainer();
     cc.removeEventListener("pointerdown", this.onRawInput, { capture: true });
     cc.removeEventListener("wheel", this.onRawInput, { capture: true });
@@ -281,30 +306,34 @@ export class TrailMap {
     const m = this.map;
     const gen = ++this.styleGen;
     this.photosKey = ""; // fresh sources after a style switch
+    this.hoverKey = "";
     const sat = this.base === "satellite" && !OFFLINE_MAP;
     const add = (id: string) => { if (!m.getSource(id)) m.addSource(id, { type: "geojson", data: empty }); };
-    ["route", "gaps", "walked", "transfer", "selected", "day-ends", "days-hit", "recent", "replay", "pois", "poi-selected", "stations"].forEach(add);
+    ["route", "gaps", "walked", "transfer", "selected", "day-ends", "days-hit", "recent", "replay", "pois", "poi-selected", "stations", "hover", "pop"].forEach(add);
     if (!m.getSource("photos")) {
       m.addSource("photos", { type: "geojson", data: empty, cluster: true, clusterRadius: 70, clusterMaxZoom: 14 });
     }
     const dark = this.mapDark;
-    const routeColor = sat ? "#ffffff" : dark ? "#e3e7ec" : "#2c3640";
-    const casing = sat ? "rgba(0,0,0,0.45)" : dark ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.95)";
+    // the trail still to walk: a pale line in the night; what Ewan walked: a lit tube of marker orange
+    const routeColor = sat ? "#ffffff" : dark ? "#C3D2EA" : "#2c3640";
+    const casing = sat ? "rgba(0,0,0,0.45)" : dark ? "rgba(3,8,18,0.7)" : "rgba(255,255,255,0.95)";
     const w = (a: number, b: number) => zi([[5, a], [12, b]]);
     // trail lines sit under the place names, like roads do
     const before = ["contour-label", "water-name"].find((l) => m.getLayer(l));
     const line = (spec: maplibregl.LayerSpecification) => m.addLayer(spec, before);
+    const round = { "line-join": "round", "line-cap": "round" } as const;
 
-    line({ id: "route-casing", type: "line", source: "route", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": casing, "line-width": w(3, 6.5) } });
-    line({ id: "route", type: "line", source: "route", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": routeColor, "line-width": w(1.2, 2.8), "line-opacity": sat ? 0.9 : 0.8 } });
+    line({ id: "route-casing", type: "line", source: "route", layout: round, paint: { "line-color": casing, "line-width": w(3, 6.2) } });
+    line({ id: "route", type: "line", source: "route", layout: round, paint: { "line-color": routeColor, "line-width": w(1.1, 2.6), "line-opacity": sat ? 0.9 : dark ? 0.62 : 0.8 } });
     line({ id: "gaps", type: "line", source: "gaps", layout: { "line-cap": "round" }, paint: { "line-color": routeColor, "line-width": w(1, 2), "line-opacity": 0.6, "line-dasharray": [0.1, 2.2] } });
     line({ id: "transfer", type: "line", source: "transfer", layout: { "line-cap": "round" }, paint: { "line-color": ORANGE, "line-width": w(1.5, 3), "line-dasharray": [0.1, 1.8] } });
-    line({ id: "walked-glow", type: "line", source: "walked", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": ORANGE, "line-width": w(7, 16), "line-blur": w(4, 9), "line-opacity": sat ? 0.45 : 0.3 } });
-    line({ id: "walked", type: "line", source: "walked", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": ORANGE, "line-width": w(2.6, 5.2) } });
-    line({ id: "recent", type: "line", source: "recent", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": ORANGE, "line-width": w(1.5, 3), "line-opacity": 0.9, "line-dasharray": [0.6, 1.4] } });
-    line({ id: "selected-halo", type: "line", source: "selected", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#ffffff", "line-width": w(7, 12), "line-opacity": 0.95 } });
-    line({ id: "selected", type: "line", source: "selected", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": ORANGE, "line-width": w(3.5, 6.5) } });
-    line({ id: "replay", type: "line", source: "replay", layout: { "line-join": "round", "line-cap": "round" }, paint: { "line-color": "#ffffff", "line-width": w(3, 5) } });
+    line({ id: "walked-glow", type: "line", source: "walked", layout: round, paint: { "line-color": ORANGE, "line-width": w(9, 20), "line-blur": w(6, 12), "line-opacity": sat ? 0.5 : dark ? 0.6 : 0.3 } });
+    line({ id: "walked", type: "line", source: "walked", layout: round, paint: { "line-color": ORANGE, "line-width": w(2.6, 5) } });
+    line({ id: "walked-core", type: "line", source: "walked", layout: round, paint: { "line-color": "#FFD9BD", "line-width": w(0.5, 1.3), "line-opacity": dark || sat ? 0.85 : 0 } });
+    line({ id: "recent", type: "line", source: "recent", layout: round, paint: { "line-color": ORANGE, "line-width": w(1.5, 3), "line-opacity": 0.9, "line-dasharray": [0.6, 1.4] } });
+    line({ id: "selected-halo", type: "line", source: "selected", layout: round, paint: { "line-color": dark || sat ? "#FFE9D9" : "#ffffff", "line-width": w(6.5, 11.5), "line-opacity": 0.9, "line-blur": dark ? 1.2 : 0 } });
+    line({ id: "selected", type: "line", source: "selected", layout: round, paint: { "line-color": ORANGE, "line-width": w(3.4, 6.2) } });
+    line({ id: "replay", type: "line", source: "replay", layout: round, paint: { "line-color": "#ffffff", "line-width": w(3, 5) } });
     m.addLayer({ id: "days-hit", type: "line", source: "days-hit", paint: { "line-color": "#000", "line-width": 22, "line-opacity": 0 } });
     m.addLayer({
       id: "day-ends", type: "circle", source: "day-ends",
@@ -312,10 +341,12 @@ export class TrailMap {
         "circle-radius": ["interpolate", ["linear"], ["zoom"],
           5, ["case", ["boolean", ["get", "sel"], false], 6, 3],
           11, ["case", ["boolean", ["get", "sel"], false], 8, 5.5]],
-        "circle-color": "#ffffff",
-        "circle-stroke-color": ORANGE,
-        "circle-stroke-width": ["case", ["boolean", ["get", "sel"], false], 3.5, 2.2],
+        "circle-color": ["case", ["boolean", ["get", "sel"], false], ORANGE, dark ? "#0C1526" : "#ffffff"],
+        "circle-stroke-color": ["case", ["boolean", ["get", "sel"], false], dark ? "#FFE9D9" : "#ffffff", ORANGE],
+        "circle-stroke-width": ["case", ["boolean", ["get", "sel"], false], 3, 2.2],
         "circle-pitch-alignment": "viewport",
+        "circle-opacity": ["interpolate", ["linear"], ["zoom"], 6.5, ["case", ["boolean", ["get", "sel"], false], 1, 0], 8, 1],
+        "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 6.5, ["case", ["boolean", ["get", "sel"], false], 1, 0], 8, 1],
       },
     });
     // invisible layer so photo clusters are computed (markers are HTML)
@@ -324,8 +355,13 @@ export class TrailMap {
     // points of interest and the trail's own stations: icons need to exist before their layers
     await installIcons(m, dark || sat);
     if (gen !== this.styleGen || !m.getSource("pois")) return; // the style changed again meanwhile
-    const halo = sat ? "rgba(0,0,0,0.7)" : dark ? "rgba(14,16,19,0.9)" : "rgba(255,255,255,0.95)";
+    const halo = sat ? "rgba(0,0,0,0.7)" : dark ? "rgba(6,12,24,0.88)" : "rgba(255,255,255,0.95)";
     m.addLayer({ id: "poi-ring", type: "symbol", source: "poi-selected", layout: { "icon-image": "poi-ring", "icon-allow-overlap": true, "icon-ignore-placement": true } });
+    // the place under the mouse
+    m.addLayer({
+      id: "poi-hover", type: "circle", source: "hover",
+      paint: { "circle-radius": 16, "circle-color": "rgba(0,0,0,0)", "circle-stroke-width": 2, "circle-stroke-color": ["get", "c"], "circle-stroke-opacity": 0.85, "circle-pitch-alignment": "viewport" },
+    });
     for (const L of POI_LAYERS) {
       const color = KIND_COLOR[L.kind][dark || sat ? "dark" : "light"];
       const isPeak = L.kind === "peak";
@@ -350,7 +386,7 @@ export class TrailMap {
           visibility: this.poiFilter || this.visibleKind(L.kind) ? "visible" : "none",
         } as maplibregl.SymbolLayerSpecification["layout"],
         paint: {
-          "text-color": isPeak ? (dark || sat ? "#f2f2f7" : "#3a3a3c") : color,
+          "text-color": isPeak ? (dark || sat ? "#DCE6F5" : "#3a3a3c") : color,
           "text-halo-color": halo, "text-halo-width": 1.4,
         },
       } as maplibregl.LayerSpecification);
@@ -363,11 +399,20 @@ export class TrailMap {
         "text-field": ["get", "n"], "text-font": F.bold, "text-size": zi([[5, 12], [10, 13.5]]),
         "text-anchor": "left", "text-offset": [0.8, 0], "text-optional": tier !== 1, "text-max-width": 9,
       },
-      paint: { "text-color": sat || dark ? "#ffffff" : "#16191d", "text-halo-color": halo, "text-halo-width": 1.6 },
+      paint: { "text-color": sat || dark ? "#F3F6FB" : "#16191d", "text-halo-color": halo, "text-halo-width": 1.6 },
     });
     stationLayer(3, 8.6);
     stationLayer(2, 6.8);
     stationLayer(1, 0);
+    // the answer to a touch (see popAt()): a ring in the place's own colour
+    m.addLayer({
+      id: "pop-ripple", type: "circle", source: "pop",
+      paint: { "circle-radius": 12, "circle-color": "rgba(0,0,0,0)", "circle-stroke-width": 2.5, "circle-stroke-color": ["get", "c"], "circle-stroke-opacity": 0, "circle-pitch-alignment": "viewport" },
+    });
+    m.addLayer({
+      id: "pop-icon", type: "symbol", source: "pop",
+      layout: { "icon-image": ["get", "img"], "icon-size": 1, "icon-allow-overlap": true, "icon-ignore-placement": true },
+    });
 
     this.pushData();
     this.pushPois();
@@ -476,9 +521,7 @@ export class TrailMap {
       gapLines.push([routeLines[i][routeLines[i].length - 1], routeLines[i + 1][0]]);
     }
     this.src("gaps")!.setData(multi(gapLines));
-    this.src("walked")!.setData(multi(d.walked.hike.flatMap(([a, b]) => r.slice(a, b))));
-    this.src("transfer")!.setData(multi(d.walked.transfer.flatMap(([a, b]) => r.slice(a, b))));
-    this.src("recent")!.setData(d.recent.length > 1 ? multi([d.recent]) : empty);
+    this.pushWalked();
     this.pushStations();
 
     const ends: GeoJSON.Feature[] = [];
@@ -492,8 +535,7 @@ export class TrailMap {
     }
     this.src("day-ends")!.setData({ type: "FeatureCollection", features: ends });
     this.src("days-hit")!.setData({ type: "FeatureCollection", features: hits });
-    this.src("selected")!.setData(this.selected && this.selected.start_km !== null && this.selected.end_km !== null
-      ? multi(r.slice(this.selected.start_km, this.selected.end_km)) : empty);
+    this.pushSelected();
 
     const shown = d.photos.filter(({ day }) => !this.selected || day.id === this.selected.id);
     const key = shown.map(({ m, c }) => `${m.id}@${c[0].toFixed(5)},${c[1].toFixed(5)}`).join("|");
@@ -515,6 +557,84 @@ export class TrailMap {
     this.map.once("idle", () => this.updatePhotoMarkers());
   }
 
+  /** What Ewan walked, up to `drawKm` while the arrival animation draws it. */
+  private pushWalked() {
+    const d = this.data;
+    if (!d || !this.src("walked")) return;
+    const r = d.route, max = this.drawKm ?? Infinity;
+    const upTo = (ranges: [number, number][]) => ranges.flatMap(([a, b]) => (a >= max ? [] : r.slice(a, Math.min(b, max))));
+    this.src("walked")!.setData(multi(upTo(d.walked.hike)));
+    this.src("transfer")!.setData(multi(upTo(d.walked.transfer)));
+    this.src("recent")!.setData(this.drawKm === null && d.recent.length > 1 ? multi([d.recent]) : empty);
+  }
+
+  /** The open day's stretch of trail, drawn from its start while `selDraw` runs. */
+  private pushSelected() {
+    const d = this.data, sel = this.selected;
+    if (!d || !this.src("selected")) return;
+    if (!sel || sel.start_km === null || sel.end_km === null) { this.src("selected")!.setData(empty); return; }
+    const k = this.selDraw ?? 1;
+    const end = sel.start_km + (sel.end_km - sel.start_km) * k;
+    this.src("selected")!.setData(multi(d.route.slice(sel.start_km, end)));
+  }
+
+  private drawKm: number | null = null;
+  private drawGen = 0;
+  private arrivalTimer: number | undefined;
+  private selDraw: number | null = null;
+  private selGen = 0;
+
+  /**
+   * The arrival: Ewan's walked trail draws itself from Ship Cove to where he is, then he lands with a ping.
+   * The interface counts his kilometres up on the same clock: `t0` (performance.now()) and `duration`. If the
+   * map is ready late, the drawing catches up with that clock; if it is ready after the end, he just lands.
+   */
+  drawIn(t0: number, duration: number): Promise<void> {
+    const gen = ++this.drawGen;
+    if (reduceMotion()) { this.endArrival(); return Promise.resolve(); }
+    return this.whenReady().then(() => new Promise<void>((resolve) => {
+      const frame = (now: number) => {
+        if (gen !== this.drawGen) { resolve(); return; } // a newer one (or destroy) took over
+        const d = this.data;
+        const end = d ? Math.max(0, ...d.walked.hike.map(([, b]) => b), ...d.walked.transfer.map(([, b]) => b)) : 0;
+        const t = Math.max(0, Math.min(1, (now - t0) / duration));
+        if (t >= 1 || end <= 0.5) { this.endArrival(); resolve(); return; }
+        this.drawKm = end * easeInOut(t);
+        this.pushWalked();
+        requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    }));
+  }
+
+  /** No arrival (a link straight to a day or a place): everything is drawn at once. */
+  skipArrival() {
+    this.drawGen++;
+    if (this.drawKm === null) return;
+    this.drawKm = null;
+    this.pushWalked();
+    this.liveMarker?.getElement().classList.remove("is-arriving");
+  }
+
+  private endArrival() {
+    const was = this.drawKm !== null;
+    this.drawKm = null;
+    this.pushWalked();
+    if (was || this.liveMarker?.getElement().classList.contains("is-arriving")) this.landMarker();
+  }
+
+  /** Ewan's marker appears where the drawn trail ends, with a ring going out from it. */
+  private landMarker() {
+    const el = this.liveMarker?.getElement();
+    if (!el) return;
+    el.classList.remove("is-arriving");
+    el.classList.add("is-landing");
+    const ping = document.createElement("span");
+    ping.className = "live-pin__ping";
+    el.appendChild(ping);
+    window.setTimeout(() => { ping.remove(); el.classList.remove("is-landing"); }, 1400);
+  }
+
   setLive(live: LiveData | null) {
     this.live = live;
     this.updateLive();
@@ -529,6 +649,7 @@ export class TrailMap {
       el.type = "button";
       el.innerHTML = '<span class="live-pin__halo"></span><span class="live-pin__dot"></span><span class="live-pin__label"></span>';
       el.addEventListener("click", (e) => { e.stopPropagation(); this.cb.onLive(); });
+      if (this.drawKm !== null) el.classList.add("is-arriving");
       this.liveMarker = new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat(live.c).addTo(this.map);
     }
     const el = this.liveMarker.getElement();
@@ -586,40 +707,73 @@ export class TrailMap {
     }
   }
 
-  private handleClick(point: maplibregl.Point) {
-    const box = (r: number): [maplibregl.PointLike, maplibregl.PointLike] => [[point.x - r, point.y - r], [point.x + r, point.y + r]];
-    const layers = (ids: string[]) => ids.filter((l) => this.map.getLayer(l));
-    const place = this.map.queryRenderedFeatures(box(10), { layers: layers(INTERACTIVE) })[0];
-    if (place) {
-      const p = place.properties ?? {};
-      if (place.layer.id.startsWith("station-")) this.cb.onStation(Number(p.i));
-      else if (p.id) this.cb.onPlace(String(p.id));
-      return;
+  /** The place drawn closest to a point, within `r` px (a fingertip covers ~44 px). */
+  private placeAt(point: maplibregl.Point, r: number): MapGeoJSONFeature | null {
+    const layers = INTERACTIVE.filter((l) => this.map.getLayer(l));
+    if (!layers.length) return null;
+    const hits = this.map.queryRenderedFeatures([[point.x - r, point.y - r], [point.x + r, point.y + r]], { layers });
+    let best: MapGeoJSONFeature | null = null, bestD = Infinity;
+    for (const f of hits) {
+      if (f.geometry.type !== "Point") continue;
+      const q = this.map.project((f.geometry as GeoJSON.Point).coordinates as LngLat);
+      const d = Math.hypot(q.x - point.x, q.y - point.y);
+      if (d < bestD) { best = f; bestD = d; }
     }
-    const f = this.map.queryRenderedFeatures(box(8), { layers: layers(["day-ends", "days-hit"]) })[0];
-    if (f?.properties?.n) this.cb.onDay(Number(f.properties.n));
+    return best;
   }
 
-  // ------------------------------------------------------------- selection & camera
-  setPadding(p: Partial<Padding>, animate = true) {
-    this.padding = { ...this.padding, ...p };
-    if (this.replaying) return;
-    // while the map is in someone's hand, don't move it: change the padding without moving the view once they let go
-    if (this.gesturing) { this.pendingPadding = this.padding; return; }
-    // a flight is on its way: don't cut it short, settle into the new padding when it lands
-    if (this.map.isEasing()) {
-      if (!this.paddingAfterFlight) {
-        this.paddingAfterFlight = true;
-        // never start an ease from inside "moveend": when that event comes from a new flight stopping the old
-        // one, two animations end up running at once and the map stops drawing
-        this.map.once("moveend", () => requestAnimationFrame(() => {
-          this.paddingAfterFlight = false;
-          if (!this.gesturing && !this.replaying && !this.map.isEasing()) this.map.easeTo({ padding: this.padding, duration: reduceMotion() ? 0 : 350 });
-        }));
-      }
+  private handleClick(point: maplibregl.Point) {
+    const best = this.placeAt(point, 22);
+    if (best) {
+      const p = best.properties ?? {};
+      const station = best.layer.id.startsWith("station-");
+      if (station) this.cb.onStation(Number(p.i));
+      else if (p.id) this.cb.onPlace(String(p.id));
+      const look = kindLook(station ? "town" : String(p.t));
+      this.popAt((best.geometry as GeoJSON.Point).coordinates as LngLat, look.img, look.color);
       return;
     }
-    this.map.easeTo({ padding: this.padding, duration: animate && !reduceMotion() ? 350 : 0 });
+    const layers = ["day-ends", "days-hit"].filter((l) => this.map.getLayer(l));
+    const f = this.map.queryRenderedFeatures([[point.x - 12, point.y - 12], [point.x + 12, point.y + 12]], { layers })[0];
+    if (f?.properties?.n) { this.cb.onDay(Number(f.properties.n)); return; }
+    this.cb.onEmptyTap?.();
+  }
+
+  /** A place answers: its badge pops above the others and a ring in its colour ripples out from it. */
+  private popAt(c: LngLat, img: string, color: string) {
+    const m = this.map;
+    const src = this.src("pop");
+    if (!src || !m.getLayer("pop-icon") || reduceMotion()) return;
+    this.lastPop = performance.now();
+    src.setData({ type: "Feature", properties: { img, c: color }, geometry: { type: "Point", coordinates: c } });
+    const t0 = performance.now(), gen = ++this.popGen;
+    const frame = (now: number) => {
+      if (gen !== this.popGen || !m.getLayer("pop-icon")) return;
+      const k = Math.min(1, (now - t0) / 560);
+      // badge: up to 1.5x and back, with a small bounce; ring: grows and fades
+      const size = 1 + 0.5 * Math.sin(Math.PI * Math.min(1, k * 1.25)) * (1 - k * 0.4);
+      m.setLayoutProperty("pop-icon", "icon-size", Math.max(1, size));
+      m.setPaintProperty("pop-ripple", "circle-radius", 12 + 32 * k);
+      m.setPaintProperty("pop-ripple", "circle-stroke-opacity", 0.95 * (1 - k));
+      if (k < 1) requestAnimationFrame(frame);
+      else src.setData(empty);
+    };
+    requestAnimationFrame(frame);
+  }
+  private lastPop = 0;
+  private popGen = 0;
+
+  // ------------------------------------------------------------- selection & camera
+  /**
+   * How much of the map the sheet or panel covers. Changing it never moves the picture (the sheet sliding
+   * must not drag the map along, as in Apple Maps): only the next flight frames things in the free part.
+   */
+  setPadding(p: Partial<Padding>) {
+    this.padding = { ...this.padding, ...p };
+    if (this.replaying) return;
+    // in someone's hand or on a flight: apply it, still in place, once the map is free again
+    if (this.gesturing || this.map.isEasing()) { this.pendingPadding = this.padding; return; }
+    this.paddingInPlace(this.padding);
   }
   get viewPadding() { return this.padding; }
 
@@ -632,7 +786,23 @@ export class TrailMap {
   }
 
   select(day: Day | null) {
+    const fresh = !!day && day.id !== this.selected?.id;
     this.selected = day;
+    if (fresh && !reduceMotion()) {
+      // the day's stretch lights up from where he started that morning, while the camera flies there
+      const gen = ++this.selGen;
+      this.selDraw = 0;
+      let t0 = 0;
+      const frame = (now: number) => {
+        if (gen !== this.selGen) return;
+        if (!t0) t0 = now + 350;
+        const t = Math.max(0, Math.min(1, (now - t0) / 1100));
+        this.selDraw = t < 1 ? easeInOut(t) : null;
+        this.pushSelected();
+        if (t < 1) requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+    } else if (!day) { this.selGen++; this.selDraw = null; }
     if (this.src("route")) this.pushData();
   }
 
@@ -654,7 +824,7 @@ export class TrailMap {
     try { cam = this.map.cameraForBounds(b, { padding: 36, bearing: brg, maxZoom: 13.5 }); } catch (_) { cam = undefined; }
     this.map.flyTo({
       center: cam?.center ?? z, zoom: Math.max(5, (cam?.zoom ?? 12) - 0.35), bearing: brg, pitch: 58,
-      padding: this.padding, duration: reduceMotion() ? 0 : 2200, curve: 1.3, essential: true,
+      padding: this.padding, duration: reduceMotion() ? 0 : 1700, curve: 1.2, essential: true,
     });
   }
 
@@ -673,7 +843,7 @@ export class TrailMap {
 
   flyTo(c: LngLat, zoom = 12.5, pitch = 55) {
     this.cameraClaimed = true;
-    this.flyAndCentre({ center: c, zoom, pitch, padding: this.padding, duration: reduceMotion() ? 0 : 2000, essential: true }, c);
+    this.flyAndCentre({ center: c, zoom, pitch, padding: this.padding, duration: reduceMotion() ? 0 : 1500, curve: 1.2, essential: true }, c);
   }
 
   /** Close-up on a place, looking along the trail (peaks from a little further, to see the mountain). */
@@ -681,7 +851,9 @@ export class TrailMap {
     this.cameraClaimed = true;
     const brg = km !== null ? route.bearingAt(km, 3) : this.map.getBearing();
     const zoom = kind === "peak" ? 12.4 : kind === "town" ? 12.6 : kind === "gap" ? 11.2 : kind === "pass" ? 13 : 13.4;
-    this.flyAndCentre({ center: c, zoom, pitch: kind === "peak" ? 64 : 58, bearing: brg, padding: this.padding, duration: reduceMotion() ? 0 : 2200, curve: 1.4, essential: true }, c);
+    const look = kindLook(kind);
+    this.flyAndCentre({ center: c, zoom, pitch: kind === "peak" ? 64 : 58, bearing: brg, padding: this.padding, duration: reduceMotion() ? 0 : 1600, curve: 1.2, essential: true }, c,
+      () => { if (performance.now() - this.lastPop > 2500) this.popAt(c, look.img, look.color); });
   }
 
   /** a newer flight, or the person's hand, makes a pending re-centring obsolete */
@@ -692,7 +864,7 @@ export class TrailMap {
    * arrives after the camera does; MapLibre then keeps the camera where it is and the place drifts up
    * the screen (by a lot for a hut at 1 500 m). Once the relief is there, a short glide puts it back.
    */
-  private flyAndCentre(opts: maplibregl.FlyToOptions, target: LngLat) {
+  private flyAndCentre(opts: maplibregl.FlyToOptions, target: LngLat, arrived?: () => void) {
     const m = this.map;
     const token = ++this.flightToken;
     const check = () => {
@@ -705,6 +877,7 @@ export class TrailMap {
     };
     this.moveThen(() => m.flyTo(opts), () => {
       if (token !== this.flightToken) return;
+      arrived?.();
       let done = false;
       const once = () => { if (!done) { done = true; check(); } };
       m.once("idle", once);

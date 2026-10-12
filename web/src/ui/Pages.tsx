@@ -176,7 +176,7 @@ function DayBars({ list }: { list: Day[] }) {
             <g class={`bars__col${sel === i ? " is-sel" : ""}`}>
               {d.kind === "rest" || v <= 0
                 ? <circle class="bars__rest" cx={cx} cy={base - 5} r={4} />
-                : <path class={`bars__bar${d.kind === "transport" ? " is-transport" : ""}`} d={col(v, cx)} />}
+                : <path class={`bars__bar${d.kind === "transport" ? " is-transport" : ""}`} d={col(v, cx)} style={`--d:${Math.min(i * 12, 480)}ms`} />}
               {i === maxIdx && v > 0 && <text class="bars__label" x={cx} y={y(v) - 5} text-anchor="middle">{fmtKm(v, l, 0)}</text>}
             </g>
           );

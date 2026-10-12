@@ -25,7 +25,8 @@ const ui = (fn, arg) => (p) => p.evaluate(([fn, arg]) => { const u = window.__ui
 const half = ui("u.detent.value = 'half'");
 const full = ui("u.detent.value = 'full'");
 const tap = (sel) => (p) => p.evaluate((sel) => document.querySelector(sel)?.click(), sel);
-const camera = (p, c) => p.evaluate((c) => window.__tm?.map.jumpTo(c), c);
+// (claimCamera: the arrival flight must not take the camera back)
+const camera = (p, c) => p.evaluate((c) => { window.__tm?.claimCamera(); window.__tm?.map.jumpTo(c); }, c);
 const prefs = (v) => (p) => p.addInitScript((v) => { try { localStorage.setItem("map-prefs-v1", JSON.stringify(v)); } catch (_) {} }, v);
 const click = (sel) => (p) => p.click(sel);
 const wait = (ms) => (p) => p.waitForTimeout(ms);
@@ -47,7 +48,8 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "m-modes", ctx: mobile(false), url: "?mock", act: seq(ui("u.modesOpen.value = true"), wait(800)), noSettle: true },
   { id: "m-alps-3d", ctx: mobile(false), url: "?mock", act: (p) => camera(p, { center: [172.62, -42.13], zoom: 11.6, pitch: 62, bearing: 160 }) },
   { id: "m-pois-close", ctx: mobile(false), url: "?mock", act: (p) => camera(p, { center: [172.73, -42.0], zoom: 12.6, pitch: 50, bearing: 190 }) },
-  { id: "m-dark-pois", ctx: mobile(true), url: "?mock", act: (p) => camera(p, { center: [172.73, -42.0], zoom: 12.4, pitch: 55, bearing: 190 }) },
+  { id: "m-lakes", ctx: mobile(false), url: "?mock", act: (p) => camera(p, { center: [170.38, -44.05], zoom: 9.3, pitch: 50, bearing: 15 }) },
+  { id: "m-island", ctx: mobile(false), url: "?mock", act: (p) => camera(p, { center: [171.6, -43.4], zoom: 5.4, pitch: 0, bearing: 0 }) },
   { id: "m-satellite", ctx: mobile(false), url: "?mock", pre: prefs({ base: "satellite", contours: true, sun: false }), act: (p) => camera(p, { center: [172.62, -42.13], zoom: 11.6, pitch: 62, bearing: 160 }) },
   { id: "m-eye", ctx: mobile(false), url: "?mock", act: seq(wait(4000), ui("u.startEyeView()"), wait(11000)) },
   { id: "m-trail", ctx: mobile(false), url: "?mock", act: seq(wait(4000), ui("u.startTrailMode(348)"), wait(10000)), noSettle: true },
@@ -59,7 +61,8 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "d-sun", ctx: desktop(false), url: "?mock", pre: prefs({ base: "explore", contours: true, sun: true }), act: (p) => camera(p, { center: [172.62, -42.13], zoom: 11.2, pitch: 60, bearing: 160 }) },
   { id: "d-eye", ctx: desktop(false), url: "?mock", act: seq(wait(4000), ui("u.startEyeView()"), wait(11000)) },
   { id: "d-trail", ctx: desktop(false), url: "?mock", act: seq(wait(4000), ui("u.startTrailMode(348)"), wait(10000)), noSettle: true },
-  { id: "d-dark-home", ctx: desktop(true), url: "?mock" },
+  { id: "d-lakes", ctx: desktop(false), url: "?mock", act: (p) => camera(p, { center: [169.2, -44.62], zoom: 9.4, pitch: 58, bearing: 330 }) },
+  { id: "d-day", ctx: desktop(false), url: "?mock#/jour/14" },
 ];
 
 const log = [];
@@ -77,6 +80,9 @@ for (const s of shots) {
     await page.goto(BASE + s.url, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(3000);
     await settle(page, 800);
+    // the arrival (trail drawing in, then the flight to Ewan) runs first on the plain map
+    await page.waitForFunction(() => window.__ui?.arrival?.value === null, null, { timeout: 15000, polling: 300 }).catch(() => {});
+    await settle(page, 600);
     if (s.act) { await s.act(page); if (!s.noSettle) await settle(page, 1800); }
     await page.screenshot({ path: `${OUT}/${s.id}.png`, timeout: 120000 });
   } catch (e) {

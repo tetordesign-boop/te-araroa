@@ -43,6 +43,8 @@ export const mapBearing = signal(0);
 export const cameraShow = signal<{ kind: "orbit" | "eye"; id?: string; stop: () => void } | null>(null);
 /** the whole-trail flyover with its elevation profile */
 export const trailMode = signal<{ startKm: number } | null>(null);
+/** the arrival, while the walked trail draws itself on the map: 0 to 1 (eased), null once it's all there */
+export const arrival = signal<number | null>(null);
 
 export function hrefFor(v: View): string {
   switch (v.name) {

@@ -1,4 +1,5 @@
 import { render } from "preact";
+import "@fontsource-variable/archivo/wdth.css";
 import "@fontsource-variable/literata/opsz.css";
 import "../styles/app.css";
 import "./admin.css";

@@ -7,7 +7,7 @@ import type { Route } from "../lib/geo";
  * The whole trail as one line, like a metro diagram: the part Ewan walked in marker orange,
  * the river and lake crossings he can't walk as breaks. The large version names the towns.
  */
-export function TrailStrip({ route, walked, here, large }: { route: Route; walked: [number, number][]; here: number | null; large?: boolean }) {
+export function TrailStrip({ route, walked, here, large, legendAt }: { route: Route; walked: [number, number][]; here: number | null; large?: boolean; legendAt?: number | null }) {
   const ref = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(340);
   useLayoutEffect(() => {
@@ -37,7 +37,8 @@ export function TrailStrip({ route, walked, here, large }: { route: Route; walke
     if (e - s > 0.01) segs.push([s, e]);
   }
   const places = route.places();
-  const next = here !== null ? places.find((p) => p.km > here + 0.5) : null;
+  const at = legendAt !== undefined ? legendAt : here; // the legend names the real next stop, even while the line animates
+  const next = at !== null ? places.find((p) => p.km > at + 0.5) : null;
   const l = lang.value;
   const towns = large ? places.filter((p) => TOWNS.has(p.n)) : [];
   const inset = SW / 2;
@@ -62,8 +63,8 @@ export function TrailStrip({ route, walked, here, large }: { route: Route; walke
       {!large && (
         <div class="strip__legend">
           <span>Ship Cove</span>
-          {next && here !== null && here > 0
-            ? <span class="strip__next"><strong class="num">{fmtKm(next.km - here, l)} km</strong> {t("beforePlace", { place: shortPlace(next.n) })}</span>
+          {next && at !== null && at > 0
+            ? <span class="strip__next"><strong class="num">{fmtKm(next.km - at, l)} km</strong> {t("beforePlace", { place: shortPlace(next.n) })}</span>
             : <span class="strip__next" />}
           <span>Bluff</span>
         </div>

@@ -97,7 +97,7 @@ function Sections({ list }: { list: Place[] }) {
     <>
       {sections.map((s) => (
         <section class="psection">
-          <h3 class="psection__head">{s.from}<span aria-hidden="true"> → </span><span class="sr-only">{l === "fr" ? " à " : " to "}</span>{s.to}</h3>
+          <h3 class="psection__head">{s.from}<span aria-hidden="true"> – </span><span class="sr-only">{l === "fr" ? " à " : " to "}</span>{s.to}</h3>
           <div class="rows">{s.items.map((p) => <PlaceRow p={p} />)}</div>
         </section>
       ))}

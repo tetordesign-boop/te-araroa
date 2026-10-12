@@ -31,15 +31,18 @@ export const GROUP_OF: Record<PoiKind, PoiGroup | null> = {
 };
 export const GROUPS: PoiGroup[] = ["huts", "camps", "summits", "sights"];
 
-/** Badge colour per kind, light and dark (validated for colour-vision deficiency; glyphs carry identity too). */
+/**
+ * Badge colour per kind. Dark: bright disks with a navy glyph on the night map (each checked against the others
+ * for colour-vision deficiency by lightness and hue; the glyph always says the kind too).
+ */
 export const KIND_COLOR: Record<PoiKind, { light: string; dark: string }> = {
-  hut: { light: "#5856D6", dark: "#7471F0" },
-  camp: { light: "#2E9D57", dark: "#34A85F" },
-  pass: { light: "#C2367A", dark: "#D9488F" },
-  peak: { light: "#3A3A3C", dark: "#E5E5EA" },
-  fall: { light: "#0A84C8", dark: "#2F98DC" },
-  view: { light: "#0A84C8", dark: "#2F98DC" },
-  gap: { light: "#8E8E93", dark: "#98989D" },
+  hut: { light: "#5856D6", dark: "#8B80FF" },
+  camp: { light: "#2E9D57", dark: "#56E39F" },
+  pass: { light: "#C2367A", dark: "#FF3D9A" },
+  peak: { light: "#3A3A3C", dark: "#EAF2FF" },
+  fall: { light: "#0A84C8", dark: "#4CC3FF" },
+  view: { light: "#0A84C8", dark: "#4CC3FF" },
+  gap: { light: "#8E8E93", dark: "#9AA8BE" },
 };
 
 const LABELS: Record<PoiKind, [string, string]> = {

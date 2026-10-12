@@ -259,7 +259,7 @@ export function PlaceView({ id }: { id: string }) {
 
         <Facts p={p} />
 
-        <div class="actions">
+        <div class="actions actions--map">
           <button class={`action${orbiting ? " is-on" : ""}`} type="button" onClick={orbit} aria-pressed={orbiting}>
             <Orbit />{orbiting ? t("stopOrbit") : t("orbit")}
           </button>

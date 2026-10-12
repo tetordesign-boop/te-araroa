@@ -21,6 +21,8 @@ function initialPrefs(): MapPrefs {
 }
 export const mapPrefs = signal<MapPrefs>(initialPrefs());
 export const modesOpen = signal(false);
+/** when a tap outside last closed the card (that same tap must not also act on the map) */
+export let modesClosedAt = 0;
 
 export function setPrefs(p: Partial<MapPrefs>) {
   mapPrefs.value = { ...mapPrefs.value, ...p };
@@ -58,15 +60,16 @@ function Thumb({ kind }: { kind: BaseStyle }) {
   }
   return (
     <svg viewBox="0 0 120 76" aria-hidden="true" class="mthumb">
-      <rect width="120" height="76" fill="#eef1e7" />
-      <path d="M0 76V44c14-6 22-16 38-14s26-16 44-18 26 4 38 0v64z" fill="#e5e0d4" />
-      <path d="M62 14c8-3 14-2 20 4-6 3-12 4-20-4z" fill="#ffffff" />
-      <path d="M0 58c18-4 30 4 44 0s22-10 38-6 26 0 38-4v28H0z" fill="#cfe3bc" />
-      <g fill="none" stroke="#a08b6c" stroke-opacity=".35" stroke-width=".8">
+      <rect width="120" height="76" fill="#0F1B2E" />
+      <path d="M0 76V44c14-6 22-16 38-14s26-16 44-18 26 4 38 0v64z" fill="#1B314C" />
+      <path d="M62 14c8-3 14-2 20 4-6 3-12 4-20-4z" fill="#8299B8" />
+      <path d="M0 58c18-4 30 4 44 0s22-10 38-6 26 0 38-4v28H0z" fill="#0E2B2E" />
+      <g fill="none" stroke="#7DA5DC" stroke-opacity=".28" stroke-width=".8">
         <path d="M20 46c10-8 22-12 36-10s22-10 34-12" /><path d="M30 40c10-6 18-8 28-6s18-8 28-10" /><path d="M48 30c6-4 12-5 18-4s12-6 18-6" />
       </g>
-      <path d="M86 62c6-6 16-6 22 0-6 5-16 5-22 0z" fill="#a8d0ee" />
-      <path d="M18 76 40 56 58 50 74 36 92 34" fill="none" stroke="#2c3640" stroke-width="2" stroke-linecap="round" stroke-dasharray="0" />
+      <path d="M86 62c6-6 16-6 22 0-6 5-16 5-22 0z" fill="#0D7487" stroke="#5CD6E6" stroke-width="1" />
+      <path d="M18 76 40 56 58 50 74 36 92 34" fill="none" stroke="#C3D2EA" stroke-opacity=".7" stroke-width="1.6" stroke-linecap="round" />
+      <path d="M18 76 40 56 58 50" fill="none" stroke="#FF6B12" stroke-opacity=".45" stroke-width="7" stroke-linecap="round" />
       <path d="M18 76 40 56 58 50" fill="none" stroke="#FF6B12" stroke-width="3" stroke-linecap="round" />
     </svg>
   );
@@ -83,6 +86,7 @@ export function MapModes() {
     const onDown = (e: PointerEvent) => {
       const el = e.target as HTMLElement;
       if (ref.current?.contains(el) || el.closest("[data-modes-toggle]")) return;
+      modesClosedAt = performance.now();
       modesOpen.value = false;
     };
     document.addEventListener("keydown", onKey);
