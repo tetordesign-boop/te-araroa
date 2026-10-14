@@ -29,6 +29,8 @@ jobs:
           nohup npx vite --port 5173 --strictPort > /tmp/vite.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:5173/ >/dev/null && break; sleep 1; done
       - name: Screenshots
+        # under the job's limit, so whatever was taken still gets published below
+        timeout-minutes: 40
         run: |
           mkdir -p /tmp/shots
           set -o pipefail

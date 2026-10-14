@@ -66,8 +66,10 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
 ];
 
 const log = [];
+const started = Date.now();
 for (const s of shots) {
   if (prefixes.length && !prefixes.some((x) => s.id.startsWith(x))) continue;
+  if (Date.now() - started > 34 * 60_000) { const l = `${s.id} skipped (time budget)`; console.log(l); log.push(l); continue; }
   const ctx = await browser.newContext(s.ctx);
   const page = await ctx.newPage();
   const errs = [];
@@ -75,21 +77,24 @@ for (const s of shots) {
   page.on("console", (m) => { if (m.type() === "error") errs.push(m.text().slice(0, 200)); });
   const t0 = Date.now();
   let status = "ok";
+  const marks = [];
+  const mark = (name) => marks.push(`${name} ${Math.round((Date.now() - t0) / 100) / 10}s`);
   try {
     if (s.pre) await s.pre(page);
     await page.goto(BASE + s.url, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(3000);
-    await settle(page, 800);
+    await settle(page, 800); mark("settled");
     // the arrival (trail drawing in, then the flight to Ewan) runs first on the plain map
     await page.waitForFunction(() => window.__ui?.arrival?.value === null, null, { timeout: 15000, polling: 300 }).catch(() => {});
-    await settle(page, 600);
-    if (s.act) { await s.act(page); if (!s.noSettle) await settle(page, 1800); }
+    mark("arrived");
+    await settle(page, 600); mark("settled");
+    if (s.act) { await s.act(page); mark("acted"); if (!s.noSettle) { await settle(page, 1800); mark("settled"); } }
     await page.screenshot({ path: `${OUT}/${s.id}.png`, timeout: 120000 });
   } catch (e) {
     status = `FAIL ${String(e.message || e).split("\n")[0]}`;
     await page.screenshot({ path: `${OUT}/${s.id}.png`, timeout: 120000 }).catch(() => {});
   }
-  const line = `${s.id} ${Date.now() - t0}ms ${status}${errs.length ? " ERR " + [...new Set(errs)].slice(0, 5).join(" | ") : ""}`;
+  const line = `${s.id} ${Date.now() - t0}ms ${status} [${marks.join(", ")}]${errs.length ? " ERR " + [...new Set(errs)].slice(0, 5).join(" | ") : ""}`;
   console.log(line); log.push(line);
   await ctx.close();
 }
