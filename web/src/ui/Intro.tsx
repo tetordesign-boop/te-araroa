@@ -66,6 +66,7 @@ export function Intro() {
   useEffect(() => {
     const root = document.documentElement;
     root.classList.add("is-intro");
+
     // focus inside the dialog (on the dialog itself: no ring for someone who taps); Tab reaches the buttons
     box.current?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => {

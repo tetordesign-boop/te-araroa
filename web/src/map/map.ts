@@ -107,7 +107,7 @@ export class TrailMap {
     if (init.arrival && !reduceMotion()) {
       // the walked trail and Ewan wait for the arrival to draw them (see drawIn); never longer than this
       this.drawKm = 0;
-      this.arrivalTimer = window.setTimeout(() => { if (this.drawKm === 0) this.endArrival(); }, 12_000);
+      this.armArrivalFallback();
     }
     if (init.base) this.base = init.base;
     if (init.contours !== undefined) this.contours = init.contours;
@@ -589,6 +589,20 @@ export class TrailMap {
   private drawKm: number | null = null;
   private drawGen = 0;
   private arrivalTimer: number | undefined;
+  private arrivalHeld = false;
+
+  /** The presentation is up: Ewan and his trail keep waiting for the arrival, however long it stays. */
+  holdArrival(on: boolean) {
+    this.arrivalHeld = on;
+    clearTimeout(this.arrivalTimer);
+    if (!on) this.armArrivalFallback();
+  }
+
+  /** Should the arrival never come (no news, a failing map), the trail and Ewan still show after a while. */
+  private armArrivalFallback() {
+    clearTimeout(this.arrivalTimer);
+    this.arrivalTimer = window.setTimeout(() => { if (this.drawKm === 0 && !this.arrivalHeld) this.endArrival(); }, 12_000);
+  }
   private selDraw: number | null = null;
   private selGen = 0;
 
@@ -1021,8 +1035,6 @@ export class TrailMap {
    */
   introLoop(route: Route, pad: Padding): () => void {
     const m = this.map;
-    // Ewan and his trail wait for the arrival, however long the presentation stays up
-    clearTimeout(this.arrivalTimer);
     const lines = route.parts.map((p) => Array.from(p.lng, (x, i) => [x, p.lat[i]] as LngLat));
     const b = route.bounds(lines);
     // the island as everyone knows it (north up), tilted a little so the Alps stand out
@@ -1043,11 +1055,21 @@ export class TrailMap {
       zoom: zoom + 0.08 * Math.sin((2 * Math.PI * t) / 47 + 0.4),
     });
     const clear = () => { this.src("comet")?.setData(empty); this.src("comet-head")?.setData(empty); };
+    // The map's credits open by themselves until the map is first moved, which won't happen under the
+    // presentation: keep them to their (i), unless someone taps it.
+    const attrib = m.getContainer().querySelector<HTMLElement>(".maplibregl-ctrl-attrib");
+    let asked = false;
+    const ask = () => { asked = true; };
+    const fold = () => { if (!asked && attrib?.classList.contains("maplibregl-compact-show")) attrib.classList.remove("maplibregl-compact-show"); };
+    attrib?.addEventListener("pointerdown", ask, true);
+    const watch = attrib ? new MutationObserver(fold) : null;
+    if (attrib) watch!.observe(attrib, { attributes: true, attributeFilter: ["class"] });
+    fold();
     const done = () => {
       this.replaying = false;
       clear();
-      // the arrival comes next; should it not, never leave the trail hidden
-      this.arrivalTimer = window.setTimeout(() => { if (this.drawKm === 0) this.endArrival(); }, 12_000);
+      watch?.disconnect();
+      attrib?.removeEventListener("pointerdown", ask, true);
     };
     if (reduceMotion()) {
       m.jumpTo(view(0));

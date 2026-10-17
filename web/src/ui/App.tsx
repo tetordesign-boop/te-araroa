@@ -237,10 +237,12 @@ export function App() {
     const tm = mapApi.value;
     if (!tm || !introOpen.value) return;
     let stop: (() => void) | null = null, alive = true;
+    tm.holdArrival(true); // Ewan and his trail wait behind the presentation, however long it stays
     tm.whenReady().then(() => { if (alive) stop = tm.introLoop(route.peek(), introPadding()); });
     return () => {
       alive = false;
       stop?.();
+      tm.holdArrival(false);
       tm.unclaimCamera(); // the dive to Ewan that follows is what they asked for by going in
     };
   }), []);
