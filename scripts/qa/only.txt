@@ -1,4 +1,2 @@
 m-intro
 d-intro
-m-home-peek
-d-home

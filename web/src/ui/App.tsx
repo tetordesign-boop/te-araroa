@@ -85,7 +85,7 @@ function introPadding() {
   const w = window.innerWidth, h = window.innerHeight;
   return isDesktop.peek()
     ? { top: 70, bottom: 70, left: Math.round(w * 0.52), right: 60 }
-    : { top: 64, bottom: Math.round(h * 0.47), left: 18, right: 18 };
+    : { top: 64, bottom: Math.round(h * 0.47), left: 18, right: 64 }; // (room on the right for the names)
 }
 
 /** After the sheet has moved (it changes the map's padding): camera flights start from the new framing. */

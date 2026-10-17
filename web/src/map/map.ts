@@ -1037,21 +1037,36 @@ export class TrailMap {
     const m = this.map;
     const lines = route.parts.map((p) => Array.from(p.lng, (x, i) => [x, p.lat[i]] as LngLat));
     const b = route.bounds(lines);
-    // the island as everyone knows it (north up), tilted a little so the Alps stand out
+    // The island as everyone knows it (north up), tilted a little so the Alps stand out. The whole trail must
+    // fit the free part of the screen as it will really be drawn (tilted, on the relief): place it, measure
+    // where it lands on screen, correct, twice.
+    const el = m.getContainer();
+    const pts: LngLat[] = [];
+    for (let k = 0; k <= route.total; k += 12) pts.push(route.pointAt(k));
+    pts.push(route.pointAt(route.total));
     let center: LngLat = [171.2, -43.85], zoom = 5.2;
+    const PITCH = 38;
     try {
-      // the trail's middle, at the zoom where all of it fits the free part of the screen (the tilt brings the
-      // south closer, hence a little room)
       m.jumpTo({ padding: { top: 0, bottom: 0, left: 0, right: 0 }, bearing: 0, pitch: 0 });
       const mid = b ? m.cameraForBounds(b, { padding: 6 }) : undefined;
       const fit = b ? m.cameraForBounds(b, { padding: { top: pad.top + 10, bottom: pad.bottom + 10, left: pad.left + 10, right: pad.right + 10 } }) : undefined;
-      if (mid?.center && fit && Number.isFinite(fit.zoom)) { center = maplibregl.LngLat.convert(mid.center).toArray() as LngLat; zoom = fit.zoom! - 0.12; }
+      if (mid?.center && fit && Number.isFinite(fit.zoom)) { center = maplibregl.LngLat.convert(mid.center).toArray() as LngLat; zoom = fit.zoom!; }
+      const boxW = el.clientWidth - pad.left - pad.right, boxH = el.clientHeight - pad.top - pad.bottom;
+      for (let i = 0; i < 3; i++) {
+        m.jumpTo({ center, zoom, bearing: 0, pitch: PITCH, padding: pad });
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        for (const p of pts) { const q = m.project(p); x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); }
+        if (!Number.isFinite(x0) || x1 - x0 < 1 || y1 - y0 < 1) break;
+        // the trail's middle on screen becomes the middle of the free part, at the zoom where it fits (with room for the sway)
+        center = m.unproject([(x0 + x1) / 2, (y0 + y1) / 2]).toArray() as LngLat;
+        zoom += Math.log2(Math.min(boxW / (x1 - x0), boxH / (y1 - y0)) * 0.9);
+      }
     } catch (_) { /* keep the defaults */ }
     this.replaying = true; // no photo markers, no re-framing while it sways
     const view = (t: number) => ({
       center, padding: pad,
       bearing: 7 * Math.sin((2 * Math.PI * t) / 40),
-      pitch: 38 + 6 * Math.sin((2 * Math.PI * t) / 55 + 1.2),
+      pitch: PITCH + 6 * Math.sin((2 * Math.PI * t) / 55 + 1.2),
       zoom: zoom + 0.08 * Math.sin((2 * Math.PI * t) / 47 + 0.4),
     });
     const clear = () => { this.src("comet")?.setData(empty); this.src("comet-head")?.setData(empty); };
