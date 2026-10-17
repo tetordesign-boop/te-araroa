@@ -10,6 +10,7 @@ The site follows an Apple-Maps-like structure (map full screen, a glass sheet wi
 - **The trail line is the motif.** The same orange line runs on the map, in the progress strip (a metro-style diagram with the river crossings as breaks), down the journal as its spine, and through the elevation profiles.
 - **Every touch answers.** Pressed things give a little and spring back (`--spring`, a `linear()` spring); the sheet follows the finger and springs to its height with the speed of the flick; a place touched on the map pops and sends a ring of its own colour; reactions burst; a signed note glows at the top of the hut book; profiles and bars draw themselves when they appear.
 - **One orchestrated moment.** On arrival, over the whole island, the trail he walked draws itself from Ship Cove while his kilometres count up on the same clock; he lands with a ping and the camera dives to him. Nothing else moves on its own; camera shows (orbit, Ewan's view, flyover) start only when asked, and touching the map always wins.
+- **The presentation, once.** On a first visit to the plain address (never on a link to a day, a place or the flyover), the island at night sways slowly under the title while a light runs the whole trail from Ship Cove to Bluff, again and again. The words say where Ewan is today, so nobody has to go in to know. A tap anywhere, Enter or Escape goes in: the words lift away, the sheet rises, and the arrival plays. It can be watched again from "À propos". Reduced motion: the same screen, still.
 
 ## Handling
 

@@ -21,8 +21,10 @@ import { About, Journal, Stats } from "./Pages";
 import { PlaceView, placeName } from "./Place";
 import { startReplay } from "./replayControl";
 import { Sheet } from "./Sheet";
+import { Intro } from "./Intro";
 import {
-  arrival, cameraShow, detent, FLYOVER_RE, go, goBack, isDesktop, mapApi, mapBearing, replayState, searchQuery, toastMsg, trailMode, view,
+  arrival, arrivalDue, cameraShow, detent, FLYOVER_RE, go, goBack, introOpen, isDesktop, mapApi, mapBearing, replayState, searchQuery, toastMsg,
+  trailMode, view,
 } from "./state";
 import { startTrailMode, TrailMode } from "./TrailMode";
 
@@ -78,6 +80,14 @@ function arrivesPlain() {
 }
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
+/** Where the island sits during the presentation: above the words on a phone, beside them on a computer. */
+function introPadding() {
+  const w = window.innerWidth, h = window.innerHeight;
+  return isDesktop.peek()
+    ? { top: 70, bottom: 70, left: Math.round(w * 0.52), right: 60 }
+    : { top: 64, bottom: Math.round(h * 0.47), left: 18, right: 18 };
+}
+
 /** After the sheet has moved (it changes the map's padding): camera flights start from the new framing. */
 const afterLayout = (fn: () => void) => requestAnimationFrame(() => requestAnimationFrame(fn));
 
@@ -112,7 +122,7 @@ function Controls() {
   const turned = Math.abs(((b + 540) % 360) - 180) > 3; // the map is turned more than 3° off north
   return (
     <nav class="controls" aria-label={t("mapModes")}>
-      <div class="controls__group glass" inert={!!trailMode.value}>
+      <div class="controls__group glass" inert={!!trailMode.value || introOpen.value}>
         <button type="button" data-modes-toggle onClick={() => (modesOpen.value = !open)} aria-expanded={open} aria-label={t("mapModes")} title={t("mapModes")} class={open ? "is-on" : ""}>
           <MapIcon />
         </button>
@@ -171,7 +181,6 @@ const viewKey = (v: ReturnType<typeof view.peek>) => (v.name === "day" ? `day-${
 
 export function App() {
   const mapEl = useRef<HTMLDivElement>(null);
-  const introDone = useRef(false);
 
   // ---- map lifecycle
   useEffect(() => {
@@ -198,7 +207,7 @@ export function App() {
       mapApi.value = tm;
       if (import.meta.env.DEV) {
         // for the screenshot scripts: the map, and the few switches a visitor would flip
-        Object.assign(window, { __tm: tm, __ui: { detent, go, startTrailMode, startEyeView, modesOpen, arrival }, __maplibre: (await import("maplibre-gl")).default });
+        Object.assign(window, { __tm: tm, __ui: { detent, go, startTrailMode, startEyeView, modesOpen, arrival, introOpen }, __maplibre: (await import("maplibre-gl")).default });
       }
       const m = tm.map;
       let raf = 0;
@@ -223,11 +232,24 @@ export function App() {
   // LINZ imagery when a key is configured
   useEffect(() => effect(() => { mapApi.value?.setLinzKey(settings.value?.linz_api_key ?? null); }), []);
 
-  // ---- first arrival
+  // ---- the presentation (first visit): the map sways over the island until the visitor goes in
   useEffect(() => effect(() => {
     const tm = mapApi.value;
-    if (!tm || introDone.current || status.value !== "ready") return;
-    introDone.current = true;
+    if (!tm || !introOpen.value) return;
+    let stop: (() => void) | null = null, alive = true;
+    tm.whenReady().then(() => { if (alive) stop = tm.introLoop(route.peek(), introPadding()); });
+    return () => {
+      alive = false;
+      stop?.();
+      tm.unclaimCamera(); // the dive to Ewan that follows is what they asked for by going in
+    };
+  }), []);
+
+  // ---- arrival (after the presentation, when there is one)
+  useEffect(() => effect(() => {
+    const tm = mapApi.value;
+    if (!tm || status.value !== "ready" || introOpen.value || !arrivalDue.value) return;
+    arrivalDue.value = false;
     const fly = FLYOVER_RE.exec(location.hash);
     if (fly) {
       // a flyover link: straight into it, from its km (or from where Ewan is)
@@ -250,7 +272,9 @@ export function App() {
       if (started) return;
       started = true;
       const t0 = performance.now();
-      void tm.drawIn(t0, D);
+      const root = document.documentElement;
+      root.classList.add("is-arriving");
+      void tm.drawIn(t0, D).then(() => window.setTimeout(() => root.classList.remove("is-arriving"), 2000));
       if (counting) {
         const tick = (now: number) => {
           const k = Math.min(1, (now - t0) / D);
@@ -348,7 +372,7 @@ export function App() {
     <>
       <div class="map" ref={mapEl} />
 
-      <header class="topbar" inert={!!trailMode.value}>
+      <header class="topbar" inert={!!trailMode.value || introOpen.value}>
         <Brand />
         <button class="topbtn glass" type="button" onClick={openSearch} aria-label={t("searchLabel")} title={t("searchLabel")}><Search /></button>
       </header>
@@ -356,7 +380,7 @@ export function App() {
       <Controls />
       {modesOpen.value && <MapModes />}
 
-      <Sheet label={t("whereNow")} inert={!!trailMode.value}>
+      <Sheet label={t("whereNow")} inert={!!trailMode.value || introOpen.value}>
         {isDesktop.value && <Brand inPanel />}
         {status.value === "error" && !days.value.length ? (
           <div>
@@ -395,6 +419,7 @@ export function App() {
       {trailMode.value && <TrailMode />}
 
       <div class={`toast glass${toastMsg.value ? " is-on" : ""}`} role="status" aria-live="polite">{toastMsg.value}</div>
+      {introOpen.value && <Intro />}
     </>
   );
 }

@@ -34,6 +34,8 @@ const seq = (...fs) => async (p) => { for (const f of fs) await f(p); };
 
 
 const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
+  { id: "m-intro", ctx: mobile(false), url: "?mock&intro", intro: true },
+  { id: "d-intro", ctx: desktop(false), url: "?mock&intro", intro: true },
   { id: "m-home-peek", ctx: mobile(false), url: "?mock" },
   { id: "m-home-half", ctx: mobile(false), url: "?mock", act: half },
   { id: "m-home-full", ctx: mobile(false), url: "?mock", act: seq(full, wait(800), (p) => p.evaluate(() => { const b = document.querySelector(".sheet__body"); if (b) b.scrollTop = 520; })) },
@@ -81,7 +83,18 @@ for (const s of shots) {
   const mark = (name) => marks.push(`${name} ${Math.round((Date.now() - t0) / 100) / 10}s`);
   try {
     if (s.pre) await s.pre(page);
+    // the presentation shows on a first visit only: these are return visits (except the presentation's own shots)
+    if (!s.intro) await page.addInitScript(() => { try { localStorage.setItem("intro-v1", "1"); } catch (_) {} });
     await page.goto(BASE + s.url, { waitUntil: "domcontentloaded" });
+    if (s.intro) {
+      // the map sways and the light runs: it never goes idle, so no settling, just time for the tiles
+      await page.waitForTimeout(14000); mark("waited");
+      await page.screenshot({ path: `${OUT}/${s.id}.png`, timeout: 120000 });
+      const line = `${s.id} ${Date.now() - t0}ms ok [${marks.join(", ")}]${errs.length ? " ERR " + [...new Set(errs)].slice(0, 5).join(" | ") : ""}`;
+      console.log(line); log.push(line);
+      await ctx.close();
+      continue;
+    }
     await page.waitForTimeout(3000);
     await settle(page, 800); mark("settled");
     // the arrival (trail drawing in, then the flight to Ewan) runs first on the plain map

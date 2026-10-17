@@ -5,7 +5,8 @@ import { clock, coverOf, dayOnTrail, days, media, mediaByDay, progressKm, route,
 import { addDays, fmtDate, fmtInt, fmtKm, nzToday, typo } from "../lib/format";
 import type { Day } from "../types";
 import { dayKm, excerpt, LangSwitch, titleOf } from "./Home";
-import { AddSquare, Close, Pencil, Trail } from "./icons";
+import { AddSquare, Close, Pencil, Play, Trail } from "./icons";
+import { replayIntro } from "./Intro";
 import { go, goBack, hrefFor } from "./state";
 import { TrailStrip } from "./TrailStrip";
 
@@ -292,6 +293,10 @@ export function About() {
         <h2 class="h-section" style={{ marginBottom: "12px" }}>{t("language")}</h2>
         <LangSwitch />
       </section>
+
+      <button class="btn btn--tint btn--block block" type="button" onClick={replayIntro}>
+        <Play />{t("replayIntro")}
+      </button>
 
       <section class="block">
         <h2 class="h-section" style={{ fontSize: "17px" }}>{t("credits")}</h2>

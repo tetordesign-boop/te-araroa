@@ -45,6 +45,26 @@ export const cameraShow = signal<{ kind: "orbit" | "eye"; id?: string; stop: () 
 export const trailMode = signal<{ startKm: number } | null>(null);
 /** the arrival, while the walked trail draws itself on the map: 0 to 1 (eased), null once it's all there */
 export const arrival = signal<number | null>(null);
+/** the arrival is still to play (once per visit, and again after the presentation is replayed) */
+export const arrivalDue = signal(true);
+
+// ------------------------------------------------------------------ the presentation, on a first visit
+const INTRO_KEY = "intro-v1";
+function firstVisit(): boolean {
+  const q = new URLSearchParams(location.search);
+  if (q.has("intro")) return true; // to look at it again (and for the screenshots)
+  if (q.has("nointro")) return false;
+  // a shared link to a day, a place or the flyover goes straight to it
+  if (!/^#?\/?$/.test(location.hash)) return false;
+  try { return !localStorage.getItem(INTRO_KEY); } catch (_) { return false; }
+}
+/** the presentation over the map: only on a first visit to the plain address (and when asked for again) */
+export const introOpen = signal(firstVisit());
+// before the first paint: the sheet and the controls wait off screen instead of sliding away
+if (introOpen.peek()) document.documentElement.classList.add("is-intro");
+export function rememberIntro() {
+  try { localStorage.setItem(INTRO_KEY, "1"); } catch (_) { /* private mode: it will show again, that's all */ }
+}
 
 export function hrefFor(v: View): string {
   switch (v.name) {

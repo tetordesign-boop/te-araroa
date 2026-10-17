@@ -238,6 +238,12 @@ const fr = {
   sunNow: "Soleil à {alt}°, {dir}",
   sunNight: "C'est la nuit là-bas\u202f: carte de nuit",
   compass: "Remettre le nord en haut",
+  introWith: "avec Ewan",
+  introLede: "{km} km à pied sur l'île du Sud de la Nouvelle-Zélande, de Ship Cove à Bluff.",
+  introDayKm: "jour {n}, {km} km parcourus",
+  introCta: "Suivre Ewan",
+  introLabel: "Présentation du site",
+  replayIntro: "Revoir la présentation",
 };
 
 type Dict = typeof fr;
@@ -476,6 +482,12 @@ const en: Dict = {
   sunNow: "Sun {alt}° up, {dir}",
   sunNight: "It's night over there: night map",
   compass: "Point north up",
+  introWith: "with Ewan",
+  introLede: "{km} km on foot across New Zealand's South Island, from Ship Cove to Bluff.",
+  introDayKm: "day {n}, {km} km walked",
+  introCta: "Follow Ewan",
+  introLabel: "About this site",
+  replayIntro: "Watch the intro again",
 };
 
 const dicts: Record<Lang, Dict> = { fr, en };

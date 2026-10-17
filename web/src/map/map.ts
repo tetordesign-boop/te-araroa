@@ -189,6 +189,8 @@ export class TrailMap {
   claimCamera() { this.cameraClaimed = true; this.flightToken++; }
   /** whether the visitor (or something they asked for) has already moved the camera */
   get claimed() { return this.cameraClaimed; }
+  /** going in from the presentation is asking for the arrival flight: earlier camera moves no longer count */
+  unclaimCamera() { this.cameraClaimed = false; }
 
   private onRawInput = (e: Event) => {
     if (e.type === "pointerdown" && (e as PointerEvent).button > 0) return;
@@ -309,7 +311,8 @@ export class TrailMap {
     this.hoverKey = "";
     const sat = this.base === "satellite" && !OFFLINE_MAP;
     const add = (id: string) => { if (!m.getSource(id)) m.addSource(id, { type: "geojson", data: empty }); };
-    ["route", "gaps", "walked", "transfer", "selected", "day-ends", "days-hit", "recent", "replay", "pois", "poi-selected", "stations", "hover", "pop"].forEach(add);
+    ["route", "gaps", "walked", "transfer", "selected", "day-ends", "days-hit", "recent", "replay", "pois", "poi-selected", "stations", "hover", "pop", "comet-head"].forEach(add);
+    if (!m.getSource("comet")) m.addSource("comet", { type: "geojson", data: empty, lineMetrics: true });
     if (!m.getSource("photos")) {
       m.addSource("photos", { type: "geojson", data: empty, cluster: true, clusterRadius: 70, clusterMaxZoom: 14 });
     }
@@ -334,6 +337,11 @@ export class TrailMap {
     line({ id: "selected-halo", type: "line", source: "selected", layout: round, paint: { "line-color": dark || sat ? "#FFE9D9" : "#ffffff", "line-width": w(6.5, 11.5), "line-opacity": 0.9, "line-blur": dark ? 1.2 : 0 } });
     line({ id: "selected", type: "line", source: "selected", layout: round, paint: { "line-color": ORANGE, "line-width": w(3.4, 6.2) } });
     line({ id: "replay", type: "line", source: "replay", layout: round, paint: { "line-color": "#ffffff", "line-width": w(3, 5) } });
+    // the presentation's light running along the trail (see introLoop): a fading tail, a hot head
+    line({ id: "comet-glow", type: "line", source: "comet", layout: round, paint: { "line-width": w(12, 22), "line-blur": w(8, 14), "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "rgba(255,107,18,0)", 1, "rgba(255,107,18,0.6)"] } });
+    line({ id: "comet", type: "line", source: "comet", layout: round, paint: { "line-width": w(2.6, 5), "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "rgba(255,107,18,0)", 0.75, "rgba(255,107,18,0.95)", 1, "#FFE6D2"] } });
+    m.addLayer({ id: "comet-head-glow", type: "circle", source: "comet-head", paint: { "circle-radius": 18, "circle-color": ORANGE, "circle-opacity": 0.45, "circle-blur": 1, "circle-pitch-alignment": "viewport" } });
+    m.addLayer({ id: "comet-head", type: "circle", source: "comet-head", paint: { "circle-radius": 4.5, "circle-color": "#FFF3EA", "circle-blur": 0.25, "circle-pitch-alignment": "viewport" } });
     m.addLayer({ id: "days-hit", type: "line", source: "days-hit", paint: { "line-color": "#000", "line-width": 22, "line-opacity": 0 } });
     m.addLayer({
       id: "day-ends", type: "circle", source: "day-ends",
@@ -1005,6 +1013,76 @@ export class TrailMap {
     } catch (_) {
       this.map.jumpTo({ center: [171.2, -43.9], zoom: 5.2, pitch: 0, bearing: 0 });
     }
+  }
+
+  /**
+   * The presentation's backdrop: the whole island at night, the camera swaying slowly over it, and a light running
+   * the trail from Ship Cove to Bluff, again and again. Returns the stop function.
+   */
+  introLoop(route: Route, pad: Padding): () => void {
+    const m = this.map;
+    // Ewan and his trail wait for the arrival, however long the presentation stays up
+    clearTimeout(this.arrivalTimer);
+    const lines = route.parts.map((p) => Array.from(p.lng, (x, i) => [x, p.lat[i]] as LngLat));
+    const b = route.bounds(lines);
+    // the island as everyone knows it (north up), tilted a little so the Alps stand out
+    let center: LngLat = [171.2, -43.85], zoom = 5.2;
+    try {
+      // the trail's middle, at the zoom where all of it fits the free part of the screen (the tilt brings the
+      // south closer, hence a little room)
+      m.jumpTo({ padding: { top: 0, bottom: 0, left: 0, right: 0 }, bearing: 0, pitch: 0 });
+      const mid = b ? m.cameraForBounds(b, { padding: 6 }) : undefined;
+      const fit = b ? m.cameraForBounds(b, { padding: { top: pad.top + 10, bottom: pad.bottom + 10, left: pad.left + 10, right: pad.right + 10 } }) : undefined;
+      if (mid?.center && fit && Number.isFinite(fit.zoom)) { center = maplibregl.LngLat.convert(mid.center).toArray() as LngLat; zoom = fit.zoom! - 0.12; }
+    } catch (_) { /* keep the defaults */ }
+    this.replaying = true; // no photo markers, no re-framing while it sways
+    const view = (t: number) => ({
+      center, padding: pad,
+      bearing: 7 * Math.sin((2 * Math.PI * t) / 40),
+      pitch: 38 + 6 * Math.sin((2 * Math.PI * t) / 55 + 1.2),
+      zoom: zoom + 0.08 * Math.sin((2 * Math.PI * t) / 47 + 0.4),
+    });
+    const clear = () => { this.src("comet")?.setData(empty); this.src("comet-head")?.setData(empty); };
+    const done = () => {
+      this.replaying = false;
+      clear();
+      // the arrival comes next; should it not, never leave the trail hidden
+      this.arrivalTimer = window.setTimeout(() => { if (this.drawKm === 0) this.endArrival(); }, 12_000);
+    };
+    if (reduceMotion()) {
+      m.jumpTo(view(0));
+      return done;
+    }
+    const total = route.total, RUN = 9000, PAUSE = 1600, TAIL = 110;
+    let raf = 0, stopped = false, t0 = 0;
+    const frame = (now: number) => {
+      if (stopped) return;
+      if (!t0) t0 = now;
+      const t = now - t0;
+      m.jumpTo(view(t / 1000));
+      const k = Math.min(1, (t % (RUN + PAUSE)) / RUN);
+      if (k >= 1) clear();
+      else {
+        const km = total * easeInOut(k);
+        this.src("comet")?.setData(multi(route.slice(Math.max(0, km - TAIL), km)));
+        this.src("comet-head")?.setData({ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: route.pointAt(km) } });
+      }
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => {
+      stopped = true;
+      cancelAnimationFrame(raf);
+      done();
+    };
+  }
+
+  /** The presentation is shown again: Ewan's trail and marker wait for the arrival once more. */
+  resetArrival() {
+    this.drawGen++;
+    this.drawKm = 0;
+    this.pushWalked();
+    this.liveMarker?.getElement().classList.add("is-arriving");
   }
 
   /** First arrival: from the whole island down to where Ewan is. */
