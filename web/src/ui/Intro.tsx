@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { lang, setLang, t } from "../i18n";
 import { clock, dayOnTrail, days, latestPosition, liveState, phase, progressKm, route, settings, status } from "../lib/data";
 import { daysBetween, fmtKm, nzToday } from "../lib/format";
+import { play } from "../lib/sound";
 import { Marker } from "./icons";
 import { arrivalDue, go, introOpen, mapApi, rememberIntro } from "./state";
 
@@ -57,6 +58,7 @@ export function Intro() {
   const enter = () => {
     if (leaving) return;
     setLeaving(true);
+    play("enter");
     rememberIntro();
     // the sheet and the controls come in while the words go
     document.documentElement.classList.remove("is-intro");
@@ -92,7 +94,7 @@ export function Intro() {
         </h1>
         <p class="intro__lede voice">{t("introLede", { km: fmtKm(route.value.total, l, 0) })}</p>
         <Today />
-        <button class="intro__cta" type="button" onClick={(e) => { e.stopPropagation(); enter(); }}>
+        <button class="intro__cta" type="button" data-sfx="none" onClick={(e) => { e.stopPropagation(); enter(); }}>
           {t("introCta")}
         </button>
       </div>

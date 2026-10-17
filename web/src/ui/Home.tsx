@@ -120,8 +120,8 @@ function Actions() {
   const eye = !!latestPosition.value && ph !== "before";
   return (
     <div class="actions actions--home">
-      {eye && <button class="action" type="button" onClick={startEyeView}><Eye />{t("seeWhatHeSees")}</button>}
-      <button class="action" type="button" onClick={() => startTrailMode(ph === "before" ? 0 : progressKm.value)}><Play />{t("flyover")}</button>
+      {eye && <button class="action" type="button" data-sfx="whoosh" onClick={startEyeView}><Eye />{t("seeWhatHeSees")}</button>}
+      <button class="action" type="button" data-sfx="whoosh" onClick={() => startTrailMode(ph === "before" ? 0 : progressKm.value)}><Play />{t("flyover")}</button>
     </div>
   );
 }

@@ -201,7 +201,7 @@ export function PlaceView({ id }: { id: string }) {
   if (!p) {
     return (
       <div>
-        <div class="dhead"><span /><button class="iconbtn" type="button" aria-label={t("close")} onClick={goBack}><Close /></button></div>
+        <div class="dhead"><span /><button class="iconbtn" type="button" data-sfx="close" aria-label={t("close")} onClick={goBack}><Close /></button></div>
         <p class="empty" style={{ marginTop: "12px" }}>{places.value.length ? t("placeMissing") : t("loading")}</p>
       </div>
     );
@@ -241,7 +241,7 @@ export function PlaceView({ id }: { id: string }) {
         </div>
         <div class="dhead__actions">
           <button class="iconbtn" type="button" aria-label={t("share")} onClick={share}><Share /></button>
-          <button class="iconbtn" type="button" aria-label={t("close")} onClick={goBack}><Close /></button>
+          <button class="iconbtn" type="button" data-sfx="close" aria-label={t("close")} onClick={goBack}><Close /></button>
         </div>
       </div>
 
@@ -260,7 +260,7 @@ export function PlaceView({ id }: { id: string }) {
         <Facts p={p} />
 
         <div class="actions actions--map">
-          <button class={`action${orbiting ? " is-on" : ""}`} type="button" onClick={orbit} aria-pressed={orbiting}>
+          <button class={`action${orbiting ? " is-on" : ""}`} type="button" data-sfx={orbiting ? "off" : "whoosh"} onClick={orbit} aria-pressed={orbiting}>
             <Orbit />{orbiting ? t("stopOrbit") : t("orbit")}
           </button>
           {p.poi?.url && (

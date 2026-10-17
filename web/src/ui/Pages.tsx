@@ -7,6 +7,7 @@ import type { Day } from "../types";
 import { dayKm, excerpt, LangSwitch, titleOf } from "./Home";
 import { AddSquare, Close, Pencil, Play, Trail } from "./icons";
 import { replayIntro } from "./Intro";
+import { setSound, soundOn } from "../lib/sound";
 import { go, goBack, hrefFor } from "./state";
 import { TrailStrip } from "./TrailStrip";
 
@@ -14,7 +15,7 @@ export function PageHead({ title }: { title: string }) {
   return (
     <header class="phead">
       <h1 class="h-page" tabIndex={-1} data-autofocus>{title}</h1>
-      <button class="iconbtn" type="button" aria-label={t("close")} onClick={goBack}><Close /></button>
+      <button class="iconbtn" type="button" data-sfx="close" aria-label={t("close")} onClick={goBack}><Close /></button>
     </header>
   );
 }
@@ -292,6 +293,12 @@ export function About() {
       <section class="block">
         <h2 class="h-section" style={{ marginBottom: "12px" }}>{t("language")}</h2>
         <LangSwitch />
+        <div class="modes__list" style={{ marginTop: "16px" }}>
+          <label class="switchrow">
+            <span class="switchrow__text">{t("sounds")}<small>{t("soundsSub")}</small></span>
+            <input type="checkbox" role="switch" checked={soundOn.value} onChange={(e) => setSound((e.target as HTMLInputElement).checked)} />
+          </label>
+        </div>
       </section>
 
       <button class="btn btn--tint btn--block block" type="button" onClick={replayIntro}>

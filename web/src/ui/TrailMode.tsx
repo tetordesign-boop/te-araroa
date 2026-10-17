@@ -230,7 +230,7 @@ export function TrailMode() {
         <button class={`trail-hud__play${playing ? " is-playing" : ""}`} type="button" onClick={toggle} aria-label={playing ? t("pause") : t("play")}>
           {playing ? <Pause /> : <Play />}
         </button>
-        <button class="iconbtn" type="button" aria-label={t("closeFlyover")} onClick={closeTrailMode}><Close /></button>
+        <button class="iconbtn" type="button" data-sfx="close" aria-label={t("closeFlyover")} onClick={closeTrailMode}><Close /></button>
       </div>
       <div class="trail-hud__profile" ref={wrap}
         role="slider" tabIndex={0} aria-label={t("profileLabel")}

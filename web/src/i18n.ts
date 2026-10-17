@@ -244,6 +244,8 @@ const fr = {
   introCta: "Suivre Ewan",
   introLabel: "Présentation du site",
   replayIntro: "Revoir la présentation",
+  sounds: "Sons de l'interface",
+  soundsSub: "Discrets, et muets quand l'iPhone est en mode silencieux",
 };
 
 type Dict = typeof fr;
@@ -488,6 +490,8 @@ const en: Dict = {
   introCta: "Follow Ewan",
   introLabel: "About this site",
   replayIntro: "Watch the intro again",
+  sounds: "Interface sounds",
+  soundsSub: "Quiet, and silent when your phone is on silent",
 };
 
 const dicts: Record<Lang, Dict> = { fr, en };

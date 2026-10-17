@@ -3,6 +3,7 @@ import { MOCK } from "../config";
 import { lang, t } from "../i18n";
 import { deviceId, messageCounts, sb } from "../lib/data";
 import { relTime, typo } from "../lib/format";
+import { play } from "../lib/sound";
 import type { Message } from "../types";
 import { Pencil } from "./icons";
 
@@ -61,6 +62,7 @@ export function HutBook({ dayId }: { dayId: string | null }) {
       const id = String(Date.now());
       setMsgs([...(msgs ?? []), { id, day_id: dayId, author: a, body: b, created_at: new Date().toISOString() }]);
       setFresh(id);
+      play("signed");
       setBody(""); close(); setState({ kind: "ok", msg: t("signed") });
       return;
     }
@@ -73,6 +75,7 @@ export function HutBook({ dayId }: { dayId: string | null }) {
     const row = (Array.isArray(data) ? data[0] : data) as Message;
     setMsgs([...(msgs ?? []), row]);
     setFresh(row.id);
+    play("signed");
     if (dayId) messageCounts.value = { ...messageCounts.value, [dayId]: (messageCounts.value[dayId] ?? 0) + 1 };
     setBody(""); close();
     setState({ kind: "ok", msg: t("signed") });
@@ -117,8 +120,8 @@ export function HutBook({ dayId }: { dayId: string | null }) {
             placeholder={t("yourMessage")} aria-label={t("yourMessage")} value={body} onInput={(e) => setBody((e.target as HTMLTextAreaElement).value)} />
           <input type="text" name="website" tabIndex={-1} autoComplete="off" class="sr-only" aria-hidden="true" value={trap} onInput={(e) => setTrap((e.target as HTMLInputElement).value)} />
           <div class="form__row">
-            <button class="btn" type="button" onClick={() => { close(); setState({ kind: "idle" }); }}>{t("cancel")}</button>
-            <button class="btn btn--primary" type="submit" disabled={state.kind === "sending" || !name.trim() || !body.trim()}>
+            <button class="btn" type="button" data-sfx="close" onClick={() => { close(); setState({ kind: "idle" }); }}>{t("cancel")}</button>
+            <button class="btn btn--primary" type="submit" data-sfx="none" disabled={state.kind === "sending" || !name.trim() || !body.trim()}>
               {state.kind === "sending" ? t("signing") : t("sign")}
             </button>
           </div>

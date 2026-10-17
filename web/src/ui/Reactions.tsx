@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t, type Key } from "../i18n";
 import { reactions, toggleReaction } from "../lib/data";
+import { play } from "../lib/sound";
 import type { ReactionKey } from "../types";
 
 const ITEMS: { k: ReactionKey; e: string; label: Key }[] = [
@@ -29,9 +30,10 @@ export function Reactions({ dayId }: { dayId: string }) {
         const mine = !!s?.mine;
         const isPop = popped?.k === k;
         return (
-          <button type="button" class={`react${mine ? " is-mine" : ""}${isPop ? " pop" : ""}`} aria-pressed={mine}
+          <button type="button" class={`react${mine ? " is-mine" : ""}${isPop ? " pop" : ""}`} aria-pressed={mine} data-sfx="none"
             aria-label={`${t(label)}${s?.total ? `, ${s.total}` : ""}`}
             onClick={() => {
+              play(mine ? "tap" : "react");
               if (!mine) {
                 setPopped({ k, n: (popped?.n ?? 0) + 1 });
                 clearTimeout(timer.current);

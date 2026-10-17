@@ -9,6 +9,7 @@ import {
 import { relTime } from "../lib/format";
 import type { LngLat } from "../lib/geo";
 import { mapPois, placeById, places, poiGroups, searchPlaces } from "../lib/places";
+import { play } from "../lib/sound";
 import { TrailMap, type LiveData, type MapData } from "../map/map";
 import { DayView } from "./DayView";
 import { ExploreView, openSearch } from "./Explore";
@@ -60,6 +61,9 @@ const liveData = computed<LiveData | null>(() => {
     label: `${t(liveState.value === "live" ? "live" : "lastKnown")}, ${relTime(lp.recorded_at, lang.value)}`,
   };
 });
+
+/** each kind of place answers a touch in its own voice: huts low, summits high */
+const POP_PITCH: Record<string, number> = { hut: 0.85, camp: 0.95, gap: 0.8, fall: 1.1, view: 1.15, pass: 1.25, peak: 1.4 };
 
 /** whether the map is tilted, for the 2D / 3D button */
 const map3d = signal(false);
@@ -153,7 +157,7 @@ function ShowPill() {
       <div class="show-pill show-pill--eye glass" role="status">
         <Eye />
         <span class="show-pill__text"><strong>{t("eyeTitle")}</strong><small>{t("eyeSub")}</small></span>
-        <button class="iconbtn" type="button" aria-label={t("close")} onClick={endEyeView}><Close /></button>
+        <button class="iconbtn" type="button" data-sfx="close" aria-label={t("close")} onClick={endEyeView}><Close /></button>
       </div>
     );
   }
@@ -162,7 +166,7 @@ function ShowPill() {
     <div class="show-pill glass" role="status">
       <Orbit />
       <span class="show-pill__text"><strong>{t("orbitTitle")}</strong>{p && <small>{placeName(p, l)}</small>}</span>
-      <button class="iconbtn" type="button" aria-label={t("stopOrbit")} onClick={() => { mapApi.value?.stopShow(); cameraShow.value = null; }}><Close /></button>
+      <button class="iconbtn" type="button" data-sfx="close" aria-label={t("stopOrbit")} onClick={() => { mapApi.value?.stopShow(); cameraShow.value = null; }}><Close /></button>
     </div>
   );
 }
@@ -190,11 +194,12 @@ export function App() {
       const land = OFFLINE_MAP ? ((await import("../dev/nz-land.json")).default as unknown as GeoJSON.Feature) : undefined;
       const prefs = mapPrefs.peek();
       tm = new TrailMap(mapEl.current!, {
-        onDay: (n) => go({ name: "day", n }),
+        onDay: (n) => { play("open"); go({ name: "day", n }); },
         onPhoto: (n, id) => go({ name: "day", n, photo: id }),
         onLive: () => { go({ name: "home" }); detent.value = "half"; },
-        onPlace: (id) => go({ name: "place", id }),
-        onStation: (i) => go({ name: "place", id: `s${i}` }),
+        onPlace: (id) => { play("pop", POP_PITCH[placeById.peek().get(id)?.t ?? ""] ?? 1); go({ name: "place", id }); },
+        onStation: (i) => { play("pop", 0.8); go({ name: "place", id: `s${i}` }); },
+        onLanded: () => play("ping"),
         // moving the map leaves the sheet where it is (as in Apple Maps): only the map modes card closes
         onInteract: () => { modesOpen.value = false; },
         onUserInput: () => replayState.peek()?.stop(true),
@@ -404,7 +409,7 @@ export function App() {
       </Sheet>
 
       {replayable.value && !replayState.value && !cameraShow.value && (isDesktop.value || detent.value !== "full") && (
-        <button class="replay-fab glass" type="button" onClick={() => startReplay(replayable.value!)}>
+        <button class="replay-fab glass" type="button" data-sfx="whoosh" onClick={() => startReplay(replayable.value!)}>
           <Replay />{t("replay3d")}
         </button>
       )}

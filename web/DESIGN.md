@@ -12,11 +12,17 @@ The site follows an Apple-Maps-like structure (map full screen, a glass sheet wi
 - **One orchestrated moment.** On arrival, over the whole island, the trail he walked draws itself from Ship Cove while his kilometres count up on the same clock; he lands with a ping and the camera dives to him. Nothing else moves on its own; camera shows (orbit, Ewan's view, flyover) start only when asked, and touching the map always wins.
 - **The presentation, once.** On a first visit to the plain address (never on a link to a day, a place or the flyover), the island at night sways slowly under the title while a light runs the whole trail from Ship Cove to Bluff, again and again. The words say where Ewan is today, so nobody has to go in to know. A tap anywhere, Enter or Escape goes in: the words lift away, the sheet rises, and the arrival plays. It can be watched again from "À propos". Reduced motion: the same screen, still.
 
+## Sounds
+
+`src/lib/sound.ts`: synthesised with Web Audio (no files), one small family of soft tones. A tap is a wooden "tock"; links open with two rising notes and close buttons with two falling ones; switches and filters say on or off; a place touched on the map is a bubble (huts low, summits high); the sheet settling after a drag is a low thud; a reaction sparkles; a signed note is a warm chord; the camera shows (flyover, Ewan's view, the turn around a place) breathe; going in from the presentation chimes; Ewan landing at the end of the arrival pings, far away. Buttons can name their sound with `data-sfx` (or `none` when their code plays one). Quiet, one at a time, ambient audio session on iPhone (the silent switch mutes them and they never stop the visitor's music), and a switch in "À propos" turns them off.
+
 ## Handling
 
 - The sheet is positioned by script (`ui/Sheet.tsx`): no React render while dragging, a spring integrated in small steps on real time, velocity from the events' own timestamps (a busy phone delivers moves late), rubber band past its ends, a clear flick always moves one height. Fully open, the content scrolls and pulls the sheet down once it is back at the top.
 - The map never moves when the sheet does: the new padding is applied in place, and only the next flight frames things in the free part.
-- Taps on the map look 22 px around the finger and take the place drawn closest; a tap on nothing closes the place card (and only the map modes card, if that is what was open).
+- Taps on the map look 22 px around the finger and take the place drawn closest; a tap on nothing closes the place card (and only the map modes card, if that is what was open). On touch screens the map ignores the first 7 px a finger wobbles (`clickTolerance`), so a tap neither nudges the map nor gets lost.
+- A press in the sheet may wander 10 px (a finger) or 5 px (a mouse) and still be a tap: buttons are never swallowed by a would-be drag. A gesture the browser takes over (a sideways swipe on a shelf) is not a tap either.
+- The page itself never zooms on a phone (no double-tap zoom, Safari's pinch is cancelled): the map and the photos zoom. Holding a control doesn't select its words or open a link preview.
 
 ## The map
 

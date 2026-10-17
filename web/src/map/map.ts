@@ -40,6 +40,8 @@ export interface MapCallbacks {
   onUserInput?: () => void;
   /** a tap on the map that hit nothing (closes the open card, like in Maps) */
   onEmptyTap?: () => void;
+  /** Ewan's marker has just landed at the end of the arrival */
+  onLanded?: () => void;
 }
 
 type Padding = { top: number; right: number; bottom: number; left: number };
@@ -127,6 +129,8 @@ export class TrailMap {
       fadeDuration: 180,
       renderWorldCopies: false,
       cooperativeGestures: false,
+      // a fingertip wobbles a few pixels on a tap: below this the map neither moves nor misses the tap
+      clickTolerance: window.matchMedia("(pointer: coarse)").matches ? 7 : 3,
       canvasContextAttributes: { antialias: true },
     } as maplibregl.MapOptions);
     this.map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
@@ -654,6 +658,7 @@ export class TrailMap {
     const ping = document.createElement("span");
     ping.className = "live-pin__ping";
     el.appendChild(ping);
+    this.cb.onLanded?.();
     window.setTimeout(() => { ping.remove(); el.classList.remove("is-landing"); }, 1400);
   }
 
@@ -700,6 +705,7 @@ export class TrailMap {
       const el = document.createElement("button");
       el.type = "button";
       el.className = "photo-pin";
+      el.dataset.sfx = p.cluster ? "tap" : "open";
       if (p.cluster) {
         const count = Number(p.point_count);
         el.innerHTML = `<span class="photo-pin__count">${count}</span>`;

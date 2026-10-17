@@ -123,7 +123,7 @@ export function DayView({ n, photo }: { n: number; photo?: string }) {
   if (!d) {
     return (
       <div>
-        <div class="dhead"><span /><button class="iconbtn" type="button" aria-label={t("close")} onClick={goBack}><Close /></button></div>
+        <div class="dhead"><span /><button class="iconbtn" type="button" data-sfx="close" aria-label={t("close")} onClick={goBack}><Close /></button></div>
         <p class="empty" style={{ marginTop: "12px" }}>{t("journalEmpty")}</p>
       </div>
     );
@@ -154,7 +154,7 @@ export function DayView({ n, photo }: { n: number; photo?: string }) {
         </div>
         <div class="dhead__actions">
           <button class="iconbtn" type="button" aria-label={t("share")} onClick={share}><Share /></button>
-          <button class="iconbtn" type="button" aria-label={t("close")} onClick={goBack}><Close /></button>
+          <button class="iconbtn" type="button" data-sfx="close" aria-label={t("close")} onClick={goBack}><Close /></button>
         </div>
       </div>
 

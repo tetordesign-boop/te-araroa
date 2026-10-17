@@ -4,6 +4,7 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { t } from "../i18n";
+import { play } from "../lib/sound";
 import { detent, isDesktop, mapApi, type Detent } from "./state";
 
 const PEEK = 236;
@@ -101,7 +102,7 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
   useEffect(() => {
     const el = ref.current, body = bodyRef.current;
     if (!el || !body) return;
-    let drag: { y0: number; start: number; moved: boolean; id: number | "touch"; onGrip: boolean; samples: [number, number][] } | null = null;
+    let drag: { y0: number; start: number; moved: boolean; id: number | "touch"; onGrip: boolean; samples: [number, number][]; slop: number } | null = null;
 
     const clampWithRubber = (y: number) => {
       const top = 0, bottom = yFor("peek");
@@ -110,22 +111,24 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
       return y;
     };
     // times are the events' own (when the finger moved), not when a busy page got round to handling them
-    const begin = (y0: number, id: number | "touch", onGrip: boolean, ts: number) => {
+    // how far a press may wander and still be a tap: a fingertip wobbles more than a mouse
+    const begin = (y0: number, id: number | "touch", onGrip: boolean, ts: number, finger = true) => {
       cancelAnimationFrame(anim.current.raf);
-      drag = { y0, start: Number.isFinite(anim.current.y) ? anim.current.y : yFor(detent.peek()), moved: false, id, onGrip, samples: [[y0, ts]] };
+      drag = { y0, start: Number.isFinite(anim.current.y) ? anim.current.y : yFor(detent.peek()), moved: false, id, onGrip, samples: [[y0, ts]], slop: finger ? 10 : 5 };
     };
     const move = (y: number, ts: number): boolean => {
       if (!drag) return false;
       const dy = y - drag.y0;
       if (!drag.moved) {
-        if (Math.abs(dy) < 6) return false;
+        if (Math.abs(dy) < drag.slop) return false;
         drag.moved = true;
+        drag.y0 += Math.sign(dy) * drag.slop;
         anim.current.dragging = true;
         el.classList.add("is-dragging");
       }
       drag.samples.push([y, ts]);
       if (drag.samples.length > 8) drag.samples.shift();
-      place(clampWithRubber(drag.start + dy));
+      place(clampWithRubber(drag.start + (y - drag.y0)));
       return true;
     };
     const end = (tapTarget: EventTarget | null, ts: number) => {
@@ -133,10 +136,11 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
       drag = null;
       if (!d) return;
       if (!d.moved) {
+        if (!tapTarget) return; // cancelled (the browser took the gesture): nothing happened
         // a tap: on the grip it cycles the heights; on the empty part of a low sheet it opens it a bit more
         const cur = detent.peek();
-        if (d.onGrip) detent.value = cur === "peek" ? "half" : cur === "half" ? "full" : "half";
-        else if (cur === "peek" && !(tapTarget as HTMLElement | null)?.closest?.("a,button,input,textarea,[role=button]")) detent.value = "half";
+        if (d.onGrip) { detent.value = cur === "peek" ? "half" : cur === "half" ? "full" : "half"; play("snap"); }
+        else if (cur === "peek" && !(tapTarget as HTMLElement).closest?.("a,button,input,textarea,label,[role=button]")) { detent.value = "half"; play("snap"); }
         return;
       }
       anim.current.dragging = false;
@@ -155,7 +159,7 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
       const i = ORDER.indexOf(detent.peek());
       if (to === detent.peek() && Math.abs(v) > 0.45) to = v > 0 ? ORDER[Math.min(2, i + 1)] : ORDER[Math.max(0, i - 1)];
       if (to === detent.peek()) settle(to, v);
-      else { anim.current.flickV = v; detent.value = to; } // the effect above springs there, with this speed
+      else { anim.current.flickV = v; detent.value = to; play("snap"); } // the effect above springs there, with this speed
     };
 
     // pointer (mouse, pen, and touch when the sheet isn't fully open: touch-action is off then)
@@ -163,8 +167,7 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
       if (isDesktop.value || e.button > 0) return;
       const onGrip = !!(e.target as HTMLElement).closest(".sheet__grip");
       if (!onGrip && detent.peek() === "full") return; // full: the content scrolls (touch handled below)
-      if (e.pointerType === "touch" && !onGrip && detent.peek() !== "full") { begin(e.clientY, e.pointerId, false, e.timeStamp); return; }
-      begin(e.clientY, e.pointerId, onGrip, e.timeStamp);
+      begin(e.clientY, e.pointerId, onGrip, e.timeStamp, e.pointerType !== "mouse");
     };
     const onMove = (e: PointerEvent) => {
       if (!drag || drag.id !== e.pointerId) return;
@@ -188,7 +191,7 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
       if (!s || e.touches.length !== 1) return;
       const y = e.touches[0].clientY, dy = y - s.y, dx = e.touches[0].clientX - s.x;
       if (!s.decided) {
-        if (Math.abs(dy) < 6 && Math.abs(dx) < 6) return;
+        if (Math.abs(dy) < 8 && Math.abs(dx) < 8) return;
         s.decided = true;
         s.pulling = body.scrollTop <= 0 && dy > 0 && Math.abs(dy) > Math.abs(dx);
         if (s.pulling) begin(s.y, "touch", false, s.ts);
@@ -237,11 +240,12 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
       inert={inert}
       onClickCapture={onClickCapture as unknown as (e: Event) => void}
     >
-      <div class="sheet__grip" role="button" tabIndex={0} aria-label={current === "full" ? t("collapse") : t("expand")}
+      <div class="sheet__grip" role="button" tabIndex={0} data-sfx="none" aria-label={current === "full" ? t("collapse") : t("expand")}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             detent.value = current === "full" ? "peek" : current === "peek" ? "half" : "full";
+            play("snap");
           }
         }}>
         <span />

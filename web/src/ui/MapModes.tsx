@@ -101,7 +101,7 @@ export function MapModes() {
   }, []);
 
   const base = (b: BaseStyle) => (
-    <button type="button" class="mbase" aria-pressed={p.base === b} onClick={() => setPrefs({ base: b })}>
+    <button type="button" class="mbase" data-sfx="tap" aria-pressed={p.base === b} onClick={() => setPrefs({ base: b })}>
       <Thumb kind={b} />
       <span>{b === "explore" ? t("mapPlan") : t("satellite")}</span>
     </button>
@@ -111,7 +111,7 @@ export function MapModes() {
     <div class="modes glass" ref={ref} role="dialog" aria-label={t("mapModes")}>
       <div class="modes__head">
         <h2 class="modes__title">{t("mapModes")}</h2>
-        <button class="iconbtn" type="button" aria-label={t("close")} onClick={() => (modesOpen.value = false)}><Close /></button>
+        <button class="iconbtn" type="button" data-sfx="close" aria-label={t("close")} onClick={() => (modesOpen.value = false)}><Close /></button>
       </div>
       <div class="modes__bases">{base("explore")}{base("satellite")}</div>
       <div class="modes__list">

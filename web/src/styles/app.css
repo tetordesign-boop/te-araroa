@@ -82,7 +82,14 @@
 
 /* ------------------------------------------------------------------ base */
 *, *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
+html, body { margin: 0; height: 100%; overscroll-behavior: none; }
+/* taps are taps: no double-tap zoom of the page on phones (the map handles its own gestures) */
+html { touch-action: manipulation; }
+button, a, input, label, [role="button"] { touch-action: manipulation; }
+/* pressing and holding a control doesn't select its words or open a link preview: it's an app */
+button, [role="button"], label, .row, .prow, .next, .feature, .pager__item, .prel--day, .log__link, .topbar, .controls, .now, .strip, .trail-hud {
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
 body {
   font-family: var(--font-ui);
   font-size: 16px;
