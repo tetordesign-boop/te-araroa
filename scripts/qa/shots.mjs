@@ -31,6 +31,12 @@ const prefs = (v) => (p) => p.addInitScript((v) => { try { localStorage.setItem(
 const click = (sel) => (p) => p.click(sel);
 const wait = (ms) => (p) => p.waitForTimeout(ms);
 const seq = (...fs) => async (p) => { for (const f of fs) await f(p); };
+/** what the page says, for the log (probe: an expression evaluated in the page) */
+const probe = async (p, s) => {
+  if (!s.probe) return "";
+  const v = await p.evaluate((x) => { try { return String(new Function(`return (${x})`)() ?? ""); } catch (e) { return `probe failed: ${e}`; } }, s.probe).catch((e) => `probe failed: ${e}`);
+  return `\n  SAYS ${v.replace(/\s*\n\s*/g, " / ").slice(0, 1500)}`;
+};
 
 
 const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
@@ -65,6 +71,19 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "d-trail", ctx: desktop(false), url: "?mock", act: seq(wait(4000), ui("u.startTrailMode(348)"), wait(10000)), noSettle: true },
   { id: "d-lakes", ctx: desktop(false), url: "?mock", act: (p) => camera(p, { center: [169.2, -44.62], zoom: 9.4, pitch: 58, bearing: 330 }) },
   { id: "d-day", ctx: desktop(false), url: "?mock#/jour/14" },
+  // the real site, with the real database (what family and friends see today)
+  { id: "r-m-intro", ctx: mobile(false), url: "?intro", intro: true, probe: "document.querySelector('.intro')?.innerText" },
+  { id: "r-m-intro-en", ctx: mobile(false, "en-NZ"), url: "?intro", intro: true, probe: "document.querySelector('.intro')?.innerText" },
+  { id: "r-m-home", ctx: mobile(false), url: "", probe: "document.querySelector('.sheet')?.innerText" },
+  { id: "r-m-home-half", ctx: mobile(false), url: "", act: half },
+  { id: "r-m-home-full", ctx: mobile(false), url: "", act: seq(full, wait(800)) },
+  { id: "r-m-home-full-2", ctx: mobile(false), url: "", act: seq(full, wait(800), (p) => p.evaluate(() => { const b = document.querySelector(".sheet__body"); if (b) b.scrollTop = 640; })) },
+  { id: "r-m-about", ctx: mobile(false), url: "#/apropos", act: full },
+  { id: "r-m-explore", ctx: mobile(false), url: "#/explorer" },
+  { id: "r-m-journal", ctx: mobile(false), url: "#/journal", probe: "document.querySelector('.sheet')?.innerText" },
+  { id: "r-m-carnet", ctx: mobile(false), url: "admin/", plain: 6000, probe: "document.body.innerText" },
+  { id: "r-d-intro", ctx: desktop(false), url: "?intro", intro: true },
+  { id: "r-d-home", ctx: desktop(false), url: "", probe: "document.querySelector('.sheet, .panel')?.innerText" },
 ];
 
 const log = [];
@@ -79,6 +98,7 @@ for (const s of shots) {
   page.on("console", (m) => { if (m.type() === "error") errs.push(m.text().slice(0, 200)); });
   const t0 = Date.now();
   let status = "ok";
+  let info = "";
   const marks = [];
   const mark = (name) => marks.push(`${name} ${Math.round((Date.now() - t0) / 100) / 10}s`);
   try {
@@ -86,11 +106,13 @@ for (const s of shots) {
     // the presentation shows on a first visit only: these are return visits (except the presentation's own shots)
     if (!s.intro) await page.addInitScript(() => { try { localStorage.setItem("intro-v1", "1"); } catch (_) {} });
     await page.goto(BASE + s.url, { waitUntil: "domcontentloaded" });
-    if (s.intro) {
-      // the map sways and the light runs: it never goes idle, so no settling, just time for the tiles
-      await page.waitForTimeout(14000); mark("waited");
+    if (s.intro || s.plain) {
+      // the presentation sways and its light runs: it never goes idle, so no settling, just time for the tiles
+      // (plain: a page without the map, the Carnet)
+      await page.waitForTimeout(s.plain ?? 14000); mark("waited");
       await page.screenshot({ path: `${OUT}/${s.id}.png`, timeout: 120000 });
-      const line = `${s.id} ${Date.now() - t0}ms ok [${marks.join(", ")}]${errs.length ? " ERR " + [...new Set(errs)].slice(0, 5).join(" | ") : ""}`;
+      const info = await probe(page, s);
+      const line = `${s.id} ${Date.now() - t0}ms ok [${marks.join(", ")}]${errs.length ? " ERR " + [...new Set(errs)].slice(0, 5).join(" | ") : ""}${info}`;
       console.log(line); log.push(line);
       await ctx.close();
       continue;
@@ -103,11 +125,12 @@ for (const s of shots) {
     await settle(page, 600); mark("settled");
     if (s.act) { await s.act(page); mark("acted"); if (!s.noSettle) { await settle(page, 1800); mark("settled"); } }
     await page.screenshot({ path: `${OUT}/${s.id}.png`, timeout: 120000 });
+    info = await probe(page, s);
   } catch (e) {
     status = `FAIL ${String(e.message || e).split("\n")[0]}`;
     await page.screenshot({ path: `${OUT}/${s.id}.png`, timeout: 120000 }).catch(() => {});
   }
-  const line = `${s.id} ${Date.now() - t0}ms ${status} [${marks.join(", ")}]${errs.length ? " ERR " + [...new Set(errs)].slice(0, 5).join(" | ") : ""}`;
+  const line = `${s.id} ${Date.now() - t0}ms ${status} [${marks.join(", ")}]${errs.length ? " ERR " + [...new Set(errs)].slice(0, 5).join(" | ") : ""}${info}`;
   console.log(line); log.push(line);
   await ctx.close();
 }
