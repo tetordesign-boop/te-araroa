@@ -123,7 +123,7 @@ a.textbtn { text-decoration: none; color: var(--marker); }
   background: var(--marker); color: var(--on-marker); font: 760 14px/24px var(--font-ui); text-align: center;
 }
 .steps li + li { border-top: 1px solid var(--separator); }
-.auth { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
+.auth { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
 .auth__box { width: 100%; max-width: 400px; }
 .auth__mark { width: 64px; height: 64px; margin: 0 auto 14px; display: block; }
 .auth h1 { text-align: center; font-size: 28px; margin: 0 0 6px; letter-spacing: -0.02em; }

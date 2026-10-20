@@ -16,6 +16,16 @@ The site follows an Apple-Maps-like structure (map full screen, a glass sheet wi
 
 `src/lib/sound.ts`: synthesised with Web Audio (no files), one small family of soft tones. A tap is a wooden "tock"; links open with two rising notes and close buttons with two falling ones; switches and filters say on or off; a place touched on the map is a bubble (huts low, summits high); the sheet settling after a drag is a low thud; a reaction sparkles; a signed note is a warm chord; the camera shows (flyover, Ewan's view, the turn around a place) breathe; going in from the presentation chimes; Ewan landing at the end of the arrival pings, far away. Buttons can name their sound with `data-sfx` (or `none` when their code plays one). Quiet, one at a time, ambient audio session on iPhone (the silent switch mutes them and they never stop the visitor's music), and a switch in "À propos" turns them off.
 
+## Screens
+
+- Phones held upright: the sheet, full width. Under 360 px (an iPhone with display zoom, small Androids) the hero number and the day's figures shrink or go two by two rather than collide.
+- Phones held sideways (`PANEL_MQ` in `ui/state.ts`, the same query as the `@media` rules): a sheet would cover the whole of a screen that short, so the panel of the computer layout comes in, narrower (`--panel-w`), with the map beside it. The presentation keeps its words beside the island too, closer together.
+- Tablets held upright (600 to 899 px wide): the sheet becomes a card on the left, 468 px at most, and the map stays in view beside it; it keeps its three heights.
+- Computers and tablets held sideways: the floating panel, 432 px.
+- Past 1 000 km the hero number gets narrower (by the final figure, so it doesn't jump while it counts up); at the end the side says how many days it took.
+- No WebGL 2 (an older iPad): the map can't start, so `ui/MapFallback.tsx` draws the trail plainly, with what Ewan walked, where he is and the main towns, and the buttons that need the map go away. Everything else works.
+- Fonts: the Archivo face is preloaded with the page (`preloadFonts()` in `vite.config.ts`); the presentation's words wait for their fonts, 1.5 s at most, rather than come in with stand-ins and jump.
+
 ## Handling
 
 - The sheet is positioned by script (`ui/Sheet.tsx`): no React render while dragging, a spring integrated in small steps on real time, velocity from the events' own timestamps (a busy phone delivers moves late), rubber band past its ends, a clear flick always moves one height. Fully open, the content scrolls and pulls the sheet down once it is back at the top.
@@ -74,6 +84,6 @@ Type scale: 12.5 / 14 / 15 / 16 (body, weight 450) / 18.5 (stories, Literata, li
 
 ## Checking a change
 
-`npm run dev`, then open `/?mock` (16 sample days), `/?mock&before` (before departure), `/?mock&slow` (loading state). Without access to the tile servers, add `&offline-map` (a plain land shape). Check a phone width (393 px) and a computer width (1440 px), FR and EN, and with reduced motion.
+`npm run dev`, then open `/?mock` (16 sample days), `/?mock&before` (before departure), `/?mock&slow` (loading state). Without access to the tile servers, add `&offline-map` (a plain land shape). Check a phone width (393 px, and 320 px), a phone held sideways (852 × 393), an iPad (820 × 1180) and a computer width (1440 px), FR and EN, and with reduced motion. Without WebGL (Chromium's `--disable-webgl`), the plain drawing must say where Ewan is.
 
 Screenshots on the real map: push to `bot/qa`; the "Captures de contrôle" workflow publishes them on `bot/qa-out` (`scripts/qa/shots.mjs` lists the views). The places and the elevation profile are rebuilt by pushing to `bot/data` (results on `bot/data-out`, to copy into `public/data/`). The icons and the link preview are drawn by `scripts/brand/icons.mjs` and `scripts/brand/og.mjs`.

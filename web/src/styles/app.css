@@ -207,6 +207,7 @@ strong, b { font-weight: 650; }
   position: absolute; z-index: 30;
   left: calc(var(--safe-l) + 8px); right: calc(var(--safe-r) + 8px);
   bottom: calc(var(--safe-b) + 8px);
+  height: calc(100vh - var(--safe-t) - var(--safe-b) - 70px); /* (Safari before 15.4) */
   height: calc(100dvh - var(--safe-t) - var(--safe-b) - 70px);
   border-radius: var(--r-sheet);
   display: flex; flex-direction: column;
@@ -873,6 +874,7 @@ textarea.field { min-height: 108px; line-height: 1.45; font-family: var(--font-v
   position: absolute; z-index: 45;
   top: calc(var(--safe-t) + 10px); right: calc(var(--safe-r) + 66px);
   width: min(330px, calc(100vw - var(--safe-l) - var(--safe-r) - 84px));
+  max-height: calc(100vh - var(--safe-t) - var(--safe-b) - 24px);
   max-height: calc(100dvh - var(--safe-t) - var(--safe-b) - 24px); overflow-y: auto; overscroll-behavior: contain;
   padding: 12px 14px 16px; border-radius: 24px; transform-origin: top right;
   animation: modes-in 0.42s var(--spring) both;

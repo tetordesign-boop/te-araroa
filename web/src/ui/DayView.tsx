@@ -137,7 +137,9 @@ export function DayView({ n, photo }: { n: number; photo?: string }) {
   const share = async () => {
     const url = `${location.origin}${location.pathname}#/jour/${d.day_number}`;
     const real = dayTitle(d, l);
-    const text = t("shareText", { title: `${t("day", { n: d.day_number })}${real ? ` : ${real}` : ""}` });
+    // "Jour 12 : St Arnaud." / "Day 12: St Arnaud." (no full stop after Ewan's own ! or ?)
+    const head = `${t("day", { n: d.day_number })}${real ? `${l === "fr" ? "\u202f: " : ": "}${real}` : ""}`;
+    const text = t("shareText", { title: /[.!?…]$/.test(head) ? head : `${head}.` });
     try {
       if (navigator.share) { await navigator.share({ title: text, url }); return; }
       await navigator.clipboard.writeText(url);
