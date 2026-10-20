@@ -10,6 +10,14 @@ import { installTapSounds } from "./lib/sound";
 import { App } from "./ui/App";
 
 document.documentElement.lang = lang.value;
+// the presentation's words wait (a moment at most) for their own fonts, rather than come in with stand-ins and jump
+if (document.documentElement.classList.contains("is-intro") && document.fonts?.load) {
+  const root = document.documentElement;
+  const done = () => root.classList.remove("fonts-wait");
+  root.classList.add("fonts-wait");
+  Promise.all([document.fonts.load('860 100px "Archivo Variable"'), document.fonts.load('18px "Literata Variable"')]).then(done, done);
+  window.setTimeout(done, 1500);
+}
 startData();
 loadPlaces();
 installTapSounds();

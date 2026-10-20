@@ -124,7 +124,8 @@ export function DayView({ n, photo }: { n: number; photo?: string }) {
     return (
       <div>
         <div class="dhead"><span /><button class="iconbtn" type="button" data-sfx="close" aria-label={t("close")} onClick={goBack}><Close /></button></div>
-        <p class="empty" style={{ marginTop: "12px" }}>{t("journalEmpty")}</p>
+        {/* (a link to a day that isn't there: the journal has started, or not) */}
+        <p class="empty" style={{ marginTop: "12px" }}>{list.length ? t("dayMissing", { n }) : t("journalEmpty")}</p>
       </div>
     );
   }

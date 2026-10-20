@@ -150,7 +150,7 @@ export function ExploreView() {
         <>
           <GroupChips counts={counts} scroll />
 
-          <button class="cta" type="button" data-sfx="whoosh" onClick={() => startTrailMode(from)}>
+          <button class="cta" type="button" data-sfx="whoosh" data-needs-map onClick={() => startTrailMode(from)}>
             <span class="cta__icon" aria-hidden="true"><Play /></span>
             <span class="cta__text">
               <strong>{t("flyoverCta")}</strong>

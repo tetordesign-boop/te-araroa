@@ -98,13 +98,15 @@ function Now() {
       <Status />
       <div class="now__row">
         <div class="now__km">
-          <span class="num now__big" aria-hidden={a !== null}>{fmtKm(shown, l, 0)}</span>
+          {/* past 1 000 km the number gets narrower (by the final figure: no jump while it counts up) */}
+          <span class={`num now__big${km >= 999.5 ? " is-long" : ""}`} aria-hidden={a !== null}>{fmtKm(shown, l, 0)}</span>
           {a !== null && <span class="sr-only">{fmtKm(km, l, 0)}</span>}
           <span class="now__unit">km</span>
         </div>
         <div class="now__side">
-          {n ? <span class="now__day">{ph === "after" ? t("finished", { n }) : t("day", { n })}</span> : null}
-          <span class="now__of">{t("ofTotal", { total: fmtKm(r.total, l, 0) })}</span>
+          {/* at the end: how long it took, short enough to sit beside the four digits */}
+          {n ? <span class="now__day">{ph === "after" ? t("daysTotal", { n }) : t("day", { n })}</span> : null}
+          <span class="now__of">{ph === "after" ? t("toBluff") : t("ofTotal", { total: fmtKm(r.total, l, 0) })}</span>
         </div>
       </div>
       <TrailStrip route={r} walked={a === null ? walked.value.hike : upTo(walked.value.hike, shown)} here={shown} legendAt={km} />
@@ -119,7 +121,7 @@ function Actions() {
   const ph = phase.value;
   const eye = !!latestPosition.value && ph !== "before";
   return (
-    <div class="actions actions--home">
+    <div class="actions actions--home" data-needs-map>
       {eye && <button class="action" type="button" data-sfx="whoosh" onClick={startEyeView}><Eye />{t("seeWhatHeSees")}</button>}
       <button class="action" type="button" data-sfx="whoosh" onClick={() => startTrailMode(ph === "before" ? 0 : progressKm.value)}><Play />{t("flyover")}</button>
     </div>

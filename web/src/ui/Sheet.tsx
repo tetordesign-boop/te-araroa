@@ -89,8 +89,12 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
   useLayoutEffect(() => {
     const { vh } = geo.current;
     const visible = heights()[current];
+    // beside the panel (its width depends on the screen: narrower on a phone held sideways)
+    // (its layout box: during the presentation it is slid away by a transform)
+    const panelRight = ref.current ? ref.current.offsetLeft + ref.current.offsetWidth : 446;
+    const short = vh < 520;
     mapApi.value?.setPadding(isDesktop.value
-      ? { left: 440, bottom: 40, top: 90, right: 70 }
+      ? { left: panelRight - 6, bottom: short ? 20 : 40, top: short ? 24 : 90, right: 70 }
       : { left: 24, right: 70, top: 84, bottom: Math.min(visible, vh * 0.62) + 20 });
   }, [current, isDesktop.value, mapApi.value]);
 

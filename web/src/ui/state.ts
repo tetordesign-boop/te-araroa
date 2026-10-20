@@ -27,14 +27,20 @@ function parse(hash: string): View {
 const detentFor = (v: View, desktop: boolean): Detent =>
   v.name === "home" ? "peek" : v.name === "day" || v.name === "place" ? (desktop ? "full" : "half") : "full";
 
-export const isDesktop = signal(window.matchMedia("(min-width: 900px)").matches);
-window.matchMedia("(min-width: 900px)").addEventListener("change", (e) => (isDesktop.value = e.matches));
+/** The floating panel beside the map instead of the sheet: computers and big tablets, and phones held sideways
+ * (a sheet would cover the whole of a screen that short). Same query as the `@media` rules in app.css. */
+export const PANEL_MQ = "(min-width: 900px), (min-width: 600px) and (max-height: 520px)";
+const panelMq = window.matchMedia(PANEL_MQ);
+export const isDesktop = signal(panelMq.matches);
+panelMq.addEventListener("change", (e) => (isDesktop.value = e.matches));
 
 export const view = signal<View>(parse(location.hash));
 export const detent = signal<Detent>(detentFor(view.value, isDesktop.value));
 export const toastMsg = signal<string | null>(null);
 export const replayState = signal<{ n: number; progress: number; stop: (byHand?: boolean) => void } | null>(null);
 export const mapApi = signal<TrailMap | null>(null);
+/** the map couldn't start (no WebGL 2: an older iPad, say): the trail is drawn plainly instead */
+export const mapFailed = signal(false);
 /** what the search field in the explore view holds (kept while browsing places) */
 export const searchQuery = signal("");
 /** the map's bearing, for the compass */

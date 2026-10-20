@@ -13,6 +13,9 @@ const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--ena
 const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
 const mobile = (dark, locale = "fr-FR") => ({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: dark ? "dark" : "light", locale, timezoneId: "Pacific/Auckland", userAgent: IPHONE });
 const desktop = (dark) => ({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, colorScheme: dark ? "dark" : "light", locale: "fr-FR", timezoneId: "Pacific/Auckland" });
+// a phone held sideways, and an iPad held upright (Safari on iPad says it is a Mac)
+const sideways = () => ({ viewport: { width: 852, height: 393 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: "fr-FR", timezoneId: "Pacific/Auckland", userAgent: IPHONE });
+const tablet = () => ({ viewport: { width: 820, height: 1180 }, deviceScaleFactor: 1, hasTouch: true, locale: "fr-FR", timezoneId: "Pacific/Auckland" });
 
 const grip = async (p, n = 1) => { for (let i = 0; i < n; i++) { await p.click(".sheet__grip"); await p.waitForTimeout(700); } };
 /** wait until the map has loaded what it needs for the current view */
@@ -71,6 +74,11 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "d-trail", ctx: desktop(false), url: "?mock", act: seq(wait(4000), ui("u.startTrailMode(348)"), wait(10000)), noSettle: true },
   { id: "d-lakes", ctx: desktop(false), url: "?mock", act: (p) => camera(p, { center: [169.2, -44.62], zoom: 9.4, pitch: 58, bearing: 330 }) },
   { id: "d-day", ctx: desktop(false), url: "?mock#/jour/14" },
+  { id: "l-intro", ctx: sideways(), url: "?mock&intro", intro: true },
+  { id: "l-home", ctx: sideways(), url: "?mock" },
+  { id: "l-day", ctx: sideways(), url: "?mock#/jour/12" },
+  { id: "t-home", ctx: tablet(), url: "?mock" },
+  { id: "t-day", ctx: tablet(), url: "?mock#/jour/12" },
   // the real site, with the real database (what family and friends see today)
   { id: "r-m-intro", ctx: mobile(false), url: "?intro", intro: true, probe: "document.querySelector('.intro')?.innerText" },
   { id: "r-m-intro-en", ctx: mobile(false, "en-NZ"), url: "?intro", intro: true, probe: "document.querySelector('.intro')?.innerText" },

@@ -14,9 +14,9 @@ const SOUTH_ISLAND: [LngLat, LngLat] = [[166.4, -47.3], [174.5, -40.45]];
 const F = OFFLINE_MAP ? OFFLINE_FONT : FONT;
 
 /** Label tiers for the trail's own stations: 1 = always, 2 = regional zoom, 3 = close-up only. */
-const TIER1 = new Set(["Ship Cove · Meretoto", "St Arnaud", "Arthur's Pass (Klondyke Corner)", "Lake Tekapo", "Queenstown", "Bluff · Stirling Point"]);
+export const TIER1 = new Set(["Ship Cove · Meretoto", "St Arnaud", "Arthur's Pass (Klondyke Corner)", "Lake Tekapo", "Queenstown", "Bluff · Stirling Point"]);
 const TIER2 = new Set(["Havelock", "Boyle Village", "Lake Coleridge · Rakaia", "Twizel", "Wānaka", "Invercargill"]);
-const stationName = (n: string) => n.replace(" (Klondyke Corner)", "").replace(" · Stirling Point", "").replace(" · Meretoto", "").replace("Lake Coleridge · Rakaia", "Rakaia").replace(" · Aparima", "");
+export const stationName = (n: string) => n.replace(" (Klondyke Corner)", "").replace(" · Stirling Point", "").replace(" · Meretoto", "").replace("Lake Coleridge · Rakaia", "Rakaia").replace(" · Aparima", "");
 
 export interface MapData {
   route: Route;
@@ -330,8 +330,9 @@ export class TrailMap {
     const line = (spec: maplibregl.LayerSpecification) => m.addLayer(spec, before);
     const round = { "line-join": "round", "line-cap": "round" } as const;
 
-    line({ id: "route-casing", type: "line", source: "route", layout: round, paint: { "line-color": casing, "line-width": w(3, 6.2) } });
-    line({ id: "route", type: "line", source: "route", layout: round, paint: { "line-color": routeColor, "line-width": w(1.1, 2.6), "line-opacity": sat ? 0.9 : dark ? 0.62 : 0.8 } });
+    // (over the whole island the line is thin: a little brighter there, so the way ahead reads before he even starts)
+    line({ id: "route-casing", type: "line", source: "route", layout: round, paint: { "line-color": casing, "line-width": w(3.6, 6.2) } });
+    line({ id: "route", type: "line", source: "route", layout: round, paint: { "line-color": routeColor, "line-width": w(1.7, 2.6), "line-opacity": sat ? 0.9 : dark ? zi([[5, 0.9], [8, 0.76], [11, 0.62]]) : 0.8 } });
     line({ id: "gaps", type: "line", source: "gaps", layout: { "line-cap": "round" }, paint: { "line-color": routeColor, "line-width": w(1, 2), "line-opacity": 0.6, "line-dasharray": [0.1, 2.2] } });
     line({ id: "transfer", type: "line", source: "transfer", layout: { "line-cap": "round" }, paint: { "line-color": ORANGE, "line-width": w(1.5, 3), "line-dasharray": [0.1, 1.8] } });
     line({ id: "walked-glow", type: "line", source: "walked", layout: round, paint: { "line-color": ORANGE, "line-width": w(9, 20), "line-blur": w(6, 12), "line-opacity": sat ? 0.5 : dark ? 0.6 : 0.3 } });

@@ -17,6 +17,7 @@ import { endEyeView, startEyeView } from "./eye";
 import { Home } from "./Home";
 import { dayKm } from "./Home";
 import { Close, Compass, Eye, Locate, MapIcon, Marker, Orbit, Replay, Search } from "./icons";
+import { MapFallback } from "./MapFallback";
 import { MapModes, mapPrefs, modesClosedAt, modesOpen } from "./MapModes";
 import { About, Journal, Stats } from "./Pages";
 import { PlaceView, placeName } from "./Place";
@@ -24,7 +25,7 @@ import { startReplay } from "./replayControl";
 import { Sheet } from "./Sheet";
 import { Intro } from "./Intro";
 import {
-  arrival, arrivalDue, cameraShow, detent, FLYOVER_RE, go, goBack, introOpen, isDesktop, mapApi, mapBearing, replayState, searchQuery, toastMsg,
+  arrival, arrivalDue, cameraShow, detent, FLYOVER_RE, go, goBack, introOpen, isDesktop, mapApi, mapBearing, mapFailed, replayState, searchQuery, toastMsg,
   trailMode, view,
 } from "./state";
 import { startTrailMode, TrailMode } from "./TrailMode";
@@ -87,9 +88,12 @@ const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t 
 /** Where the island sits during the presentation: above the words on a phone, beside them on a computer. */
 function introPadding() {
   const w = window.innerWidth, h = window.innerHeight;
+  const short = h < 520; // a phone held sideways: every pixel of height counts (but the language button stays clear)
+  // on a phone, above the words: on a small one they climb higher than half the screen, and Bluff must stay clear
+  const words = document.querySelector(".intro__body")?.getBoundingClientRect().top ?? h;
   return isDesktop.peek()
-    ? { top: 70, bottom: 70, left: Math.round(w * 0.52), right: 60 }
-    : { top: 64, bottom: Math.round(h * 0.47), left: 18, right: 64 }; // (room on the right for the names)
+    ? { top: short ? 54 : 70, bottom: short ? 18 : 70, left: Math.round(w * 0.52), right: 60 }
+    : { top: 64, bottom: Math.round(Math.max(h * 0.47, h - words + 6)), left: 18, right: 64 }; // (room on the right for the names)
 }
 
 /** After the sheet has moved (it changes the map's padding): camera flights start from the new framing. */
@@ -193,6 +197,7 @@ export function App() {
     (async () => {
       const land = OFFLINE_MAP ? ((await import("../dev/nz-land.json")).default as unknown as GeoJSON.Feature) : undefined;
       const prefs = mapPrefs.peek();
+      try {
       tm = new TrailMap(mapEl.current!, {
         onDay: (n) => { play("open"); go({ name: "day", n }); },
         onPhoto: (n, id) => go({ name: "day", n, photo: id }),
@@ -209,6 +214,13 @@ export function App() {
           if (view.peek().name === "place") goBack();
         },
       }, land, { base: prefs.base, contours: prefs.contours, sun: prefs.sun, groups: poiGroups.peek(), arrival: arrivesPlain() });
+      } catch (e) {
+        // no WebGL 2 (an older iPad, say): the trail is drawn plainly, and the buttons that need the map go away
+        console.warn("map unavailable", e);
+        mapFailed.value = true;
+        document.documentElement.classList.add("no-map");
+        return;
+      }
       mapApi.value = tm;
       if (import.meta.env.DEV) {
         // for the screenshot scripts: the map, and the few switches a visitor would flip
@@ -378,6 +390,7 @@ export function App() {
   return (
     <>
       <div class="map" ref={mapEl} />
+      {mapFailed.value && <MapFallback />}
 
       <header class="topbar" inert={!!trailMode.value || introOpen.value}>
         <Brand />
