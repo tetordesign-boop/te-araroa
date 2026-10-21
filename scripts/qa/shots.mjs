@@ -8,7 +8,9 @@ const onlyFile = new URL("./only.txt", import.meta.url);
 const [, , OUT = "/tmp/shots", only = process.env.ONLY ?? (existsSync(onlyFile) ? readFileSync(onlyFile, "utf8") : "")] = process.argv;
 const prefixes = only.split(/[\s,]+/).filter(Boolean);
 mkdirSync(OUT, { recursive: true });
-const BASE = process.env.BASE || "http://localhost:5173/";
+// the address to photograph: the local dev server, or (scripts/qa/base.txt) the site as it is online
+const baseFile = new URL("./base.txt", import.meta.url);
+const BASE = process.env.BASE || (existsSync(baseFile) ? readFileSync(baseFile, "utf8").trim() : "") || "http://localhost:5173/";
 const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--enable-webgl"] });
 const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
 const mobile = (dark, locale = "fr-FR") => ({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, colorScheme: dark ? "dark" : "light", locale, timezoneId: "Pacific/Auckland", userAgent: IPHONE });
@@ -92,6 +94,13 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "r-m-carnet", ctx: mobile(false), url: "admin/", plain: 6000, probe: "document.body.innerText" },
   { id: "r-d-intro", ctx: desktop(false), url: "?intro", intro: true },
   { id: "r-d-home", ctx: desktop(false), url: "", probe: "document.querySelector('.sheet, .panel')?.innerText" },
+  // the site online (with base.txt): no developer hooks there, so plain waits
+  { id: "p-m-intro", ctx: mobile(false), url: "?intro", intro: true, probe: "document.querySelector('.intro')?.innerText" },
+  { id: "p-m-home", ctx: mobile(false), url: "", plain: 16000, probe: "document.querySelector('.sheet')?.innerText" },
+  { id: "p-l-home", ctx: sideways(), url: "", plain: 16000 },
+  { id: "p-t-home", ctx: tablet(), url: "", plain: 16000 },
+  { id: "p-d-home", ctx: desktop(false), url: "", plain: 16000, probe: "[...document.querySelectorAll('link[rel=preload]')].map((l) => l.href.split('/').pop()).join(' ') + ' | fonts ' + document.fonts.check('860 100px \"Archivo Variable\"')" },
+  { id: "p-m-carnet", ctx: mobile(false), url: "admin/", plain: 6000, probe: "document.body.innerText" },
 ];
 
 const log = [];
