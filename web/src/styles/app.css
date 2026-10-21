@@ -686,6 +686,10 @@ textarea.field { min-height: 108px; line-height: 1.45; font-family: var(--font-v
 @media (min-width: 600px) {
   .maplibregl-ctrl-bottom-right { bottom: 8px; }
 }
+/* opened (as they are until the map is first moved), the credits stay beside the panel rather than slip under it */
+@media (min-width: 900px), (min-width: 600px) and (max-height: 520px) {
+  .map .maplibregl-ctrl-attrib.maplibregl-compact-show { box-sizing: border-box; max-width: calc(100vw - var(--safe-l) - var(--safe-r) - var(--panel-w) - 44px); }
+}
 /* the map's own stylesheet loads after this one: the extra .map keeps these rules on top */
 .map .maplibregl-ctrl-attrib.maplibregl-compact { background: var(--glass-bg) !important; color: var(--ink-2); border-radius: 12px; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); box-shadow: inset 0 0 0 1px var(--line); }
 .map .maplibregl-ctrl-attrib a { color: var(--ink-2); }
