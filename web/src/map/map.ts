@@ -102,6 +102,7 @@ export class TrailMap {
   private resolveReady!: () => void;
   private styleGen = 0;
   replaying = false;
+  private flightLines: LngLat[][] = [];
 
   constructor(container: HTMLElement, private cb: MapCallbacks, land?: GeoJSON.Feature,
     init: { base?: BaseStyle; contours?: boolean; sun?: boolean; groups?: Iterable<PoiGroup>; arrival?: boolean } = {}) {
@@ -315,7 +316,7 @@ export class TrailMap {
     this.hoverKey = "";
     const sat = this.base === "satellite" && !OFFLINE_MAP;
     const add = (id: string) => { if (!m.getSource(id)) m.addSource(id, { type: "geojson", data: empty }); };
-    ["route", "gaps", "walked", "transfer", "selected", "day-ends", "days-hit", "recent", "replay", "pois", "poi-selected", "stations", "hover", "pop", "comet-head"].forEach(add);
+    ["route", "gaps", "walked", "transfer", "flight", "selected", "day-ends", "days-hit", "recent", "replay", "pois", "poi-selected", "stations", "hover", "pop", "comet-head"].forEach(add);
     if (!m.getSource("comet")) m.addSource("comet", { type: "geojson", data: empty, lineMetrics: true });
     if (!m.getSource("photos")) {
       m.addSource("photos", { type: "geojson", data: empty, cluster: true, clusterRadius: 70, clusterMaxZoom: 14 });
@@ -335,6 +336,9 @@ export class TrailMap {
     line({ id: "route", type: "line", source: "route", layout: round, paint: { "line-color": routeColor, "line-width": w(1.7, 2.6), "line-opacity": sat ? 0.9 : dark ? zi([[5, 0.9], [8, 0.76], [11, 0.62]]) : 0.8 } });
     line({ id: "gaps", type: "line", source: "gaps", layout: { "line-cap": "round" }, paint: { "line-color": routeColor, "line-width": w(1, 2), "line-opacity": 0.6, "line-dasharray": [0.1, 2.2] } });
     line({ id: "transfer", type: "line", source: "transfer", layout: { "line-cap": "round" }, paint: { "line-color": ORANGE, "line-width": w(1.5, 3), "line-dasharray": [0.1, 1.8] } });
+    // the flyover's way so far, from Ship Cove to its point, in the map's turquoise (Ewan's orange goes over it)
+    line({ id: "flight-casing", type: "line", source: "flight", layout: round, paint: { "line-color": "rgba(3,8,18,0.75)", "line-width": w(5, 8) } });
+    line({ id: "flight", type: "line", source: "flight", layout: round, paint: { "line-color": "#5CD6E6", "line-width": w(2.6, 4.4) } });
     line({ id: "walked-glow", type: "line", source: "walked", layout: round, paint: { "line-color": ORANGE, "line-width": w(9, 20), "line-blur": w(6, 12), "line-opacity": sat ? 0.5 : dark ? 0.6 : 0.3 } });
     line({ id: "walked", type: "line", source: "walked", layout: round, paint: { "line-color": ORANGE, "line-width": w(2.6, 5) } });
     line({ id: "walked-core", type: "line", source: "walked", layout: round, paint: { "line-color": "#FFD9BD", "line-width": w(0.5, 1.3), "line-opacity": dark || sat ? 0.85 : 0 } });
@@ -534,6 +538,7 @@ export class TrailMap {
       gapLines.push([routeLines[i][routeLines[i].length - 1], routeLines[i + 1][0]]);
     }
     this.src("gaps")!.setData(multi(gapLines));
+    this.src("flight")?.setData(multi(this.flightLines)); // (again after a change of map style)
     this.pushWalked();
     this.pushStations();
 
@@ -661,6 +666,12 @@ export class TrailMap {
     el.appendChild(ping);
     this.cb.onLanded?.();
     window.setTimeout(() => { ping.remove(); el.classList.remove("is-landing"); }, 1400);
+  }
+
+  /** The flyover's way so far (empty to clear it). */
+  setFlight(lines: LngLat[][]) {
+    this.flightLines = lines;
+    this.src("flight")?.setData(multi(lines));
   }
 
   setLive(live: LiveData | null) {

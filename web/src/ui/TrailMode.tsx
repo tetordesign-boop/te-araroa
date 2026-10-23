@@ -5,9 +5,11 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/ho
 import { computed } from "@preact/signals";
 import { mediaUrl } from "../config";
 import { lang, t } from "../i18n";
-import { days, latestPosition, media, mediaPositions, phase, progressKm, route, walked } from "../lib/data";
+import { days, latestPosition, livePlacement, media, mediaPositions, phase, progressKm, route, walked } from "../lib/data";
 import { fmtInt, fmtKm } from "../lib/format";
+import type { LngLat } from "../lib/geo";
 import type { Day, Media } from "../types";
+import { TrailSketch } from "./TrailSketch";
 import { titleOf } from "./Home";
 import { places, profile, shortStation, trailElevation, type Place } from "../lib/places";
 import { TrailCam } from "../map/trailcam";
@@ -209,7 +211,18 @@ export function TrailMode() {
     go({ name: "day", n: pd.day_number, photo: m.id }, { replace: true });
   };
 
+  // the little map of the whole island: where the flight is, the way so far, where Ewan is (a touch flies there)
+  const at = s?.km ?? target;
+  const lp = livePlacement.value;
+  const pos = latestPosition.value;
+  const ewanAt: LngLat | null = phase.value === "before" ? null : lp?.onTrail ? lp.point : pos ? [pos.lng, pos.lat] : null;
+  const [mw, mh] = isDesktop.value ? [150, 180] : [100, 122];
+
   return (
+    <>
+    <div class="fly-mini glass" aria-hidden="true">
+      <TrailSketch route={route.value} width={mw} height={mh} walked={walked.value.hike} flownTo={at} point={at} ewan={ewanAt} onPick={scrub} />
+    </div>
     <div class="trail-hud glass" ref={card} role="region" aria-label={t("trailModeTitle")}>
       <div class="trail-hud__top">
         {photo && (
@@ -254,5 +267,6 @@ export function TrailMode() {
         <span>Bluff</span>
       </div>
     </div>
+    </>
   );
 }

@@ -1,12 +1,19 @@
 // The camera of the whole-trail flyover. It glides towards the km being scrubbed on the elevation profile,
 // or moves on by itself when playing. Position and heading are smoothed, so river crossings (where the route
-// jumps) and hairpins become a calm drone flight instead of a jump cut.
+// jumps) and hairpins become a calm drone flight instead of a jump cut. A bright point marks where it is,
+// and the way from Ship Cove to that point is drawn in turquoise, so one sees at a glance how far along it is.
+import maplibregl from "maplibre-gl";
 import type { LngLat, Route } from "../lib/geo";
 import type { TrailMap } from "./map";
 
 type Padding = { top: number; right: number; bottom: number; left: number };
 
 const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** km per second while playing: the whole trail in about nine minutes */
+const SPEED = 2.4;
+/** how often the turquoise way is redrawn (the point itself moves every frame) */
+const FLIGHT_EVERY_MS = 160;
 
 export class TrailCam {
   /** km the camera is over (smoothed) and km it is heading for */
@@ -15,18 +22,21 @@ export class TrailCam {
   playing = false;
   /** the person took the map in hand at some point (no automatic start after that) */
   grabbed = false;
-  /** km per second while playing */
-  speed = 0.8;
+  speed = SPEED;
   private center: LngLat;
   private bearing: number;
-  private zoom = 11.3;
-  private pitch = 64;
+  // a little higher than a drone: enough valley around the point to know where it is
+  private zoom = 10.6;
+  private pitch = 60;
   private padding: Padding;
   private following = false;
   private raf = 0;
   private last = 0;
   private dead = false;
   private off: (() => void)[] = [];
+  private pin: maplibregl.Marker;
+  private flightAt = -1;
+  private flightTime = 0;
 
   constructor(private tm: TrailMap, private route: Route, startKm: number, padding: Padding, private onChange: () => void) {
     this.km = this.target = clampKm(startKm, route);
@@ -38,6 +48,14 @@ export class TrailCam {
     tm.claimCamera();
     tm.replaying = true;
     document.documentElement.classList.add("is-replaying");
+
+    // the point: always drawn whole, even behind a ridge (the map would fade a marker the relief hides)
+    const el = document.createElement("div");
+    el.className = "fly-pin";
+    el.setAttribute("aria-hidden", "true");
+    el.innerHTML = '<span class="fly-pin__ring"></span><span class="fly-pin__dot"></span>';
+    this.pin = new maplibregl.Marker({ element: el, anchor: "center", opacity: "1", opacityWhenCovered: "1" }).setLngLat(this.center).addTo(m);
+    this.drawFlight(true);
 
     // Someone takes the map in hand: stop steering until they scrub or press play again, and keep their zoom
     // and tilt. Watched on the raw events: while the camera moves every frame, MapLibre never sees a drag start.
@@ -54,12 +72,13 @@ export class TrailCam {
       cc.removeEventListener("pointerdown", grab, { capture: true });
       cc.removeEventListener("wheel", grab, { capture: true });
     });
+    // the approach; the loop starts when it lands (or at once with reduced motion)
+    // (stopping whatever the camera was doing ends it with a "moveend": only listen after that, or the flyover
+    // would keep the height of the flight it interrupted)
+    m.stop();
     const settle = () => { if (!this.following) { this.zoom = m.getZoom(); this.pitch = m.getPitch(); } };
     m.on("moveend", settle);
     this.off.push(() => m.off("moveend", settle));
-
-    // the approach; the loop starts when it lands (or at once with reduced motion)
-    m.stop();
     m.once("moveend", () => {
       if (this.dead) return;
       this.center = m.getCenter().toArray() as LngLat;
@@ -102,6 +121,15 @@ export class TrailCam {
     this.following = true;
   }
 
+  /** The turquoise way from Ship Cove to the point (not every frame: it is a whole line). */
+  private drawFlight(force = false) {
+    const now = performance.now();
+    if (!force && (Math.abs(this.km - this.flightAt) < 0.05 || now - this.flightTime < FLIGHT_EVERY_MS)) return;
+    this.flightAt = this.km;
+    this.flightTime = now;
+    this.tm.setFlight(this.km > 0.05 ? this.route.sample(0, this.km, 0.4) : []);
+  }
+
   private frame = (now: number) => {
     if (this.dead) return;
     const dt = this.last ? Math.min(0.1, (now - this.last) / 1000) : 1 / 60;
@@ -120,15 +148,24 @@ export class TrailCam {
       const b = instant ? 1 : 1 - Math.exp(-dt / 0.22);
       const dx = want[0] - this.center[0], dy = want[1] - this.center[1];
       this.center = [this.center[0] + dx * b, this.center[1] + dy * b];
-      const heading = this.route.bearingAt(Math.min(this.route.total, this.km + 1.2), 3);
+      // looking a little further ahead at this pace keeps the turns calm
+      const heading = this.route.bearingAt(Math.min(this.route.total, this.km + 2.6), 4);
       const delta = ((heading - this.bearing + 540) % 360) - 180;
       this.bearing = (this.bearing + delta * (instant ? 1 : 1 - Math.exp(-dt / 1.4)) + 360) % 360;
       // once everything has arrived, leave the map alone (it stays free for the person's fingers)
       const still = !this.playing && this.km === this.target && Math.abs(dx) < 1e-7 && Math.abs(dy) < 1e-7 && Math.abs(delta) < 0.05;
       if (!still) {
         this.tm.map.jumpTo({ center: this.center, bearing: this.bearing, zoom: this.zoom, pitch: this.pitch, padding: this.padding });
+        this.pin.setLngLat(want);
+        this.drawFlight(this.km === this.target && !this.playing);
         this.onChange();
       }
+    } else {
+      // the map in hand: the point and its way still follow the profile
+      const want = this.route.pointAt(this.target);
+      this.km = this.target;
+      this.pin.setLngLat(want);
+      this.drawFlight();
     }
     this.raf = requestAnimationFrame(this.frame);
   };
@@ -138,6 +175,8 @@ export class TrailCam {
     this.dead = true;
     cancelAnimationFrame(this.raf);
     for (const f of this.off) f();
+    this.pin.remove();
+    this.tm.setFlight([]);
     this.tm.replaying = false;
     document.documentElement.classList.remove("is-replaying");
   }

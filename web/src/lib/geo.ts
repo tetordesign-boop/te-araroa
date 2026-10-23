@@ -32,6 +32,22 @@ export function destination(p: LngLat, brg: number, dist: number): LngLat {
 
 interface Part { lng: Float64Array; lat: Float64Array; km: Float64Array }
 
+/** The point at a km within one part (no doubt about which side of a river crossing it is on). */
+function pointIn(p: Part, km: number): LngLat {
+  const a = p.km;
+  const last = a.length - 1;
+  if (km <= a[0]) return [p.lng[0], p.lat[0]];
+  if (km >= a[last]) return [p.lng[last], p.lat[last]];
+  let lo = 0, hi = last;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (a[mid] <= km) lo = mid; else hi = mid;
+  }
+  const span = a[hi] - a[lo];
+  const t = span > 0 ? (km - a[lo]) / span : 0;
+  return [p.lng[lo] + (p.lng[hi] - p.lng[lo]) * t, p.lat[lo] + (p.lat[hi] - p.lat[lo]) * t];
+}
+
 /** Fast lookups along the official route (km are measured from Ship Cove). */
 export class Route {
   parts: Part[];
@@ -97,6 +113,25 @@ export class Route {
       // pointAt picks the first part containing km; fix endpoints that fall on a gap boundary
       if (a === pk0) line[0] = [p.lng[0], p.lat[0]];
       if (b === pk1) line[line.length - 1] = [p.lng[p.lng.length - 1], p.lat[p.lat.length - 1]];
+      out.push(line);
+    }
+    return out;
+  }
+
+  /** Like slice, with a point every `step` km: light enough to redraw several times a second. */
+  sample(k0: number, k1: number, step: number): LngLat[][] {
+    const lo = Math.max(0, Math.min(k0, k1));
+    const hi = Math.min(this.total, Math.max(k0, k1));
+    const out: LngLat[][] = [];
+    if (hi - lo < 1e-6 || !(step > 0)) return out;
+    for (const p of this.parts) {
+      const pk0 = p.km[0], pk1 = p.km[p.km.length - 1];
+      if (pk1 < lo || pk0 > hi) continue;
+      const a = Math.max(lo, pk0), b = Math.min(hi, pk1);
+      if (b - a < 1e-6) continue;
+      const line: LngLat[] = [];
+      for (let k = a; k < b; k += step) line.push(pointIn(p, k));
+      line.push(pointIn(p, b));
       out.push(line);
     }
     return out;
