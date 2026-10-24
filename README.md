@@ -12,7 +12,7 @@ Les proches suivent sa position, ses étapes, ses photos et lui laissent des mot
 | `supabase/functions/` | Fonctions serveur : import du tracé officiel, suivi OwnTracks, création du compte admin |
 | `scripts/data/` | Fabrique les lieux du sentier (OpenStreetMap) et le profil d'altitude, dans GitHub Actions |
 | `scripts/qa/` | Captures d'écran du site sur la vraie carte, dans GitHub Actions |
-| `scripts/brand/` | Dessine les icônes de l'appli et l'image d'aperçu des liens (`node scripts/brand/icons.mjs`, `og.mjs`) |
+| `scripts/brand/` | Le logo « Cap au sud » (la Croix du Sud, sa cinquième étoile devenue la balise orange d'Ewan) : sa géométrie (`crux.mjs`), les icônes de l'appli et du Carnet (`icons.mjs`), l'image d'aperçu des liens (`og.mjs`) |
 
 ## Architecture
 

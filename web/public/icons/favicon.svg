@@ -1,11 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <defs>
-    <radialGradient id="bg" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#16223A"/><stop offset="1" stop-color="#0A1222"/></radialGradient>
-    <radialGradient id="glow" cx="50%" cy="56%" r="50%"><stop offset="0" stop-color="#FF6B12" stop-opacity=".55"/><stop offset=".55" stop-color="#FF6B12" stop-opacity=".12"/><stop offset="1" stop-color="#FF6B12" stop-opacity="0"/></radialGradient>
-    <linearGradient id="tri" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF8A3A"/><stop offset="1" stop-color="#FF5F08"/></linearGradient>
-  </defs>
+  <defs><radialGradient id="bg" cx="62%" cy="30%" r="85%"><stop offset="0" stop-color="#1A2843"/><stop offset=".55" stop-color="#0C1526"/><stop offset="1" stop-color="#050A15"/></radialGradient><radialGradient id="glow"><stop offset="0" stop-color="#FF6B12" stop-opacity=".42"/><stop offset="1" stop-color="#FF6B12" stop-opacity="0"/></radialGradient></defs>
   <rect width="100" height="100" rx="22" fill="url(#bg)"/>
-  <circle cx="50" cy="56" r="44" fill="url(#glow)"/>
-  <path d="M50 27.980800000000002 L76 73.0128 L24 73.0128 Z" fill="url(#tri)" stroke="url(#tri)" stroke-width="8.32" stroke-linejoin="round"/>
-  <circle cx="50" cy="43.5808" r="2.7" fill="#2A1203" opacity=".5"/>
+  <g transform="translate(7.433 3.152) scale(0.9147)">
+    <circle cx="63.97" cy="53.73" r="27.84" fill="url(#glow)"/>
+    <path d="M48.82 2.053200000000002Q50.674156 11.105844000000001 59.7268 12.96Q50.674156 14.814156 48.82 23.866799999999998Q46.965844 14.814156 37.9132 12.96Q46.965844 11.105844000000001 48.82 2.053200000000002Z" fill="#EAF2FF"/><path d="M55.87 73.5016Q58.197027999999996 84.862972 69.55839999999999 87.19Q58.197027999999996 89.517028 55.87 100.8784Q53.542972 89.517028 42.181599999999996 87.19Q53.542972 84.862972 55.87 73.5016Z" fill="#EAF2FF"/><path d="M23.24 32.760999999999996Q25.30363 42.83637 35.379 44.9Q25.30363 46.963629999999995 23.24 57.039Q21.17637 46.963629999999995 11.100999999999999 44.9Q21.17637 42.83637 23.24 32.760999999999996Z" fill="#EAF2FF"/><path d="M73.58 24.65Q75.042 31.788 82.17999999999999 33.25Q75.042 34.712 73.58 41.85Q72.118 34.712 64.98 33.25Q72.118 31.788 73.58 24.65Z" fill="#EAF2FF"/>
+    <path d="M63.97 44.990328L72.67 60.058727999999995L55.269999999999996 60.058727999999995Z" fill="#FF6B12" stroke="#FF6B12" stroke-width="2.44" stroke-linejoin="round"/>
+  </g>
 </svg>

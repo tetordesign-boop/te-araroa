@@ -5,7 +5,7 @@ import { clock, coverOf, dayOnTrail, days, media, mediaByDay, progressKm, route,
 import { addDays, fmtDate, fmtInt, fmtKm, nzToday, typo } from "../lib/format";
 import type { Day } from "../types";
 import { dayKm, excerpt, LangSwitch, titleOf } from "./Home";
-import { AddSquare, Close, Pencil, Play, Trail } from "./icons";
+import { AddSquare, BrandMark, Close, Pencil, Play, Trail } from "./icons";
 import { replayIntro } from "./Intro";
 import { setSound, soundOn } from "../lib/sound";
 import { go, goBack, hrefFor } from "./state";
@@ -304,6 +304,15 @@ export function About() {
       <button class="btn btn--tint btn--block block" type="button" onClick={replayIntro}>
         <Play />{t("replayIntro")}
       </button>
+
+      {/* the mark explained, once, where people look for that kind of thing */}
+      <section class="block logo-note">
+        <BrandMark class="logo-note__mark" axes />
+        <div>
+          <h2 class="h-section" style={{ fontSize: "17px" }}>{t("logoTitle")}</h2>
+          <p class="fine" style={{ marginTop: "6px" }}>{t("logoText")}</p>
+        </div>
+      </section>
 
       <section class="block">
         <h2 class="h-section" style={{ fontSize: "17px" }}>{t("credits")}</h2>

@@ -1,4 +1,5 @@
 import type { JSX } from "preact";
+import crux from "../brand/crux.json";
 
 type P = JSX.SVGAttributes<SVGSVGElement>;
 const base = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": true } as const;
@@ -30,14 +31,36 @@ export const Compass = (p: P) => (
 export const Check = (p: P) => <svg {...base} {...p} stroke-width={2.6}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
 export const Trail = (p: P) => <svg {...base} {...p} fill="currentColor" stroke="none"><path d="M12 4.2c.5 0 .9.2 1.1.6l7.3 12.6c.5.9-.1 2-1.1 2H4.7c-1 0-1.6-1.1-1.1-2l7.3-12.6c.2-.4.6-.6 1.1-.6z" /></svg>;
 
+/** A four-pointed sparkle, the way a bright star looks on a dark sky (same drawing as scripts/brand). */
+export const sparkle = (x: number, y: number, r: number) => {
+  const k = r * 0.17;
+  return `M${x} ${y - r}Q${x + k} ${y - k} ${x + r} ${y}Q${x + k} ${y + k} ${x} ${y + r}Q${x - k} ${y + k} ${x - r} ${y}Q${x - k} ${y - k} ${x} ${y - r}Z`;
+};
+/** An upright track marker centred on (x, y), side s (its corners rounded by a stroke of its own colour). */
+export const trianglePath = (x: number, y: number, s: number) => {
+  const h = s * 0.866;
+  return `M${x} ${y - h * 0.58}L${x + s / 2} ${y + h * 0.42}L${x - s / 2} ${y + h * 0.42}Z`;
+};
+
 /**
- * The brand mark: the orange triangle nailed to posts and trees all along New Zealand's tracks,
- * nail hole included.
+ * The brand mark, "Cap au sud": the Southern Cross where it is in the New Zealand sky, which points the way
+ * south, and in the place of its faint fifth star the orange track marker of the trail: Ewan, walking to Bluff.
+ * Geometry: src/brand/crux.json (scripts/brand/crux.mjs). `axes`: the faint dotted lines of the cross.
  */
-export const Marker = (p: P) => (
-  <svg viewBox="0 0 32 32" aria-hidden="true" {...p}>
-    <path d="M16 3.6c.95 0 1.8.5 2.28 1.32l11.1 19.3c.95 1.66-.25 3.73-2.17 3.73H4.79c-1.92 0-3.12-2.07-2.17-3.73l11.1-19.3A2.62 2.62 0 0116 3.6z" fill="#FF6B12" />
-    <path d="M16 3.6c.95 0 1.8.5 2.28 1.32l2.1 3.66c-1.5-.5-2.9-.75-4.38-.75s-2.88.25-4.38.75l2.1-3.66A2.62 2.62 0 0116 3.6z" fill="#fff" opacity=".22" />
-    <circle cx="16" cy="12.4" r="1.55" fill="#000" opacity=".3" />
-  </svg>
-);
+export const BrandMark = ({ axes = false, compact = false, ...p }: P & { axes?: boolean; compact?: boolean }) => {
+  const s = Object.fromEntries(crux.stars.map((x) => [x.name, x]));
+  // (compact: drawn around 30 px high, the stars and the marker a little bolder so they still read)
+  const e = compact ? { ...crux.ewan, s: crux.ewan.s * 1.4 } : crux.ewan;
+  const stars = compact ? crux.stars.map((x) => ({ ...x, r: Math.max(8.4, x.r * 1.2) })) : crux.stars;
+  return (
+    <svg viewBox={crux.box.join(" ")} aria-hidden="true" {...p}>
+      {axes && (
+        <g stroke="#EAF2FF" stroke-opacity=".22" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="0.1 3.6" fill="none">
+          {crux.axes.map(([a, b]) => <path d={`M${s[a].x} ${s[a].y}L${s[b].x} ${s[b].y}`} />)}
+        </g>
+      )}
+      {stars.map((x) => <path class="mark__star" d={sparkle(x.x, x.y, x.r)} fill="#EAF2FF" />)}
+      <path class="mark__ewan" d={trianglePath(e.x, e.y, e.s)} fill="#FF6B12" stroke="#FF6B12" stroke-width={e.s * 0.14} stroke-linejoin="round" />
+    </svg>
+  );
+};

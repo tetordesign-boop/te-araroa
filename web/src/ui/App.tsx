@@ -16,7 +16,7 @@ import { ExploreView, openSearch } from "./Explore";
 import { endEyeView, startEyeView } from "./eye";
 import { Home } from "./Home";
 import { dayKm } from "./Home";
-import { Close, Compass, Eye, Locate, MapIcon, Marker, Orbit, Replay, Search } from "./icons";
+import { BrandMark, Close, Compass, Eye, Locate, MapIcon, Orbit, Replay, Search } from "./icons";
 import { MapFallback } from "./MapFallback";
 import { MapModes, mapPrefs, modesClosedAt, modesOpen } from "./MapModes";
 import { About, Journal, Stats } from "./Pages";
@@ -105,7 +105,7 @@ function Brand({ inPanel }: { inPanel?: boolean }) {
   const tag = (l === "en" ? s?.site_tagline_en : s?.site_tagline_fr) || t("whereNow");
   return (
     <button class={`brand${inPanel ? " brand--panel" : " glass"}`} type="button" onClick={() => go({ name: "about" })} aria-label={t("about")}>
-      <Marker class="brand__mark" />
+      <BrandMark class="brand__mark" compact />
       <span class="brand__text">
         <span class="brand__title">{s?.site_title || "Te Araroa"}</span>
         <span class="brand__tag">{tag}</span>

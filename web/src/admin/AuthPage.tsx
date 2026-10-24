@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import { Marker } from "../ui/icons";
+import { BrandMark } from "../ui/icons";
 import { InstallHint } from "./InstallHint";
 import { setupAccount, signIn } from "./sb";
 
@@ -22,7 +22,7 @@ export function AuthPage() {
   return (
     <div class="auth">
       <form class="auth__box" onSubmit={submit}>
-        <Marker class="auth__mark" />
+        <BrandMark class="auth__mark" axes />
         <h1>Carnet de route</h1>
         <p>{mode === "login" ? "Connecte-toi pour publier tes étapes depuis le sentier." : "Première fois ? Crée ton accès avec le code que Claude t'a donné."}</p>
         <InstallHint before />
