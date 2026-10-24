@@ -7,6 +7,18 @@
    numbers and headlines stretched wide like a race bib.
    Orange means Ewan, turquoise means the map. Nothing else gets colour (except the kinds of places).
    ===================================================================== */
+
+/* The narrow no-break space of French typography ("1 334 km", "jour 3 : …"), which Archivo and
+   Literata lack: without it each device borrowed its own, and some showed "1334". One character,
+   0.15 em (scripts/fonts/fine-space.py), small enough to be inlined in this stylesheet. */
+@font-face {
+  font-family: "Te Araroa Fine";
+  src: url("../fonts/fine-space.woff2") format("woff2");
+  unicode-range: U+202F;
+  font-weight: 1 1000;
+  font-stretch: 50% 200%;
+}
+
 :root {
   /* night */
   --night: #0C1526;
@@ -53,9 +65,9 @@
   --shadow-float: 0 10px 30px -10px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-sheet: 0 -2px 40px -8px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4);
 
-  --font-ui: "Archivo Variable", "Archivo", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-ui: "Te Araroa Fine", "Archivo Variable", "Archivo", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-num: var(--font-ui);
-  --font-voice: "Literata Variable", "Literata", Georgia, "Times New Roman", serif;
+  --font-voice: "Te Araroa Fine", "Literata Variable", "Literata", Georgia, "Times New Roman", serif;
 
   --r-sheet: 28px;
   --r-card: 20px;

@@ -225,7 +225,7 @@ const fr = {
   eyeSub: "juste derrière lui, face au sentier",
   flyover: "Survol en 3D",
   flyoverCta: "Survoler le sentier en 3D",
-  flyoverSub: "Les 1 334 km en relief, de Ship Cove à Bluff",
+  flyoverSub: "Les 1\u202f334 km en relief, de Ship Cove à Bluff",
   trailModeTitle: "Survol du sentier",
   play: "Lecture",
   pause: "Pause",
@@ -533,6 +533,8 @@ export function t(key: Key, vars: Record<string, string | number> = {}): string 
   s = s.replace(/Ewan/g, name);
   for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
   s = s.replace("{name}", name);
+  // a number never leaves its unit at the end of a line ("12 km", "1 310 m")
+  s = s.replace(/(\d) (?=(km|m|h|min)\b)/g, "$1\u00a0");
   // French typography: a narrow no-break space before ? ! : ; and inside « », so no sign is left alone on a line
   if (lang.value === "fr") s = s.replace(/[ \u00a0]+([?!:;»])/g, "\u202f$1").replace(/«[ \u00a0]+/g, "«\u202f");
   return s;

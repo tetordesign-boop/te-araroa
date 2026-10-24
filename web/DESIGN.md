@@ -87,7 +87,8 @@ Type scale: 12.5 / 14 / 15 / 16 (body, weight 450) / 18.5 (stories, Literata, li
 
 ## Content rules
 
-- French typography is applied to typed text by `typo()` in `src/lib/format.ts` (narrow no-break spaces before `? ! : ;`, inside « », between a number and its unit, before →).
+- French typography is applied to typed text by `typo()` in `src/lib/format.ts` (narrow no-break spaces before `? ! : ;`, inside « », between a number and its unit, before →); `t()` in `src/i18n.ts` does the punctuation and the units for the site's own words.
+- Archivo and Literata have no narrow no-break space (the "1 334" of French numbers), so each device used to borrow its own, some almost invisible. `scripts/fonts/fine-space.py` makes a one-character font for it (0.15 em), first in `--font-ui` and `--font-voice` and limited to that character by `unicode-range`.
 - No ALL-CAPS labels, no middle-dot meta strings: details are joined with commas, and a km figure comes last ("Refuge, 1 310 m, km 280") so decimal commas never sit next to a separator. Ranges use an en dash ("Havelock – St Arnaud").
 - Photos: the cover first, then rows of three and two, never a lone tile (`rowSizes()` in `Gallery.tsx`).
 - Elevations read from the trail profile rather than the map data are marked "≈".
