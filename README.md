@@ -13,6 +13,7 @@ Les proches suivent sa position, ses étapes, ses photos et lui laissent des mot
 | `scripts/data/` | Fabrique les lieux du sentier (OpenStreetMap) et le profil d'altitude, dans GitHub Actions |
 | `scripts/qa/` | Captures d'écran du site sur la vraie carte, dans GitHub Actions |
 | `scripts/brand/` | Le logo « Cap au sud » (la Croix du Sud, sa cinquième étoile devenue la balise orange d'Ewan) : sa géométrie (`crux.mjs`), les icônes de l'appli et du Carnet (`icons.mjs`), l'image d'aperçu des liens (`og.mjs`) |
+| `scripts/fonts/` | L'espace fine insécable de « 1 334 km », qui manque à Archivo et Literata : une police d'un seul caractère (`fine-space.py`) |
 
 ## Architecture
 
