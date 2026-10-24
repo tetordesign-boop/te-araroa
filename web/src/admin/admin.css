@@ -134,7 +134,7 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 .steps li + li { border-top: 1px solid var(--separator); }
 .auth { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
 .auth__box { width: 100%; max-width: 400px; }
-.auth__mark { width: 76px; height: 76px; margin: 0 auto 14px; display: block; overflow: visible; filter: drop-shadow(0 0 10px rgba(170, 205, 255, 0.35)); }
+.auth__mark { width: 76px; height: 76px; margin: 0 auto 14px; display: block; overflow: visible; filter: drop-shadow(0 0 12px rgba(255, 107, 18, 0.22)); }
 .auth h1 { text-align: center; font-size: 28px; margin: 0 0 6px; letter-spacing: -0.02em; }
 .auth p { text-align: center; color: var(--ink-2); margin: 0 0 22px; font-size: 15px; line-height: 1.4; }
 .msg-hidden { opacity: .5; }

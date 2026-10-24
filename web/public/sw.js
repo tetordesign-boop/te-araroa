@@ -9,6 +9,10 @@ const KEEP = [SHELL, ASSETS, TILES, MEDIA, DATA];
 const SCOPE = new URL("./", self.location.href).href;
 const SHELL_FILES = ["./", "./index.html", "./admin/", "./admin/index.html", "./manifest.webmanifest", "./admin/manifest.webmanifest"];
 const NAV_TIMEOUT_MS = 3500;
+// files of the site that keep their names when they change (the icons, the manifest, the link preview), unlike
+// the hashed files in assets/
+const UNHASHED = /\.(png|svg|webmanifest|jpg)$/;
+const unhashed = (path) => UNHASHED.test(path) && !/\/assets\//.test(path);
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -21,6 +25,9 @@ self.addEventListener("activate", (event) => {
     // only this worker's own old caches (the Carnet keeps its own, e.g. the full trail for offline use)
     const mine = /^(shell|assets|tiles|media|data)-v\d+$/;
     await Promise.all(keys.filter((k) => mine.test(k) && !KEEP.includes(k)).map((k) => caches.delete(k)));
+    // a new version of the site may bring new icons under the same names: they come fresh next time they are asked for
+    const assets = await caches.open(ASSETS);
+    for (const k of await assets.keys()) if (unhashed(new URL(k.url).pathname)) await assets.delete(k);
     await self.clients.claim();
   })());
 });
@@ -102,7 +109,8 @@ self.addEventListener("fetch", (event) => {
   }
   if (url.origin === self.location.origin) {
     if (/\/data\/[^/]+\.json$/.test(url.pathname)) { event.respondWith(staleWhileRevalidate(event, DATA)); return; }
-    if (/\/assets\//.test(url.pathname) || /\.(png|svg|webmanifest|woff2|jpg)$/.test(url.pathname)) event.respondWith(cacheFirst(req, ASSETS, 200));
+    if (unhashed(url.pathname)) event.respondWith(staleWhileRevalidate(event, ASSETS, 200)); // the copy on the phone now, a fresh one for next time
+    else if (/\/assets\//.test(url.pathname) || /\.woff2$/.test(url.pathname)) event.respondWith(cacheFirst(req, ASSETS, 200));
     return;
   }
   if (/server\.arcgisonline\.com$/.test(url.host) || url.pathname.includes("/elevation-tiles-prod/") || url.host === "basemaps.linz.govt.nz") {

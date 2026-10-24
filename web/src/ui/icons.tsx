@@ -1,5 +1,5 @@
 import type { JSX } from "preact";
-import crux from "../brand/crux.json";
+import walker from "../brand/walker.json";
 
 type P = JSX.SVGAttributes<SVGSVGElement>;
 const base = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": true } as const;
@@ -31,36 +31,31 @@ export const Compass = (p: P) => (
 export const Check = (p: P) => <svg {...base} {...p} stroke-width={2.6}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
 export const Trail = (p: P) => <svg {...base} {...p} fill="currentColor" stroke="none"><path d="M12 4.2c.5 0 .9.2 1.1.6l7.3 12.6c.5.9-.1 2-1.1 2H4.7c-1 0-1.6-1.1-1.1-2l7.3-12.6c.2-.4.6-.6 1.1-.6z" /></svg>;
 
-/** A four-pointed sparkle, the way a bright star looks on a dark sky (same drawing as scripts/brand). */
-export const sparkle = (x: number, y: number, r: number) => {
-  const k = r * 0.17;
-  return `M${x} ${y - r}Q${x + k} ${y - k} ${x + r} ${y}Q${x + k} ${y + k} ${x} ${y + r}Q${x - k} ${y + k} ${x - r} ${y}Q${x - k} ${y - k} ${x} ${y - r}Z`;
-};
-/** An upright track marker centred on (x, y), side s (its corners rounded by a stroke of its own colour). */
-export const trianglePath = (x: number, y: number, s: number) => {
-  const h = s * 0.866;
-  return `M${x} ${y - h * 0.58}L${x + s / 2} ${y + h * 0.42}L${x - s / 2} ${y + h * 0.42}Z`;
-};
-
 /**
- * The brand mark, "Cap au sud": the Southern Cross where it is in the New Zealand sky, which points the way
- * south, and in the place of its faint fifth star the orange track marker of the trail: Ewan, walking to Bluff.
- * Geometry: src/brand/crux.json (scripts/brand/crux.mjs). `axes`: the faint dotted lines of the cross.
+ * The brand mark, "Le marcheur": Ewan seen from behind, the way everyone who follows him sees him, the rolled mat
+ * on top of a pack in the orange that means him all over the site, one foot lifting in the stride.
+ * Geometry: src/brand/walker.json (scripts/brand draws the app icons, the favicon and the link preview from it).
+ * `compact`: for 30 to 40 px, arms and legs a little bolder and no seam on the pack.
+ * `intro`: for the presentation's entrance (app.css), a dim pack under the orange one, which lights up as he steps off.
  */
-export const BrandMark = ({ axes = false, compact = false, ...p }: P & { axes?: boolean; compact?: boolean }) => {
-  const s = Object.fromEntries(crux.stars.map((x) => [x.name, x]));
-  // (compact: drawn around 30 px high, the stars and the marker a little bolder so they still read)
-  const e = compact ? { ...crux.ewan, s: crux.ewan.s * 1.4 } : crux.ewan;
-  const stars = compact ? crux.stars.map((x) => ({ ...x, r: Math.max(8.4, x.r * 1.2) })) : crux.stars;
+export const BrandMark = ({ compact = false, intro = false, ...p }: P & { compact?: boolean; intro?: boolean }) => {
+  const w = compact ? walker.compact : walker.width;
+  const c = walker.colors;
+  const [hx, hy, hr] = walker.head, [mx, my, mw, mh, mr] = walker.mat, [px, py, pw, ph, pr] = walker.pack;
   return (
-    <svg viewBox={crux.box.join(" ")} aria-hidden="true" {...p}>
-      {axes && (
-        <g stroke="#EAF2FF" stroke-opacity=".22" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="0.1 3.6" fill="none">
-          {crux.axes.map(([a, b]) => <path d={`M${s[a].x} ${s[a].y}L${s[b].x} ${s[b].y}`} />)}
-        </g>
-      )}
-      {stars.map((x) => <path class="mark__star" d={sparkle(x.x, x.y, x.r)} fill="#EAF2FF" />)}
-      <path class="mark__ewan" d={trianglePath(e.x, e.y, e.s)} fill="#FF6B12" stroke="#FF6B12" stroke-width={e.s * 0.14} stroke-linejoin="round" />
+    <svg viewBox="0 0 100 100" aria-hidden="true" {...p}>
+      <g stroke={c.ink} stroke-linecap="round" fill="none">
+        <path d={walker.arms} stroke-width={w.arm} />
+        <path d={walker.legStand} stroke-width={w.leg} />
+        <path class="mark__step" d={walker.legStep} stroke-width={w.leg} />
+      </g>
+      <circle cx={hx} cy={hy} r={hr} fill={c.ink} />
+      {intro && <rect x={px} y={py} width={pw} height={ph} rx={pr} fill="#26365A" />}
+      <g class="mark__pack">
+        <rect x={px} y={py} width={pw} height={ph} rx={pr} fill={c.pack} />
+        {!compact && <path d={walker.seam} stroke={c.seam} stroke-width={walker.width.seam} stroke-linecap="round" />}
+      </g>
+      <rect x={mx} y={my} width={mw} height={mh} rx={mr} fill={c.mat} />
     </svg>
   );
 };

@@ -307,7 +307,7 @@ export function About() {
 
       {/* the mark explained, once, where people look for that kind of thing */}
       <section class="block logo-note">
-        <BrandMark class="logo-note__mark" axes />
+        <BrandMark class="logo-note__mark" />
         <div>
           <h2 class="h-section" style={{ fontSize: "17px" }}>{t("logoTitle")}</h2>
           <p class="fine" style={{ marginTop: "6px" }}>{t("logoText")}</p>

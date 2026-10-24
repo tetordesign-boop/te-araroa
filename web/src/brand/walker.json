@@ -1,0 +1,20 @@
+{
+  "about": "The mark, 'Le marcheur': Ewan seen from behind, in a 100 x 100 square. Drawn by BrandMark (web/src/ui/icons.tsx) and by scripts/brand/walker.mjs (app icons, favicon, link preview).",
+  "head": [50, 13.6, 9.4],
+  "mat": [27.5, 19.2, 45, 10.4, 5.2],
+  "pack": [31.5, 22.5, 37, 46, 11],
+  "seam": "M37 44.5H63",
+  "arms": "M33.8 37.5L29.4 56.5M66.2 37.5L70.6 56.5",
+  "legStand": "M44.2 66L43.6 91.6",
+  "legStep": "M56 66L57.4 84.2",
+  "step": 7.4,
+  "width": { "arm": 7.2, "leg": 10.6, "seam": 2.4 },
+  "compact": { "arm": 8.4, "leg": 11.8 },
+  "colors": {
+    "ink": "#F3F6FB",
+    "pack": "#FF6B12",
+    "mat": "#DCE5F2",
+    "seam": "rgba(80, 28, 0, 0.42)",
+    "carnet": { "ink": "#0C1526", "pack": "#FFFFFF", "mat": "#FFE2CC", "seam": "rgba(12, 21, 38, 0.25)" }
+  }
+}
