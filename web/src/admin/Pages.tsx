@@ -8,6 +8,7 @@ import { InstallHint } from "./InstallHint";
 import { home, open, say } from "./nav";
 import { adminDays, adminRoute, adminSettings, loadServer } from "./server";
 import { sba, signOut } from "./sb";
+import { fetchPositions, type Pos } from "./Positions";
 import { drafts, online, outbox, queuePosition, syncAll, syncing } from "./store";
 
 const siteUrl = () => new URL("../", location.href).toString();
@@ -33,12 +34,30 @@ export function SyncPill() {
   return <div class="syncpill" role="status"><span class="syncpill__dot" />{online.value ? "Tout est en ligne" : "Hors ligne, rien en attente"}</div>;
 }
 
+/** The last point the site received, in a few words (for the Carnet's home and the tracking page). */
+function useLastPoint(source?: string) {
+  const [last, setLast] = useState<Pos | null | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    const load = () => fetchPositions(source ? 30 : 1)
+      .then((l) => { if (alive) setLast((source ? l.find((p) => p.source === source) : l[0]) ?? null); })
+      .catch(() => { /* offline: keep what is shown */ });
+    load();
+    const id = window.setInterval(() => { if (document.visibilityState === "visible") load(); }, 30_000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+  return last;
+}
+const lastLine = (p: Pos | null | undefined) =>
+  p === undefined ? "…" : p === null ? "Aucun point reçu pour l'instant" : `Dernier point ${relTime(p.recorded_at, "fr")}${p.source === "owntracks" ? ", OwnTracks" : p.source === "checkin" ? ", à la main" : ""}`;
+
 export function Dashboard() {
   const s = adminSettings.value;
   const today = nzToday();
   const days = [...adminDays.value].reverse();
   const local = drafts.value;
   const name = s?.hiker_name || "Ewan";
+  const lastPoint = useLastPoint();
 
   const edit = (id: string) => open({ name: "editor", id });
   const startToday = () => openDraft(draftForToday(), edit);
@@ -102,6 +121,7 @@ export function Dashboard() {
       </div>
 
       <div class="group">
+        <button class="cell" type="button" onClick={() => open({ name: "positions" })}><span class="cell__main"><span class="cell__title">Ma position</span><span class="cell__meta">{lastLine(lastPoint)}</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "messages" })}><span class="cell__main"><span class="cell__title">Livre de refuge</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "tracking" })}><span class="cell__main"><span class="cell__title">Suivi automatique</span><span class="cell__meta">OwnTracks sur ton iPhone</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "settings" })}><span class="cell__main"><span class="cell__title">Réglages</span></span><ChevronRight class="cell__chev" /></button>
@@ -206,6 +226,7 @@ export function Moderation() {
 export function Tracking() {
   const [pw, setPw] = useState<string | null>(null);
   const [show, setShow] = useState(false);
+  const lastOwn = useLastPoint("owntracks");
   useEffect(() => {
     sba.rpc("admin_tracking_config").then(({ data }) => setPw((data as { owntracks_password?: string } | null)?.owntracks_password ?? null));
   }, []);
@@ -229,6 +250,17 @@ export function Tracking() {
           <li>Dans OwnTracks, autorise la localisation « Toujours », puis choisis le mode « Significant » (économe en batterie).</li>
         </ol>
       </div>
+      <div class="group">
+        <button class="cell" type="button" onClick={() => open({ name: "positions" })}>
+          <span class="cell__main">
+            <span class="cell__title">Vérifier que ça marche</span>
+            <span class="cell__meta">{lastOwn === null ? "Rien reçu d'OwnTracks pour l'instant" : lastLine(lastOwn)}</span>
+          </span>
+          <ChevronRight class="cell__chev" />
+        </button>
+      </div>
+      <div class="group__title">Le mettre en pause</div>
+      <p class="group__foot" style={{ marginTop: 0 }}>Dans OwnTracks, touche le bouton de mode en haut de la carte et choisis « Quiet » : plus rien ne part. Choisis à nouveau « Significant » pour reprendre. Un point envoyé par erreur se supprime dans <button class="textbtn" type="button" onClick={() => open({ name: "positions" })}>Ma position</button>.</p>
       <div class="group__title">Réglage manuel (si le bouton ne marche pas)</div>
       <div class="group">
         <div class="cell"><span>Mode</span><span class="cell__value">HTTP</span></div>
@@ -354,6 +386,7 @@ export function Help() {
       <p><strong>Suivi automatique</strong> (OwnTracks) : ta position part en arrière-plan quand tu as du réseau, sans ouvrir le carnet. Les points enregistrés sans réseau partent ensuite.</p>
       <p><strong>Partager ma position</strong> : un point à la main, avec un petit mot si tu veux.</p>
       <p>Dans Réglages, tu peux afficher ta position avec du retard (1 h à 24 h).</p>
+      <p><strong>Ma position</strong> montre chaque point reçu, sur une carte, avec qui peut le voir. Avant ta date de départ, tout reste privé : teste autant que tu veux.</p>
 
       <h2>En cas de souci</h2>
       <div class="group">
@@ -361,6 +394,10 @@ export function Help() {
         <div class="cell cell--stack"><span class="cell__title">« Session expirée »</span><span class="cell__meta">Se déconnecter puis se reconnecter. Les brouillons restent sur le téléphone.</span></div>
         <div class="cell cell--stack"><span class="cell__title">Le site ne montre plus rien</span><span class="cell__meta">La base gratuite se met en pause après une semaine sans aucune visite. Va sur supabase.com, ouvre le projet te-araroa et touche « Restore ».</span></div>
         <div class="cell cell--stack"><span class="cell__title">Stockage presque plein</span><span class="cell__meta">Réglages › Stockage des photos. Retire de vieilles vidéos ou passe-les en lien YouTube.</span></div>
+        <div class="cell cell--stack"><span class="cell__title">Un point faux sur la carte</span><span class="cell__meta">Le GPS a sauté (point en mer, dans la vallée d'à côté) : Ma position, puis Supprimer sur ce point.</span></div>
+        <div class="cell cell--stack"><span class="cell__title">Ta position n'arrive plus</span><span class="cell__meta">Ma position dit quand le dernier point est arrivé. Pas de réseau : rien à faire, OwnTracks garde les points et les envoie plus tard. Sinon, ouvre OwnTracks et touche la flèche d'envoi, puis vérifie Suivi automatique.</span></div>
+        <div class="cell cell--stack"><span class="cell__title">Couper le suivi un moment</span><span class="cell__meta">Dans OwnTracks, mode « Quiet ». Mode « Significant » pour reprendre.</span></div>
+        <div class="cell cell--stack"><span class="cell__title">E-mail de GitHub « Veille du site »</span><span class="cell__meta">Chaque jour, une vérification automatique regarde que le site, la base et le suivi répondent. Si elle échoue, GitHub t'écrit : la cause la plus courante est la base en pause (voir plus haut).</span></div>
       </div>
     </div>
   );

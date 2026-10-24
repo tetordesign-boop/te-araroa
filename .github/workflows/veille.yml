@@ -1,0 +1,54 @@
+# Every day, a check that everything answers: the site, the Carnet, the database (a query also keeps it
+# awake: a free Supabase project is paused after a week without any) and the address the phone sends its
+# positions to. A failed run makes GitHub send an e-mail. It can also be run by hand from the GitHub app
+# (Actions › Veille du site › Run workflow).
+name: Veille du site
+on:
+  schedule:
+    - cron: "17 19 * * *" # every day, early morning in New Zealand
+  workflow_dispatch:
+permissions:
+  contents: write # only for the heartbeat below
+jobs:
+  veille:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      SITE: https://tetordesign-boop.github.io/te-araroa/
+      SUPABASE: https://jmedorwtksxxnzwyjvbz.supabase.co
+      # the public key the site itself ships with (it only grants what the database allows anyone)
+      KEY: sb_publishable_-XKxRnwVevyUpGjZ9HF0NQ_4B_ykHCx
+    steps:
+      - name: Le site répond
+        run: curl -fsS -o /dev/null --retry 4 --retry-delay 15 --retry-all-errors "$SITE"
+      - name: Le Carnet répond
+        run: curl -fsS -o /dev/null --retry 4 --retry-delay 15 --retry-all-errors "${SITE}admin/"
+      - name: La base répond
+        run: |
+          out=$(curl -fsS --retry 4 --retry-delay 15 --retry-all-errors -H "apikey: $KEY" "$SUPABASE/rest/v1/settings?select=id&id=eq.1")
+          echo "$out"
+          echo "$out" | grep -q '"id":1'
+      - name: Le suivi de position répond
+        run: |
+          # without the password the answer must be "401 unauthorized": the endpoint is up and guarded
+          for i in 1 2 3 4; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$SUPABASE/functions/v1/owntracks" -H "Content-Type: application/json" -d '{}')
+            echo "owntracks: $code"
+            [ "$code" = "401" ] && exit 0
+            sleep 15
+          done
+          exit 1
+      - name: Signe de vie
+        # GitHub pauses daily checks in a repository with no activity for 60 days: one small commit a week on
+        # a branch of its own (not the site's) keeps them going for the whole hike
+        if: github.event.schedule && github.ref == 'refs/heads/main'
+        run: |
+          [ "$(date -u +%u)" = "7" ] || exit 0
+          mkdir -p /tmp/beat && cd /tmp/beat
+          git init -q -b bot/veille
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          date -u +"%Y-%m-%d %H:%M UTC" > veille.txt
+          git add veille.txt
+          git commit -q -m "Veille $(date -u +%F)"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" bot/veille

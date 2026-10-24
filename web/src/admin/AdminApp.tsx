@@ -4,6 +4,7 @@ import { AuthPage } from "./AuthPage";
 import { Editor } from "./Editor";
 import { flash, page } from "./nav";
 import { Checkin, Dashboard, Help, Moderation, SettingsPage, Tracking } from "./Pages";
+import { Positions } from "./Positions";
 import { checkAdmin, isAdmin, session, signOut } from "./sb";
 import { adminDays, adminMedia, adminRoute, adminSettings, loadRoute, loadServer, readAdminCache } from "./server";
 import { afterSync, loadDrafts, startSyncLoop } from "./store";
@@ -67,6 +68,7 @@ export function AdminApp() {
     <>
       {p.name === "editor" ? <Editor id={p.id} />
         : p.name === "checkin" ? <Checkin />
+        : p.name === "positions" ? <Positions />
         : p.name === "messages" ? <Moderation />
         : p.name === "settings" ? <SettingsPage />
         : p.name === "tracking" ? <Tracking />

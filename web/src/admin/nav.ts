@@ -4,6 +4,7 @@ export type Page =
   | { name: "home" }
   | { name: "editor"; id: string }
   | { name: "checkin" }
+  | { name: "positions" }
   | { name: "messages" }
   | { name: "settings" }
   | { name: "tracking" }
