@@ -305,13 +305,11 @@ export function About() {
         <Play />{t("replayIntro")}
       </button>
 
-      {/* the mark explained, once, where people look for that kind of thing */}
+      {/* the brand image, whole, and what it shows: once, where people look for that kind of thing */}
       <section class="block logo-note">
-        <BrandMark class="logo-note__mark" />
-        <div>
-          <h2 class="h-section" style={{ fontSize: "17px" }}>{t("logoTitle")}</h2>
-          <p class="fine" style={{ marginTop: "6px" }}>{t("logoText")}</p>
-        </div>
+        <BrandMark class="logo-note__img" kind="full" loading="lazy" />
+        <h2 class="h-section" style={{ fontSize: "17px" }}>{t("logoTitle")}</h2>
+        <p class="fine" style={{ marginTop: "6px" }}>{t("logoText")}</p>
       </section>
 
       <section class="block">

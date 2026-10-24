@@ -12,7 +12,7 @@ Les proches suivent sa position, ses étapes, ses photos et lui laissent des mot
 | `supabase/functions/` | Fonctions serveur : import du tracé officiel, suivi OwnTracks, création du compte admin |
 | `scripts/data/` | Fabrique les lieux du sentier (OpenStreetMap) et le profil d'altitude, dans GitHub Actions |
 | `scripts/qa/` | Captures d'écran du site sur la vraie carte, dans GitHub Actions |
-| `scripts/brand/` | Le logo « Le marcheur » (Ewan vu de dos, son sac orange) : son dessin (`walker.mjs`, d'après `web/src/brand/walker.json`), les icônes de l'appli et du Carnet (`icons.mjs`), l'image d'aperçu des liens (`og.mjs`) |
+| `scripts/brand/` | L'image « Le sentier, la nuit » (Ewan de dos sur le sentier, la balise triangle, les Alpes du Sud) : la scène dessinée en code (`scene.mjs`, de nuit pour le site, au crépuscule pour le Carnet), les icônes et les images du site (`icons.mjs`), l'aperçu des liens (`og.mjs`) |
 | `scripts/fonts/` | L'espace fine insécable de « 1 334 km », qui manque à Archivo et Literata : une police d'un seul caractère (`fine-space.py`) |
 
 ## Architecture

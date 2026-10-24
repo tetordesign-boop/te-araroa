@@ -87,7 +87,7 @@ export function Intro() {
         {l === "fr" ? "English" : "Français"}
       </button>
       <div class="intro__body">
-        <BrandMark class="intro__mark" intro />
+        <BrandMark class="intro__mark" kind="tile" />
         <h1 class="intro__title" id="intro-title">
           <span class="intro__line">{title}</span>
           <span class="intro__line">{t("introWith")}</span>

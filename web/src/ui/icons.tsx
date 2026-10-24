@@ -1,5 +1,8 @@
 import type { JSX } from "preact";
-import walker from "../brand/walker.json";
+import sceneFace from "../brand/scene-face.webp";
+import sceneTile from "../brand/scene-tile.webp";
+import sceneDusk from "../brand/scene-tile-dusk.webp";
+import sceneFull from "../brand/scene.webp";
 
 type P = JSX.SVGAttributes<SVGSVGElement>;
 const base = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": true } as const;
@@ -32,30 +35,12 @@ export const Check = (p: P) => <svg {...base} {...p} stroke-width={2.6}><path d=
 export const Trail = (p: P) => <svg {...base} {...p} fill="currentColor" stroke="none"><path d="M12 4.2c.5 0 .9.2 1.1.6l7.3 12.6c.5.9-.1 2-1.1 2H4.7c-1 0-1.6-1.1-1.1-2l7.3-12.6c.2-.4.6-.6 1.1-.6z" /></svg>;
 
 /**
- * The brand mark, "Le marcheur": Ewan seen from behind, the way everyone who follows him sees him, the rolled mat
- * on top of a pack in the orange that means him all over the site, one foot lifting in the stride.
- * Geometry: src/brand/walker.json (scripts/brand draws the app icons, the favicon and the link preview from it).
- * `compact`: for 30 to 40 px, arms and legs a little bolder and no seam on the pack.
- * `intro`: for the presentation's entrance (app.css), a dim pack under the orange one, which lights up as he steps off.
+ * The brand image, "Le sentier, la nuit" (drawn by scripts/brand/scene.mjs, which also makes the app icons): Ewan
+ * seen from behind on the trail at night, his orange pack, the orange triangle of a trail marker, the Southern Alps.
+ * kind: "face" his back and pack, for 30 to 48 px (round, in the brand pill); "tile" the scene around him, the app
+ * icon; "dusk" the Carnet's icon, the same scene at dusk; "full" the whole picture ("À propos").
  */
-export const BrandMark = ({ compact = false, intro = false, ...p }: P & { compact?: boolean; intro?: boolean }) => {
-  const w = compact ? walker.compact : walker.width;
-  const c = walker.colors;
-  const [hx, hy, hr] = walker.head, [mx, my, mw, mh, mr] = walker.mat, [px, py, pw, ph, pr] = walker.pack;
-  return (
-    <svg viewBox="0 0 100 100" aria-hidden="true" {...p}>
-      <g stroke={c.ink} stroke-linecap="round" fill="none">
-        <path d={walker.arms} stroke-width={w.arm} />
-        <path d={walker.legStand} stroke-width={w.leg} />
-        <path class="mark__step" d={walker.legStep} stroke-width={w.leg} />
-      </g>
-      <circle cx={hx} cy={hy} r={hr} fill={c.ink} />
-      {intro && <rect x={px} y={py} width={pw} height={ph} rx={pr} fill="#26365A" />}
-      <g class="mark__pack">
-        <rect x={px} y={py} width={pw} height={ph} rx={pr} fill={c.pack} />
-        {!compact && <path d={walker.seam} stroke={c.seam} stroke-width={walker.width.seam} stroke-linecap="round" />}
-      </g>
-      <rect x={mx} y={my} width={mw} height={mh} rx={mr} fill={c.mat} />
-    </svg>
-  );
-};
+const SCENE = { face: sceneFace, tile: sceneTile, dusk: sceneDusk, full: sceneFull };
+export const BrandMark = ({ kind = "tile", ...p }: JSX.ImgHTMLAttributes<HTMLImageElement> & { kind?: keyof typeof SCENE }) => (
+  <img src={SCENE[kind]} alt="" aria-hidden="true" draggable={false} decoding="async" {...p} />
+);
