@@ -1,0 +1,10 @@
+p-m-intro 37087ms ok [waited 14.5s]
+  SAYS English / Te Araroa / avec Ewan / 1 334 km à pied sur l'île du Sud de la Nouvelle-Zélande, de Ship Cove à Bluff. / Le premier jour s'écrira à Ship Cove. / Suivre Ewan
+p-m-home 38024ms ok [waited 16.2s]
+  SAYS Le premier jour s'écrira à Ship Cove. / Ship Cove / Bluff / Survol en 3D / Je marche les 1 334 km de l'île du Sud sur le Te Araroa, de Ship Cove à Bluff. Ici, je publie chaque jour où je suis, mes photos et quelques mots dès que j'ai du réseau. / Laissez-moi un mot dans le livre de refuge, je les lirai le soir au refuge ! / Sur la route / Explorer / Prochain col / Kenepuru Saddle / km 29, ≈ 164 m / Prochaine étape / Anakiwa / km 70, ≈ 9 m / Prochain refuge / Captain Creek Hut / km 133, ≈ 124 m / Livre de refuge / Laissez un mot à Ewan. Il le lira dès qu'il aura du réseau. / Personne n'a encore signé. Laissez le premier mot ! / Écrire un mot / Explorer / Statistiques / À propos / Français / English
+p-l-home 43666ms ok [waited 16.2s]
+p-t-home 37256ms ok [waited 16.2s]
+p-d-home 50388ms ok [waited 16.1s]
+  SAYS archivo-latin-wdth-normal-DY7AcnAa.woff2 | fonts true
+p-m-carnet 6266ms ok [waited 6.1s]
+  SAYS Carnet de route / Connecte-toi pour publier tes étapes depuis le sentier. / Ajoute le carnet à ton écran d'accueil / Touche  Partager, puis « Sur l'écran d'accueil ». Ouvre-le ensuite depuis l'icône Carnet et connecte-toi là : c'est ce qui le fait marcher sans réseau et garde tes brouillons à l'abri. / E-mail / Mot de passe / Se connecter / J'ai un code (première fois)
