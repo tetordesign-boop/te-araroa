@@ -9,7 +9,7 @@ import { nextPlace, places, type Place } from "../lib/places";
 import type { Day, Lang } from "../types";
 import { startEyeView } from "./eye";
 import { openSearch } from "./Explore";
-import { HutBook } from "./HutBook";
+import { NoteToEwan } from "./NoteToEwan";
 import { ChevronRight, Eye, Play, Search, Trail } from "./icons";
 import { altText, openPlace, PlaceBadge, placeName } from "./Place";
 import { arrival, go, hrefFor, isDesktop } from "./state";
@@ -301,7 +301,7 @@ export function Home() {
         </section>
       )}
 
-      <div class="block"><HutBook dayId={null} /></div>
+      <div class="block"><NoteToEwan dayId={null} /></div>
       <Footer />
     </div>
   );

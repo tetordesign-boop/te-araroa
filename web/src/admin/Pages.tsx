@@ -58,6 +58,7 @@ export function Dashboard() {
   const local = drafts.value;
   const name = s?.hiker_name || "Ewan";
   const lastPoint = useLastPoint();
+  const newNotes = useNewNotes();
 
   const edit = (id: string) => open({ name: "editor", id });
   const startToday = () => openDraft(draftForToday(), edit);
@@ -122,7 +123,7 @@ export function Dashboard() {
 
       <div class="group">
         <button class="cell" type="button" onClick={() => open({ name: "positions" })}><span class="cell__main"><span class="cell__title">Ma position</span><span class="cell__meta">{lastLine(lastPoint)}</span></span><ChevronRight class="cell__chev" /></button>
-        <button class="cell" type="button" onClick={() => open({ name: "messages" })}><span class="cell__main"><span class="cell__title">Livre de refuge</span></span><ChevronRight class="cell__chev" /></button>
+        <button class="cell" type="button" onClick={() => open({ name: "messages" })}><span class="cell__main"><span class="cell__title">Mots de tes proches</span><span class="cell__meta">{newNotes === null ? "Toi seul les lis" : newNotes === 0 ? "Aucun nouveau mot" : newNotes === 1 ? "1 nouveau mot" : `${newNotes} nouveaux mots`}</span></span>{!!newNotes && <span class="badge-count" aria-hidden="true">{newNotes}</span>}<ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "tracking" })}><span class="cell__main"><span class="cell__title">Suivi automatique</span><span class="cell__meta">OwnTracks sur ton iPhone</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "settings" })}><span class="cell__main"><span class="cell__title">Réglages</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "help" })}><span class="cell__main"><span class="cell__title">Mode d'emploi</span><span class="cell__meta">Sans réseau, photos, position, en cas de souci</span></span><ChevronRight class="cell__chev" /></button>
@@ -187,31 +188,57 @@ export function Checkin() {
   );
 }
 
-// ------------------------------------------------------------------ hut book moderation
-interface Msg { id: string; day_id: string | null; author: string; body: string; hidden: boolean; created_at: string }
-export function Moderation() {
+// ------------------------------------------------------------------ notes from family and friends (only Ewan reads them)
+const SEEN_KEY = "notes-seen";
+const notesSeen = () => { try { return localStorage.getItem(SEEN_KEY) ?? "1970-01-01T00:00:00Z"; } catch (_) { return "1970-01-01T00:00:00Z"; } };
+
+/** How many notes came in since Ewan last opened the page (null: unknown, e.g. no signal). */
+function useNewNotes() {
+  const [n, setN] = useState<number | null>(null);
+  useEffect(() => {
+    sba.from("messages").select("id", { count: "exact", head: true }).gt("created_at", notesSeen())
+      .then(({ count, error }) => setN(error ? null : count ?? 0));
+  }, []);
+  return n;
+}
+
+interface Msg { id: string; day_id: string | null; author: string; body: string; created_at: string }
+export function Notes() {
   const [list, setList] = useState<Msg[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  // what was new when the page opened stays marked while Ewan reads; next time, it is not new any more
+  const [seen] = useState(notesSeen);
   const load = async () => {
-    const { data } = await sba.from("messages").select("id,day_id,author,body,hidden,created_at").order("created_at", { ascending: false }).limit(300);
+    const { data, error } = await sba.from("messages").select("id,day_id,author,body,created_at").order("created_at", { ascending: false }).limit(300);
+    if (error) { setFailed(true); return; }
+    setFailed(false);
     setList((data ?? []) as Msg[]);
+    try { localStorage.setItem(SEEN_KEY, new Date().toISOString()); } catch (_) { /* ignore */ }
   };
   useEffect(() => { load(); }, []);
   const dayOf = (id: string | null) => adminDays.value.find((d) => d.id === id);
   return (
     <div class="adm">
-      <Bar title="Livre de refuge" />
-      <p class="adm-sub" style={{ marginTop: "8px" }}>Les mots laissés par tes proches. Tu peux masquer ou supprimer un message.</p>
-      {list === null ? <p class="adm-sub">Chargement…</p> : list.length === 0 ? <p class="adm-sub">Aucun message pour l'instant.</p> : (
+      <Bar title="Mots de tes proches" />
+      <p class="adm-sub" style={{ marginTop: "8px" }}>Ce que tes proches t'écrivent depuis le site. Toi seul les lis : ils n'apparaissent nulle part sur le site.</p>
+      {failed ? <p class="adm-sub">Pas de réseau pour l'instant : les mots arriveront dès qu'il revient.</p>
+        : list === null ? <p class="adm-sub">Chargement…</p>
+        : list.length === 0 ? <p class="adm-sub">Aucun mot pour l'instant. Ceux de tes proches arriveront ici.</p> : (
         <div class="group">
           {list.map((m) => {
             const d = dayOf(m.day_id);
+            const fresh = Date.parse(m.created_at) > Date.parse(seen);
             return (
-              <div class={`cell cell--stack${m.hidden ? " msg-hidden" : ""}`}>
-                <span class="cell__title"><strong>{m.author}</strong> <span class="cell__meta" style={{ display: "inline" }}>{relTime(m.created_at, "fr")}{d ? `, jour ${d.day_number}` : ", page d'accueil"}</span></span>
-                <span class="voice" style={{ whiteSpace: "pre-wrap" }}>{m.body}</span>
+              <div class="cell cell--stack">
+                <span class="cell__title">{fresh && <span class="badge-new">Nouveau</span>}<strong>{m.author}</strong></span>
+                <span class="cell__meta">{relTime(m.created_at, "fr")}{d ? `, depuis le jour ${d.day_number}` : ", depuis l'accueil du site"}</span>
+                <span class="voice" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{m.body}</span>
                 <div class="pickrow">
-                  <button class="btn" type="button" onClick={async () => { await sba.from("messages").update({ hidden: !m.hidden }).eq("id", m.id); load(); }}>{m.hidden ? "Réafficher" : "Masquer"}</button>
-                  <button class="btn danger" type="button" onClick={async () => { if (confirm("Supprimer ce message ?")) { await sba.from("messages").delete().eq("id", m.id); load(); } }}>Supprimer</button>
+                  <button class="btn danger" type="button" onClick={async () => {
+                    if (!confirm(`Supprimer le mot de ${m.author} ?`)) return;
+                    const { error } = await sba.from("messages").delete().eq("id", m.id);
+                    if (error) say("Pas supprimé : vérifie le réseau et réessaie."); else { say("Mot supprimé"); load(); }
+                  }}>Supprimer</button>
                 </div>
               </div>
             );

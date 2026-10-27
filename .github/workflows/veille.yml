@@ -28,6 +28,12 @@ jobs:
           out=$(curl -fsS --retry 4 --retry-delay 15 --retry-all-errors -H "apikey: $KEY" "$SUPABASE/rest/v1/settings?select=id&id=eq.1")
           echo "$out"
           echo "$out" | grep -q '"id":1'
+      - name: Les mots pour Ewan restent privés
+        run: |
+          # a visitor must never read the notes back: the answer is a refusal, or an empty list
+          out=$(curl -sS --retry 4 --retry-delay 15 --retry-all-errors -H "apikey: $KEY" "$SUPABASE/rest/v1/messages?select=id&limit=1")
+          echo "$out"
+          echo "$out" | grep -q '"id"' && { echo "les mots sont lisibles par tout le monde"; exit 1; } || exit 0
       - name: Le suivi de position répond
         run: |
           # without the password the answer must be "401 unauthorized": the endpoint is up and guarded

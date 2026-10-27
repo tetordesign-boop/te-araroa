@@ -17,7 +17,6 @@ export const days = signal<Day[]>([]);
 export const media = signal<Media[]>([]);
 export const positions = signal<Position[]>([]); // ascending by time
 export const reactions = signal<Record<string, DayReactions>>({});
-export const messageCounts = signal<Record<string, number>>({});
 export const route = signal<Route>(new Route(liteTrail as unknown as Trail));
 export const fullRouteLoaded = signal(false);
 export const status = signal<"loading" | "ready" | "error">("loading");
@@ -54,7 +53,6 @@ function readCache() {
       media.value = c.media ?? [];
       positions.value = c.positions ?? [];
       reactions.value = c.reactions ?? {};
-      messageCounts.value = c.messageCounts ?? {};
       if (settings.value?.hiker_name) hikerName.value = settings.value.hiker_name;
     });
     return true;
@@ -66,35 +64,31 @@ function writeCache() {
   try {
     localStorage.setItem(CACHE_KEY, JSON.stringify({
       settings: settings.value, days: days.value, media: media.value, positions: positions.value.slice(-150),
-      reactions: reactions.value, messageCounts: messageCounts.value, at: Date.now(),
+      reactions: reactions.value, at: Date.now(),
     }));
   } catch (_) { /* quota or private mode */ }
 }
 
 // ---------------------------------------------------------------- loading
 async function fetchRemote() {
-  const [s, d, m, p, r, mc] = await Promise.all([
+  const [s, d, m, p, r] = await Promise.all([
     sb.from("settings").select("*").eq("id", 1).single(),
     sb.from("days").select(DAY_COLS).eq("published", true).order("date"),
     sb.from("media").select(MEDIA_COLS).order("sort").order("taken_at"),
     sb.from("positions").select(POS_COLS).order("recorded_at", { ascending: false }).limit(400),
     sb.rpc("get_reactions", { p_device: deviceId }),
-    sb.rpc("get_message_counts"),
   ]);
   for (const res of [s, d, m, p]) if (res.error) throw res.error;
   const rx: Record<string, DayReactions> = {};
   for (const row of (r.data ?? []) as { day_id: string; emoji_key: ReactionKey; total: number; mine: boolean }[]) {
     (rx[row.day_id] ??= {})[row.emoji_key] = { total: row.total, mine: row.mine };
   }
-  const counts: Record<string, number> = {};
-  for (const row of (mc.data ?? []) as { day_id: string; total: number }[]) counts[row.day_id] = row.total;
   return {
     settings: s.data as Settings,
     days: (d.data ?? []) as Day[],
     media: (m.data ?? []) as Media[],
     positions: ((p.data ?? []) as Position[]).reverse(),
     reactions: rx,
-    messageCounts: counts,
   };
 }
 
@@ -107,7 +101,6 @@ export async function loadAll(): Promise<void> {
       media.value = data.media;
       positions.value = data.positions;
       reactions.value = data.reactions;
-      messageCounts.value = data.messageCounts;
       if (data.settings?.hiker_name) hikerName.value = data.settings.hiker_name;
       status.value = "ready";
       lastUpdate.value = Date.now();

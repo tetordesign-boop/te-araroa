@@ -89,7 +89,7 @@ export function Intro() {
       <div class="intro__body">
         <BrandMark class="intro__mark" kind="tile" />
         <h1 class="intro__title" id="intro-title">
-          <span class="intro__line">{title}</span>
+          <span class="intro__line" translate={false}>{title}</span>
           <span class="intro__line">{t("introWith")}</span>
         </h1>
         <p class="intro__lede voice">{t("introLede", { km: fmtKm(route.value.total, l, 0) })}</p>

@@ -107,7 +107,7 @@ function Brand({ inPanel }: { inPanel?: boolean }) {
     <button class={`brand${inPanel ? " brand--panel" : " glass"}`} type="button" onClick={() => go({ name: "about" })} aria-label={t("about")}>
       <BrandMark class="brand__mark" kind="face" />
       <span class="brand__text">
-        <span class="brand__title">{s?.site_title || "Te Araroa"}</span>
+        <span class="brand__title" translate={false}>{s?.site_title || "Te Araroa"}</span>
         <span class="brand__tag">{tag}</span>
       </span>
     </button>

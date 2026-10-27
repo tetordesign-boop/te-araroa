@@ -5,7 +5,7 @@ import { fmtDate, fmtDuration, fmtInt, fmtKm, typo } from "../lib/format";
 import type { Day } from "../types";
 import { Gallery } from "./Gallery";
 import { dayKm, titleOf } from "./Home";
-import { HutBook } from "./HutBook";
+import { NoteToEwan } from "./NoteToEwan";
 import { ChevronLeft, ChevronRight, Close, Share } from "./icons";
 import { Reactions } from "./Reactions";
 import { go, goBack, hrefFor, toast } from "./state";
@@ -177,7 +177,7 @@ export function DayView({ n, photo }: { n: number; photo?: string }) {
       <Profile d={d} />
 
       <Reactions dayId={d.id} />
-      <div class="block"><HutBook dayId={d.id} /></div>
+      <div class="block"><NoteToEwan dayId={d.id} /></div>
 
       {(prev || next) && (
         <nav class="pager" aria-label={t("days")}>

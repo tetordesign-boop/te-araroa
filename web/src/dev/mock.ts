@@ -1,7 +1,7 @@
 // Development-only sample data (loaded with ?mock). Never bundled in production.
 // Close to the real thing: real huts and towns of the South Island route, elevation profiles,
 // stories of different lengths, photos with and without GPS.
-import type { Day, DayReactions, Media, Message, Position, Settings } from "../types";
+import type { Day, DayReactions, Media, Position, Settings } from "../types";
 import type { Route } from "../lib/geo";
 
 let seed = 7;
@@ -89,7 +89,7 @@ export async function mockData(route: Route) {
   const media: Media[] = [];
   if (new URLSearchParams(location.search).has("before")) {
     const d = new Date(Date.now() + 49 * 86400e3).toISOString().slice(0, 10);
-    return { settings: { ...settings, start_date: d }, days, media, positions: [] as Position[], reactions: {} as Record<string, DayReactions>, messageCounts: {} as Record<string, number> };
+    return { settings: { ...settings, start_date: d }, days, media, positions: [] as Position[], reactions: {} as Record<string, DayReactions> };
   }
   let km = 0;
   const N = 16;
@@ -144,18 +144,6 @@ export async function mockData(route: Route) {
   }
   const reactions: Record<string, DayReactions> = {};
   for (const d of days) reactions[d.id] = { heart: { total: Math.floor(rnd() * 14), mine: rnd() > 0.7 }, clap: { total: Math.floor(rnd() * 6), mine: false } };
-  const messageCounts: Record<string, number> = {};
-  for (const d of days) messageCounts[d.id] = Math.floor(rnd() * 4);
-  return { settings, days, media, positions, reactions, messageCounts };
+  return { settings, days, media, positions, reactions };
 }
 
-export function mockMessages(dayId: string | null): Message[] {
-  const base = [
-    { author: "Maman", body: "Quelles photos ! Prends soin de tes pieds et mange bien. On pense fort à toi ❤️" },
-    { author: "Léa", body: "Trop beau ce lac !! Tu me ramènes un kiwi ?" },
-    { author: "Papi Jo", body: "Bravo champion, encore 1 000 km et c'est dans la poche." },
-    { author: "Thomas", body: "On a regardé le survol en 3D avec les enfants, ils veulent tous partir marcher maintenant." },
-    { author: "Claire", body: "Courage pour la pluie, ça va passer. Envoie-nous une photo du kea !" },
-  ];
-  return base.map((b, i) => ({ id: `${dayId}-msg${i}`, day_id: dayId, author: b.author, body: b.body, created_at: new Date(Date.now() - (i + 1) * 3600e3 * 5).toISOString() }));
-}

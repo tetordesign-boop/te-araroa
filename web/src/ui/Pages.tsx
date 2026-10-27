@@ -285,7 +285,7 @@ export function About() {
         <ul class="tips">
           <li><span class="tips__icon" aria-hidden="true"><span class="tips__dot" /></span><span>{t("tipLive")}</span></li>
           <li><span class="tips__icon" aria-hidden="true"><Trail /></span><span>{t("tipDay")}</span></li>
-          <li><span class="tips__icon" aria-hidden="true"><Pencil /></span><span>{t("tipHut")}</span></li>
+          <li><span class="tips__icon" aria-hidden="true"><Pencil /></span><span>{t("tipNote")}</span></li>
           <li><span class="tips__icon" aria-hidden="true"><AddSquare /></span><span>{t("tipHome")}</span></li>
         </ul>
       </section>

@@ -1,5 +1,5 @@
 // When the map can't start (no WebGL 2: an older iPad, say): the trail as a plain drawing, with what Ewan walked
-// and where he is, so the page still says where he is. The journal, the photos and the hut book work as usual.
+// and where he is, so the page still says where he is. The journal, the photos and the notes to Ewan work as usual.
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { t } from "../i18n";
 import { latestPosition, livePlacement, phase, route, walked } from "../lib/data";

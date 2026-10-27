@@ -280,7 +280,7 @@ strong, b { font-weight: 650; }
 
 /* ------------------------------------------------------------------ shared type */
 .h-page { font-size: 32px; line-height: 1.04; font-weight: 820; font-stretch: 116%; letter-spacing: -0.03em; text-wrap: balance; }
-.h-section { font-size: 20px; line-height: 1.2; font-weight: 760; font-stretch: 110%; letter-spacing: -0.015em; }
+.h-section { font-size: 20px; line-height: 1.2; font-weight: 760; font-stretch: 110%; letter-spacing: -0.015em; text-wrap: balance; }
 .kicker { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 14px; line-height: 1.3; color: var(--ink-2); }
 .kicker__n { color: var(--marker-hot); font-weight: 700; font-stretch: 108%; }
 .sub { font-size: 15px; line-height: 1.4; color: var(--ink-2); }
@@ -474,9 +474,9 @@ strong, b { font-weight: 650; }
 .play-badge svg { width: 13px; height: 13px; margin-left: 2px; }
 .tile--hero .play-badge { width: 56px; height: 56px; right: 50%; bottom: 50%; transform: translate(50%, 50%); }
 .tile--hero .play-badge svg { width: 22px; height: 22px; }
-.caption { font-family: var(--font-voice); font-style: italic; font-size: 15px; line-height: 1.45; color: var(--ink-2); margin-top: 10px; }
+.caption { font-family: var(--font-voice); font-style: italic; font-size: 15px; line-height: 1.45; color: var(--ink-2); margin-top: 10px; text-wrap: pretty; }
 
-.story { margin-top: 26px; font-family: var(--font-voice); font-optical-sizing: auto; font-size: 18.5px; line-height: 1.68; letter-spacing: 0; color: var(--story); max-width: 62ch; }
+.story { margin-top: 26px; font-family: var(--font-voice); font-optical-sizing: auto; font-size: 18.5px; line-height: 1.68; letter-spacing: 0; color: var(--story); max-width: 62ch; text-wrap: pretty; }
 .story p + p { margin-top: 0.85em; }
 .story__translate { margin-top: 6px; }
 
@@ -597,21 +597,16 @@ strong, b { font-weight: 650; }
 .tips__icon svg { width: 16px; height: 16px; }
 .tips__dot { width: 11px; height: 11px; border-radius: 50%; background: var(--marker); box-shadow: 0 0 0 2.5px #fff, 0 0 10px var(--marker-glow); }
 
-/* ------------------------------------------------------------------ hut book */
-.hut__intro { font-size: 15px; color: var(--ink-2); margin: 4px 0 0; line-height: 1.45; }
-.hut__list { list-style: none; margin: 14px 0 0; padding: 0; }
-.hut__entry { padding: 14px 0 15px; border-top: 1px solid var(--line); }
-.hut__entry.is-new { animation: signed 2.4s var(--ease-out) both; border-radius: 14px; }
-@keyframes signed {
-  0% { background: rgba(255, 107, 18, 0.24); box-shadow: 0 0 0 10px rgba(255, 107, 18, 0.24); }
-  100% { background: rgba(255, 107, 18, 0); box-shadow: 0 0 0 10px rgba(255, 107, 18, 0); }
-}
-.hut__who { font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.hut__who time { font-weight: 450; color: var(--ink-2); font-size: 13px; white-space: nowrap; }
-.hut__body { font-family: var(--font-voice); font-size: 17px; line-height: 1.55; margin-top: 5px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--story); }
-.hut__empty { font-size: 15px; color: var(--ink-2); padding: 14px 0 4px; border-top: 1px solid var(--line); margin-top: 14px; }
-.hut__more { margin-top: 2px; }
-.hut__write { margin-top: 14px; }
+/* ------------------------------------------------------------------ a note for Ewan (private: only he reads them) */
+.note__intro { font-size: 15px; color: var(--ink-2); margin: 4px 0 0; line-height: 1.45; text-wrap: pretty; }
+.note__write { margin-top: 14px; }
+.note__label { font-size: 13.5px; font-weight: 650; color: var(--ink-2); margin: 4px 0 -4px 2px; }
+/* the receipt: the sender's own words, once, right after sending (nobody else can read them back) */
+.note__receipt { margin-top: 14px; padding: 14px 16px 15px; border-radius: 16px; background: var(--marker-tint); box-shadow: inset 0 0 0 1px rgba(255, 107, 18, 0.28); animation: view-in 0.3s var(--ease-out) both; outline: none; }
+.note__done { font-size: 15px; font-weight: 700; color: var(--marker-hot); }
+.note__echo { margin: 8px 0 0; }
+.note__echo p { font-family: var(--font-voice); font-size: 16.5px; line-height: 1.5; color: var(--story); white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.note__echo footer { margin-top: 6px; font-size: 13.5px; color: var(--ink-2); overflow-wrap: anywhere; }
 .form { display: grid; gap: 10px; margin-top: 14px; animation: view-in 0.3s var(--ease-out) both; }
 .field {
   width: 100%; border: 0; border-radius: 14px; background: var(--fill); padding: 14px 15px; font-size: 17px;
@@ -678,7 +673,8 @@ textarea.field { min-height: 108px; line-height: 1.45; font-family: var(--font-v
   background: #F3F6FB; transform: rotate(45deg); border-radius: 0 0 2px 0; z-index: -1;
 }
 .photo-pin img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; position: relative; }
-.photo-pin:hover { transform: scale(1.1); }
+/* (only where there is a real pointer: after a tap a phone keeps the hover, and the photo would stay big) */
+@media (hover: hover) and (pointer: fine) { .photo-pin:hover { transform: scale(1.1); } }
 .photo-pin:active { transform: scale(0.92); transition-duration: 0.08s; }
 .photo-pin__count {
   position: absolute; top: -8px; right: -8px; min-width: 20px; height: 20px; padding: 0 5px;

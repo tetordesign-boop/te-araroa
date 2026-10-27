@@ -84,14 +84,6 @@ export interface Position {
   note: string | null;
 }
 
-export interface Message {
-  id: string;
-  day_id: string | null;
-  author: string;
-  body: string;
-  created_at: string;
-}
-
 export type ReactionKey = "heart" | "clap" | "fire" | "wow";
 export interface ReactionState { total: number; mine: boolean }
 export type DayReactions = Partial<Record<ReactionKey, ReactionState>>;

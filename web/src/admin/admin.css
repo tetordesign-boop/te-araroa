@@ -37,6 +37,8 @@ button.cell:active, a.cell:active { background: var(--fill); }
   border: 0; background: transparent; outline: none; font-size: 17px; text-align: right; min-width: 0; flex: 1; color: var(--ink);
 }
 .cell input::placeholder, .cell textarea::placeholder { color: var(--ink-3); }
+/* the field being typed in shows where it is (the inputs themselves have no outline) */
+.cell:has(:is(input, select, textarea):focus) { box-shadow: inset 0 0 0 2px var(--glacier-ring); }
 .cell--stack { flex-direction: column; align-items: stretch; gap: 6px; }
 .cell--stack input, .cell--stack textarea { text-align: left; width: 100%; }
 .cell textarea { min-height: 150px; line-height: 1.45; resize: vertical; font-family: var(--font-voice); font-size: 17px; }
@@ -137,7 +139,9 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 .auth__mark { width: 84px; height: 84px; margin: 0 auto 16px; display: block; border-radius: 19px; box-shadow: 0 0 0 1px rgba(255, 190, 150, 0.18), 0 14px 32px -12px rgba(0, 0, 0, 0.85); }
 .auth h1 { text-align: center; font-size: 28px; margin: 0 0 6px; letter-spacing: -0.02em; }
 .auth p { text-align: center; color: var(--ink-2); margin: 0 0 22px; font-size: 15px; line-height: 1.4; }
-.msg-hidden { opacity: .5; }
+/* notes from family and friends: the new ones since Ewan last looked */
+.badge-new { display: inline-block; margin-right: 8px; padding: 2px 8px; border-radius: 999px; background: var(--marker); color: var(--on-marker); font-size: 12px; font-weight: 760; vertical-align: 1px; }
+.badge-count { flex: none; min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px; background: var(--marker); color: var(--on-marker); font-size: 13px; font-weight: 760; display: grid; place-items: center; margin-right: 6px; font-variant-numeric: tabular-nums; }
 
 /* "Add to home screen" hint (iPhone, Safari tab only) */
 .hint {

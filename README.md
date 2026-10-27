@@ -1,7 +1,7 @@
 # Te Araroa avec Ewan
 
 Le carnet de route en ligne d'Ewan sur le Te Araroa, île du Sud (Ship Cove → Bluff, 1 334 km).
-Les proches suivent sa position, ses étapes, ses photos et lui laissent des mots ; Ewan publie depuis son iPhone, même sans réseau.
+Les proches suivent sa position, ses étapes, ses photos et lui écrivent des mots que lui seul lit ; Ewan publie depuis son iPhone, même sans réseau.
 
 ## Ce que contient le dépôt
 
@@ -21,7 +21,7 @@ Les proches suivent sa position, ses étapes, ses photos et lui laissent des mot
 - **Lieux** : 486 refuges, campings, cols, sommets, cascades et points de vue le long du sentier (`web/public/data/pois.json`), plus les transferts (Rakaia, Rangitata, lac Wakatipu). Fiche par lieu (Ewan y est passé quel jour, dans combien de km il y sera, ses photos près d'ici), recherche, filtres.
 - **Effets** : à la première visite, une présentation (l'île de nuit qui ondule, une lumière qui parcourt le sentier en boucle, où en est Ewan aujourd'hui) avant d'entrer ; à l'arrivée, le tracé se dessine de Ship Cove jusqu'à Ewan pendant que ses km défilent ; survol 3D de tout le sentier piloté par son profil d'altitude (`web/public/data/profile.json`), « Ce qu'il voit » (la caméra juste derrière Ewan, face au sentier), tour en 3D d'un lieu, relief éclairé par le soleil du moment ; réponses aux gestes (lieux qui rebondissent avec une onde, réactions en gerbe, boutons à ressort).
 - **Écrans** : téléphone tenu droit (panneau en bas, trois hauteurs), téléphone en paysage et ordinateur (panneau à gauche, carte à côté), iPad tenu droit (carte flottante à gauche) ; jusqu'aux téléphones de 320 px. Si l'appareil ne peut pas afficher la carte 3D (vieil iPad sans WebGL 2), le tracé est dessiné simplement, avec ce qu'Ewan a parcouru et où il est.
-- **Données** : Supabase (projet `te-araroa`, Sydney). Tables `days`, `media`, `positions`, `messages`, `reactions`, `settings`. Lecture publique limitée par RLS, écriture réservée à l'admin.
+- **Données** : Supabase (projet `te-araroa`, Sydney). Tables `days`, `media`, `positions`, `messages`, `reactions`, `settings`. Lecture publique limitée par RLS, écriture réservée à l'admin ; les mots des proches (`messages`) ne sont lisibles que par Ewan.
 - **Photos/vidéos** : redimensionnées sur le téléphone (1600 px + vignette 640 px) pour tenir dans l'offre gratuite (1 Go de stockage, 5 + 5 Go de bande passante par mois) ; vidéos HEVC ré-encodées en H.264 720p (lisibles partout), son copié tel quel ; envoi reprenable (TUS) pour les gros fichiers.
 - **Hors ligne** : le Carnet enregistre tout dans IndexedDB et envoie dès que le réseau revient (quand l'appli est ouverte : iOS ne fait pas d'envoi en arrière-plan pour une appli web). Le service worker sert les pages depuis le téléphone si le réseau traîne plus de 3,5 s.
 - **Position** : OwnTracks (automatique) + « Partager ma position » (manuel) + géolocalisation des photos. Rien n'est public avant la date de départ ; délai de confidentialité réglable.
