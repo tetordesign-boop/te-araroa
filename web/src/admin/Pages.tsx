@@ -51,6 +51,48 @@ function useLastPoint(source?: string) {
 const lastLine = (p: Pos | null | undefined) =>
   p === undefined ? "…" : p === null ? "Aucun point reçu pour l'instant" : `Dernier point ${relTime(p.recorded_at, "fr")}${p.source === "owntracks" ? ", OwnTracks" : p.source === "checkin" ? ", à la main" : ""}`;
 
+/**
+ * Until he sets off: what is left to get ready, each line ticked from what the server knows (not from what he
+ * said he did), and gone once the trail has started.
+ */
+function BeforeDeparture({ s, lastOwn }: { s: Settings; lastOwn: Pos | null | undefined }) {
+  if (s.start_date && s.start_date <= nzToday()) return null;
+  const recentOwn = !!lastOwn && Date.now() - Date.parse(lastOwn.recorded_at) < 14 * 86400e3;
+  const oldIntro = /livre de refuge|hut book/i.test(`${s.intro_fr ?? ""} ${s.intro_en ?? ""}`);
+  const items = [
+    {
+      done: !!s.start_date, title: "Ta date de départ", page: "settings" as const,
+      meta: s.start_date ? `Le ${fmtDate(s.start_date, "fr")}` : "Réglages › Départ de Ship Cove. Elle numérote tes jours, et ta position n'apparaît sur le site qu'à partir de cette date : sans elle, jamais.",
+    },
+    {
+      done: recentOwn, title: "Tester OwnTracks", page: "positions" as const,
+      meta: lastOwn === undefined ? "…" : recentOwn ? `Point reçu ${relTime(lastOwn!.recorded_at, "fr")}` : "Envoie un point depuis OwnTracks : la page Ma position explique comment, et le montre dès qu'il arrive.",
+    },
+    {
+      done: !oldIntro, title: "Ta présentation", page: "settings" as const,
+      meta: oldIntro ? "Elle parle encore du « livre de refuge » : les mots de tes proches sont maintenant privés, sous « Un mot pour Ewan »." : "À jour",
+    },
+  ];
+  const left = items.filter((i) => !i.done).length;
+  return (
+    <>
+      <div class="group__title" style={{ marginTop: "18px" }}>Avant le départ{left ? `, ${left === 1 ? "1 chose" : `${left} choses`} à faire` : ", tout est prêt"}</div>
+      <div class="group">
+        {items.map((i) => (
+          <button class="cell" type="button" onClick={() => open({ name: i.page })}>
+            <span class={`check${i.done ? " is-done" : ""}`} aria-hidden="true">{i.done ? "✓" : ""}</span>
+            <span class="cell__main">
+              <span class="cell__title">{i.title}<span class="sr-only">{i.done ? ", fait" : ", à faire"}</span></span>
+              <span class="cell__meta">{i.meta}</span>
+            </span>
+            <ChevronRight class="cell__chev" />
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export function Dashboard() {
   const s = adminSettings.value;
   const today = nzToday();
@@ -58,6 +100,7 @@ export function Dashboard() {
   const local = drafts.value;
   const name = s?.hiker_name || "Ewan";
   const lastPoint = useLastPoint();
+  const lastOwn = useLastPoint("owntracks");
   const newNotes = useNewNotes();
 
   const edit = (id: string) => open({ name: "editor", id });
@@ -75,12 +118,7 @@ export function Dashboard() {
       <p class="adm-sub">Bonjour {name}, on est le {fmtDate(today, "fr")} en Nouvelle-Zélande.</p>
       <SyncPill />
       <InstallHint />
-      {s && !s.start_date && (
-        <button class="hint hint--action" type="button" onClick={() => open({ name: "settings" })}>
-          <strong>Indique ta date de départ</strong>
-          <span>Réglages › Départ de Ship Cove. Elle numérote tes jours, et ta position n'apparaît sur le site qu'à partir de cette date : sans elle, jamais.</span>
-        </button>
-      )}
+      {s && <BeforeDeparture s={s} lastOwn={lastOwn} />}
 
       <button class="bigbtn bigbtn--primary" type="button" onClick={startToday}>
         {local.some((d) => d.date === today) || adminDays.value.some((d) => d.date === today) ? "Reprendre l'étape du jour" : "Publier l'étape du jour"}
