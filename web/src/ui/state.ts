@@ -15,7 +15,7 @@ export type Detent = "peek" | "half" | "full";
 function parse(hash: string): View {
   const h = hash.replace(/^#\/?/, "");
   const [a, b, c] = h.split("/");
-  if (a === "journal") return { name: "journal" };
+  if (a === "journal" || a === "voyage" || a === "journey") return { name: "journal" }; // (the photo voyage opens over the journal)
   if ((a === "jour" || a === "day") && b && /^\d+$/.test(b)) return { name: "day", n: parseInt(b, 10), photo: c || undefined };
   if ((a === "lieu" || a === "place") && b) return { name: "place", id: decodeURIComponent(b) };
   if (a === "explorer" || a === "explore") return { name: "explore" };
@@ -102,6 +102,29 @@ export function closeTrailMode() {
   trailMode.value = null;
 }
 
+/** "Le voyage en photos" over the journal (ui/PhotoTunnel.tsx): it has its own address, so the back gesture closes it. */
+export const VOYAGE_RE = /^#\/(?:voyage|journey)\/?$/;
+export const tunnelOpen = signal(VOYAGE_RE.test(location.hash));
+export function openTunnel() {
+  if (!VOYAGE_RE.test(location.hash)) { history.pushState(null, "", "#/voyage"); depth++; }
+  if (view.peek().name !== "journal") view.value = { name: "journal" };
+  tunnelOpen.value = true;
+}
+export function closeTunnel() {
+  if (!tunnelOpen.value) return;
+  if (VOYAGE_RE.test(location.hash)) {
+    if (depth > 0) { history.back(); return; } // the popstate below closes it
+    history.replaceState(null, "", hrefFor({ name: "journal" }));
+  }
+  tunnelOpen.value = false;
+}
+/** From the voyage to a photo's day: the voyage's address becomes the journal's, so "back" comes to the journal. */
+export function leaveTunnelFor(v: View) {
+  if (VOYAGE_RE.test(location.hash)) history.replaceState(null, "", hrefFor({ name: "journal" }));
+  tunnelOpen.value = false;
+  go(v);
+}
+
 /** Back inside the site; never leaves it (shared links land without in-site history). */
 export function goBack() {
   if (depth > 0) history.back();
@@ -121,6 +144,7 @@ export function go(v: View, opts: { replace?: boolean } = {}) {
 window.addEventListener("popstate", () => {
   depth = Math.max(0, depth - 1);
   if (trailMode.value && !FLYOVER_RE.test(location.hash)) trailMode.value = null;
+  tunnelOpen.value = VOYAGE_RE.test(location.hash);
   if (FLYOVER_RE.test(location.hash)) return; // back to a flyover address: the view under it stays
   const v = parse(location.hash);
   view.value = v;

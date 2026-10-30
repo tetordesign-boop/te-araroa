@@ -257,9 +257,8 @@ export function LangSwitch() {
 function Footer() {
   return (
     <footer class="foot">
+      {/* (the journal, the explorer and the stats are in the navigation at the bottom) */}
       <nav class="foot__links">
-        <a href="#/explorer" onClick={(e) => { e.preventDefault(); go({ name: "explore" }); }}>{t("explore")}</a>
-        <a href="#/stats" onClick={(e) => { e.preventDefault(); go({ name: "stats" }); }}>{t("stats")}</a>
         <a href="#/apropos" onClick={(e) => { e.preventDefault(); go({ name: "about" }); }}>{t("about")}</a>
       </nav>
       <LangSwitch />

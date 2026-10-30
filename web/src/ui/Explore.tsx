@@ -11,6 +11,7 @@ import { altText, openPlace, PlaceBadge, placeKindLabel, placeName, relationShor
 import { Check, ChevronRight, Close, Play, Search } from "./icons";
 import { detent, go, searchQuery, view } from "./state";
 import { startTrailMode } from "./TrailMode";
+import { TrailSections } from "./TrailSections";
 
 const GROUP_KIND = { huts: "hut", camps: "camp", summits: "pass", sights: "fall" } as const;
 
@@ -132,7 +133,7 @@ export function ExploreView() {
 
   return (
     <div class="page explore">
-      <PageHead title={t("exploreTitle")} />
+      <PageHead title={t("exploreTitle")} tab />
       <label class="search">
         <Search />
         <input ref={input} type="search" enterKeyHint="search" autocomplete="off" spellcheck={false}
@@ -158,6 +159,8 @@ export function ExploreView() {
             </span>
             <ChevronRight class="row__chev" />
           </button>
+
+          <TrailSections />
 
           {ahead.length > 0 && (
             <section class="block">

@@ -343,8 +343,10 @@ export class TrailMap {
     line({ id: "walked", type: "line", source: "walked", layout: round, paint: { "line-color": ORANGE, "line-width": w(2.6, 5) } });
     line({ id: "walked-core", type: "line", source: "walked", layout: round, paint: { "line-color": "#FFD9BD", "line-width": w(0.5, 1.3), "line-opacity": dark || sat ? 0.85 : 0 } });
     line({ id: "recent", type: "line", source: "recent", layout: round, paint: { "line-color": ORANGE, "line-width": w(1.5, 3), "line-opacity": 0.9, "line-dasharray": [0.6, 1.4] } });
-    line({ id: "selected-halo", type: "line", source: "selected", layout: round, paint: { "line-color": dark || sat ? "#FFE9D9" : "#ffffff", "line-width": w(6.5, 11.5), "line-opacity": 0.9, "line-blur": dark ? 1.2 : 0 } });
-    line({ id: "selected", type: "line", source: "selected", layout: round, paint: { "line-color": ORANGE, "line-width": w(3.4, 6.2) } });
+    // (a section of the explorer is lit in the map's own turquoise: orange is for Ewan's days)
+    const isStretch = ["==", ["get", "kind"], "stretch"];
+    line({ id: "selected-halo", type: "line", source: "selected", layout: round, paint: { "line-color": ["case", isStretch, "#D2F6FA", dark || sat ? "#FFE9D9" : "#ffffff"] as unknown as string, "line-width": w(6.5, 11.5), "line-opacity": ["case", isStretch, 0.55, 0.9] as unknown as number, "line-blur": dark ? 1.2 : 0 } });
+    line({ id: "selected", type: "line", source: "selected", layout: round, paint: { "line-color": ["case", isStretch, "#5CD6E6", ORANGE] as unknown as string, "line-width": w(3.4, 6.2) } });
     line({ id: "replay", type: "line", source: "replay", layout: round, paint: { "line-color": "#ffffff", "line-width": w(3, 5) } });
     // the presentation's light running along the trail (see introLoop): a fading tail, a hot head
     line({ id: "comet-glow", type: "line", source: "comet", layout: round, paint: { "line-width": w(12, 22), "line-blur": w(8, 14), "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, "rgba(255,107,18,0)", 1, "rgba(255,107,18,0.6)"] } });
@@ -586,14 +588,39 @@ export class TrailMap {
     this.src("recent")!.setData(this.drawKm === null && d.recent.length > 1 ? multi([d.recent]) : empty);
   }
 
-  /** The open day's stretch of trail, drawn from its start while `selDraw` runs. */
+  /** The open day's stretch of trail (or a section of the explorer), drawn from its start while `selDraw` runs. */
   private pushSelected() {
-    const d = this.data, sel = this.selected;
+    const d = this.data, sel = this.stretch ? { start_km: this.stretch[0], end_km: this.stretch[1] } : this.selected;
     if (!d || !this.src("selected")) return;
     if (!sel || sel.start_km === null || sel.end_km === null) { this.src("selected")!.setData(empty); return; }
     const k = this.selDraw ?? 1;
     const end = sel.start_km + (sel.end_km - sel.start_km) * k;
-    this.src("selected")!.setData(multi(d.route.slice(sel.start_km, end)));
+    const f = multi(d.route.slice(sel.start_km, end));
+    if (this.stretch) f.properties = { kind: "stretch" };
+    this.src("selected")!.setData(f);
+  }
+
+  private stretch: [number, number] | null = null;
+  /** A section of the trail (the explorer's folders): lit from its start, in turquoise, until another selection. */
+  showStretch(k0: number, k1: number) {
+    this.stretch = [k0, k1];
+    this.animateSelection();
+  }
+
+  private animateSelection() {
+    if (reduceMotion()) { this.selGen++; this.selDraw = null; this.pushSelected(); return; }
+    const gen = ++this.selGen;
+    this.selDraw = 0;
+    let t0 = 0;
+    const frame = (now: number) => {
+      if (gen !== this.selGen) return;
+      if (!t0) t0 = now + 350;
+      const t = Math.max(0, Math.min(1, (now - t0) / 1100));
+      this.selDraw = t < 1 ? easeInOut(t) : null;
+      this.pushSelected();
+      if (t < 1) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
   }
 
   private drawKm: number | null = null;
@@ -828,21 +855,10 @@ export class TrailMap {
   select(day: Day | null) {
     const fresh = !!day && day.id !== this.selected?.id;
     this.selected = day;
-    if (fresh && !reduceMotion()) {
-      // the day's stretch lights up from where he started that morning, while the camera flies there
-      const gen = ++this.selGen;
-      this.selDraw = 0;
-      let t0 = 0;
-      const frame = (now: number) => {
-        if (gen !== this.selGen) return;
-        if (!t0) t0 = now + 350;
-        const t = Math.max(0, Math.min(1, (now - t0) / 1100));
-        this.selDraw = t < 1 ? easeInOut(t) : null;
-        this.pushSelected();
-        if (t < 1) requestAnimationFrame(frame);
-      };
-      requestAnimationFrame(frame);
-    } else if (!day) { this.selGen++; this.selDraw = null; }
+    this.stretch = null;
+    // the day's stretch lights up from where he started that morning, while the camera flies there
+    if (fresh && !reduceMotion()) this.animateSelection();
+    else if (!day) { this.selGen++; this.selDraw = null; }
     if (this.src("route")) this.pushData();
   }
 

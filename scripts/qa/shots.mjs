@@ -36,6 +36,11 @@ const prefs = (v) => (p) => p.addInitScript((v) => { try { localStorage.setItem(
 const click = (sel) => (p) => p.click(sel);
 const wait = (ms) => (p) => p.waitForTimeout(ms);
 const seq = (...fs) => async (p) => { for (const f of fs) await f(p); };
+/** the explorer's shelf of sections at the top of the sheet */
+const toShelf = (p) => p.evaluate(() => {
+  const b = document.querySelector(".sheet__body"), h = document.querySelector(".shelf-head");
+  if (b && h) b.scrollTop += h.getBoundingClientRect().top - b.getBoundingClientRect().top - 12;
+});
 /** what the page says, for the log (probe: an expression evaluated in the page) */
 const probe = async (p, s) => {
   if (!s.probe) return "";
@@ -101,6 +106,12 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "p-t-home", ctx: tablet(), url: "", plain: 16000 },
   { id: "p-d-home", ctx: desktop(false), url: "", plain: 16000, probe: "[...document.querySelectorAll('link[rel=preload]')].map((l) => l.href.split('/').pop()).join(' ') + ' | fonts ' + document.fonts.check('860 100px \"Archivo Variable\"')" },
   { id: "p-m-carnet", ctx: mobile(false), url: "admin/", plain: 6000, probe: "document.body.innerText" },
+  // the navigation, the sections and the voyage, online
+  { id: "p-m-nav-journal", ctx: mobile(false), url: "", plain: 14000, act: seq(tap(".lnav__item--journal"), wait(2500)), probe: "document.querySelector('.lnav [aria-current]')?.innerText + ' | ' + location.hash" },
+  { id: "p-m-shelf", ctx: mobile(false), url: "#/explorer", plain: 14000, act: seq(toShelf, wait(3000)), probe: "[...document.querySelectorAll('.gf-root')].map((f) => f.querySelector('.gf-title').innerText + ' (' + f.querySelector('.gf-meta').innerText + ')').join(' ; ')" },
+  { id: "p-m-shelf-open", ctx: mobile(false), url: "#/explorer", plain: 14000, act: seq(toShelf, wait(1500), tap(".gf-hit"), wait(2600)), probe: "[...document.querySelectorAll('.gf-root[data-open] .gf-sheet')].map((x) => x.innerText.replace(/\\n/g, ' ')).join(' | ')" },
+  { id: "p-d-shelf-open", ctx: desktop(false), url: "#/explorer", plain: 14000, act: seq(toShelf, wait(1500), tap(".gf-hit"), wait(2600)) },
+  { id: "p-m-voyage", ctx: mobile(false), url: "#/voyage", plain: 10000, probe: "document.querySelector('.tun')?.innerText" },
 ];
 
 const log = [];
@@ -127,6 +138,7 @@ for (const s of shots) {
       // the presentation sways and its light runs: it never goes idle, so no settling, just time for the tiles
       // (plain: a page without the map, the Carnet)
       await page.waitForTimeout(s.plain ?? 14000); mark("waited");
+      if (s.act) { await s.act(page); mark("acted"); }
       await page.screenshot({ path: `${OUT}/${s.id}.png`, timeout: 120000 });
       const info = await probe(page, s);
       const line = `${s.id} ${Date.now() - t0}ms ok [${marks.join(", ")}]${errs.length ? " ERR " + [...new Set(errs)].slice(0, 5).join(" | ") : ""}${info}`;

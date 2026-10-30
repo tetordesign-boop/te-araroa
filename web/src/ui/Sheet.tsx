@@ -7,7 +7,8 @@ import { t } from "../i18n";
 import { play } from "../lib/sound";
 import { detent, isDesktop, mapApi, type Detent } from "./state";
 
-const PEEK = 236;
+// what the lowest height shows: where Ewan is and his kilometres, above the navigation that floats over its foot
+const PEEK = 300;
 const ORDER: Detent[] = ["full", "half", "peek"];
 const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 

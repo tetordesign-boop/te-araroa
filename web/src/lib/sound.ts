@@ -1,12 +1,13 @@
 // Interface sounds, synthesised on the fly (Web Audio: no files to load). One small family of soft tones:
 // a wooden "tock" for a tap, two rising notes to open, two falling to close, a bubble for a place on the map,
 // a low thud when the sheet settles, a sparkle for a reaction, a warm chord when a note is signed, a breath of
-// air for the camera shows, a chime to go in, and a far ping when Ewan lands on the map.
+// air for the camera shows, a chime to go in, a far ping when Ewan lands on the map, and a drop of water for the
+// navigation.
 // They are quiet, short, never more than one at a time, follow the iPhone's silent switch (an "ambient" audio
 // session: they never stop the visitor's music either), and can be turned off.
 import { signal } from "@preact/signals";
 
-export type Sfx = "tap" | "open" | "close" | "pop" | "snap" | "on" | "off" | "react" | "signed" | "whoosh" | "enter" | "ping";
+export type Sfx = "tap" | "open" | "close" | "pop" | "snap" | "on" | "off" | "react" | "signed" | "whoosh" | "enter" | "ping" | "drip";
 
 const KEY = "sound-v1";
 function initialOn(): boolean {
@@ -138,6 +139,19 @@ export function play(kind: Sfx, pitch = 1) {
       tone(t + 0.09, 1975.5, 1975.5, 0.5, 0.012, "sine", 0.01);
       air(t, 0.7, 300, 1800, 0.035, 0.8);
       break;
+    case "drip": { // a drop of water (the navigation): a quick rising plip
+      const c = ctx!, o = c.createOscillator(), g = c.createGain();
+      o.type = "sine";
+      o.frequency.setValueAtTime(430 * p, t);
+      o.frequency.exponentialRampToValueAtTime(1500 * p, t + 0.07);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.1, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      o.connect(g).connect(master!);
+      o.start(t);
+      o.stop(t + 0.18);
+      break;
+    }
     case "ping": // far away, like the ring on the map
       tone(t, 1568, 1568, 1.1, 0.045, "sine", 0.004);
       tone(t, 3136, 3136, 0.5, 0.01, "sine", 0.004);

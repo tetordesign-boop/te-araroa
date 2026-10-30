@@ -24,9 +24,11 @@ import { PlaceView, placeName } from "./Place";
 import { startReplay } from "./replayControl";
 import { Sheet } from "./Sheet";
 import { Intro } from "./Intro";
+import { LiquidNav } from "./LiquidNav";
+import { PhotoTunnel } from "./PhotoTunnel";
 import {
   arrival, arrivalDue, cameraShow, detent, FLYOVER_RE, go, goBack, introOpen, isDesktop, mapApi, mapBearing, mapFailed, replayState, searchQuery, toastMsg,
-  trailMode, view,
+  trailMode, tunnelOpen, view,
 } from "./state";
 import { startTrailMode, TrailMode } from "./TrailMode";
 
@@ -130,7 +132,7 @@ function Controls() {
   const turned = Math.abs(((b + 540) % 360) - 180) > 3; // the map is turned more than 3° off north
   return (
     <nav class="controls" aria-label={t("mapModes")}>
-      <div class="controls__group glass" inert={!!trailMode.value || introOpen.value}>
+      <div class="controls__group glass" inert={!!trailMode.value || introOpen.value || tunnelOpen.value}>
         <button type="button" data-modes-toggle onClick={() => (modesOpen.value = !open)} aria-expanded={open} aria-label={t("mapModes")} title={t("mapModes")} class={open ? "is-on" : ""}>
           <MapIcon />
         </button>
@@ -392,7 +394,7 @@ export function App() {
       <div class="map" ref={mapEl} />
       {mapFailed.value && <MapFallback />}
 
-      <header class="topbar" inert={!!trailMode.value || introOpen.value}>
+      <header class="topbar" inert={!!trailMode.value || introOpen.value || tunnelOpen.value}>
         <Brand />
         <button class="topbtn glass" type="button" onClick={openSearch} aria-label={t("searchLabel")} title={t("searchLabel")}><Search /></button>
       </header>
@@ -400,7 +402,7 @@ export function App() {
       <Controls />
       {modesOpen.value && <MapModes />}
 
-      <Sheet label={t("whereNow")} inert={!!trailMode.value || introOpen.value}>
+      <Sheet label={t("whereNow")} inert={!!trailMode.value || introOpen.value || tunnelOpen.value}>
         {isDesktop.value && <Brand inPanel />}
         {status.value === "error" && !days.value.length ? (
           <div>
@@ -421,6 +423,8 @@ export function App() {
         {offline.value && <p class="fine" style={{ marginTop: "18px" }}>{t("offline")}</p>}
       </Sheet>
 
+      <LiquidNav inert={!!trailMode.value || introOpen.value || tunnelOpen.value} />
+
       {replayable.value && !replayState.value && !cameraShow.value && (isDesktop.value || detent.value !== "full") && (
         <button class="replay-fab glass" type="button" data-sfx="whoosh" onClick={() => startReplay(replayable.value!)}>
           <Replay />{t("replay3d")}
@@ -439,6 +443,7 @@ export function App() {
       {trailMode.value && <TrailMode />}
 
       <div class={`toast glass${toastMsg.value ? " is-on" : ""}`} role="status" aria-live="polite">{toastMsg.value}</div>
+      {tunnelOpen.value && !introOpen.value && <PhotoTunnel />}
       {introOpen.value && <Intro />}
     </>
   );

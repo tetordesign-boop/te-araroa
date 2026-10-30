@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import { mediaUrl } from "../config";
 import { lang, t } from "../i18n";
 import { clock, coverOf, dayOnTrail, days, media, mediaByDay, progressKm, route, settings, walked, walkedKm } from "../lib/data";
@@ -8,14 +8,16 @@ import { dayKm, excerpt, LangSwitch, titleOf } from "./Home";
 import { AddSquare, BrandMark, Close, Pencil, Play, Trail } from "./icons";
 import { replayIntro } from "./Intro";
 import { setSound, soundOn } from "../lib/sound";
-import { go, goBack, hrefFor } from "./state";
+import { bandSupported, PhotoBand } from "./PhotoBand";
+import { go, goBack, hrefFor, openTunnel, tunnelOpen } from "./state";
 import { TrailStrip } from "./TrailStrip";
 
-export function PageHead({ title }: { title: string }) {
+/** A page's title, and its close button (not on the pages of the navigation: the navigation is how one leaves them). */
+export function PageHead({ title, tab }: { title: string; tab?: boolean }) {
   return (
     <header class="phead">
       <h1 class="h-page" tabIndex={-1} data-autofocus>{title}</h1>
-      <button class="iconbtn" type="button" data-sfx="close" aria-label={t("close")} onClick={goBack}><Close /></button>
+      {!tab && <button class="iconbtn" type="button" data-sfx="close" aria-label={t("close")} onClick={goBack}><Close /></button>}
     </header>
   );
 }
@@ -48,6 +50,30 @@ function LogItem({ d }: { d: Day }) {
   );
 }
 
+/** The journey in photos: his photos streaming round a curve, and the way into the voyage (ui/PhotoTunnel.tsx). */
+function Voyage() {
+  const list = days.value, byDay = mediaByDay.value;
+  const pics = useMemo(() => list.flatMap((d) => (byDay.get(d.id) ?? []).flatMap((m) => {
+    const path = m.kind === "photo" ? m.thumb_path ?? m.path : m.thumb_path;
+    return path ? [{ src: mediaUrl(path), n: d.day_number }] : [];
+  })), [list, byDay]);
+  // (from three pictures: fewer would only repeat round the curve)
+  if (pics.length < 3) return null;
+  // two dozen, spread over the whole trip
+  const step = Math.max(1, pics.length / 24);
+  const sample = Array.from({ length: Math.min(24, pics.length) }, (_, i) => pics[Math.floor(i * step)].src);
+  const nMedia = media.value.length;
+  return (
+    <div class={`voyage${bandSupported ? "" : " voyage--flat"}`}>
+      {bandSupported && <PhotoBand images={sample} paused={tunnelOpen.value} tileHeight={60} curve={56} />}
+      <button class="voyage__open" type="button" data-sfx="whoosh" onClick={openTunnel}
+        aria-label={t("voyageOpen", { media: nMedia === 1 ? t("mediaOne") : t("mediaN", { n: nMedia }), a: pics[0].n, b: pics[pics.length - 1].n })}>
+        <span class="voyage__cta"><Play />{t("voyageTitle")}</span>
+      </button>
+    </div>
+  );
+}
+
 export function Journal() {
   const l = lang.value;
   const list = [...days.value].reverse();
@@ -55,7 +81,7 @@ export function Journal() {
   const nMedia = media.value.length;
   return (
     <div class="page">
-      <PageHead title={t("journal")} />
+      <PageHead title={t("journal")} tab />
       {list.length ? (
         <>
           <p class="sub page__sub">
@@ -65,6 +91,7 @@ export function Journal() {
               media: nMedia === 1 ? t("mediaOne") : t("mediaN", { n: nMedia }),
             })}
           </p>
+          <Voyage />
           <ol class="log">
             {list.map((d) => <LogItem d={d} />)}
             <li class="log__item log__start">
@@ -228,7 +255,7 @@ export function Stats() {
 
   return (
     <div class="page">
-      <PageHead title={t("stats")} />
+      <PageHead title={t("stats")} tab />
       {!ds.length ? <p class="empty" style={{ marginTop: "14px" }}>{t("statsSoon")}</p> : (
         <>
           <div class="bigline">
