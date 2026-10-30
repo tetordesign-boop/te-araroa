@@ -24,7 +24,7 @@ export function Reactions({ dayId }: { dayId: string }) {
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
   return (
-    <div class="reactions" role="group" aria-label="Réactions">
+    <div class="reactions" role="group" aria-label={t("reactionsLabel")}>
       {ITEMS.map(({ k, e, label }) => {
         const s = rx[k];
         const mine = !!s?.mine;

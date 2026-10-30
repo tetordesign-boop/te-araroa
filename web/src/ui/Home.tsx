@@ -10,6 +10,7 @@ import type { Day, Lang } from "../types";
 import { startEyeView } from "./eye";
 import { openSearch } from "./Explore";
 import { NoteToEwan } from "./NoteToEwan";
+import { Seg } from "./Seg";
 import { ChevronRight, Eye, Play, Search, Trail } from "./icons";
 import { altText, openPlace, PlaceBadge, placeName } from "./Place";
 import { arrival, go, hrefFor, isDesktop } from "./state";
@@ -245,12 +246,11 @@ export function DayRow({ d }: { d: Day }) {
 }
 
 export function LangSwitch() {
-  const l = lang.value;
   return (
-    <div class="seg" role="group" aria-label={t("language")}>
-      <button type="button" lang="fr" aria-pressed={l === "fr"} onClick={() => setLang("fr")}>Français</button>
-      <button type="button" lang="en" aria-pressed={l === "en"} onClick={() => setLang("en")}>English</button>
-    </div>
+    <Seg label={t("language")} value={lang.value} onChange={setLang} options={[
+      { value: "fr", label: "Français", attrs: { lang: "fr" } },
+      { value: "en", label: "English", attrs: { lang: "en" } },
+    ]} />
   );
 }
 

@@ -435,7 +435,7 @@ export function App() {
         <div class="replay-hud glass" role="status">
           <span class="replay-hud__title">{t("day", { n: replayState.value.n })}</span>
           <span class="replay-hud__bar"><span style={{ width: `${Math.round(replayState.value.progress * 100)}%` }} /></span>
-          <button class="iconbtn" type="button" aria-label={t("stopReplay")} onClick={() => replayState.value?.stop()}>✕</button>
+          <button class="iconbtn" type="button" data-sfx="close" aria-label={t("stopReplay")} onClick={() => replayState.value?.stop()}><Close /></button>
         </div>
       )}
 

@@ -19,7 +19,7 @@ body.admin { overflow: auto; background: var(--bg); overscroll-behavior-y: conta
 .adm-h1 { font-size: 32px; font-weight: 820; font-stretch: 116%; letter-spacing: -0.03em; margin: 6px 0 2px; }
 .adm-sub { font-size: 15px; color: var(--ink-2); margin: 0 0 18px; }
 
-.group { background: var(--card); border-radius: 14px; overflow: hidden; margin: 0 0 22px; }
+.group { background: var(--card); border-radius: 14px; overflow: hidden; margin: 0 0 22px; box-shadow: var(--lit), inset 0 0 0 1px rgba(150, 180, 228, 0.06); }
 .group__title { font-size: 13px; color: var(--ink-2); margin: 0 4px 7px 16px; font-weight: 500; }
 .group__foot { font-size: 13px; color: var(--ink-2); margin: -14px 16px 22px; line-height: 1.4; }
 .cell {
@@ -50,9 +50,13 @@ button.cell:active, a.cell:active { background: var(--fill); }
   display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px;
 }
 .bigbtn svg { width: 22px; height: 22px; }
-.bigbtn--primary { background: var(--marker); color: var(--on-marker); box-shadow: 0 8px 22px -8px var(--marker-glow); }
+.bigbtn--primary {
+  background: var(--marker); color: var(--on-marker);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 52%, rgba(90, 20, 0, 0.14) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(90, 20, 0, 0.28), 0 10px 24px -10px var(--marker-glow);
+}
 .bigbtn--primary:active { background: var(--marker-press); }
-.bigbtn--secondary { background: var(--card); color: var(--ink); }
+.bigbtn--secondary { background: var(--card); color: var(--ink); box-shadow: var(--lit), inset 0 0 0 1px rgba(150, 180, 228, 0.06); }
 .bigbtn--secondary:active { background: var(--fill-2); }
 .bigbtn[disabled] { opacity: .45; }
 .bigbtn.danger { color: #FF6B6B; }
@@ -71,6 +75,8 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 .seg { display: flex; background: var(--fill); border-radius: 10px; padding: 2px; gap: 2px; flex: 1; }
 .seg button { flex: 1; min-height: 34px; border-radius: 8px; font-size: 15px; font-weight: 550; }
 .seg button[aria-pressed="true"] { background: #26365A; color: var(--ink); box-shadow: 0 2px 8px -2px rgba(0,0,0,.5); }
+/* (the liquid thumb, ui/Seg.tsx: square-ish here, like the Carnet's control) */
+.adm .seg__thumb { top: 2px; bottom: 2px; border-radius: 8px; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { min-width: 42px; height: 38px; padding: 0; border-radius: 12px; background: var(--fill); font-size: 20px; display: grid; place-items: center; }
@@ -100,6 +106,11 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 .mitem__star { right: 40px; }
 .mitem__del { right: 5px; }
 .mitem__star[aria-pressed="true"] { background: var(--marker); color: #000; }
+.mitem__star svg, .mitem__del svg { width: 16px; height: 16px; }
+.mitem__ph { width: 30px; height: 30px; color: var(--ink-2); }
+/* (a picture still being prepared) */
+.spin { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid var(--fill-2); border-top-color: var(--marker); animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .mitem--add { display: grid; place-items: center; color: var(--marker); font-size: 15px; font-weight: 600; border: 2px dashed var(--ink-4); background: transparent; text-align: center; padding: 6px; }
 .mitem__err { position: absolute; inset: auto 0 0 0; background: rgba(220,50,60,.88); color: #fff; font-size: 11px; padding: 3px 6px; }
 

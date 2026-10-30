@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { mediaUrl } from "../config";
 import { daysBetween, fmtKm, nzToday } from "../lib/format";
 import type { Day, DayKind } from "../types";
-import { ChevronLeft } from "../ui/icons";
+import { ChevronLeft, Close, Locate, MapIcon, Play, Star } from "../ui/icons";
+import { Seg } from "../ui/Seg";
 import { shortPlace } from "../ui/TrailStrip";
 import { profileFor } from "./elevation";
 import { MapPicker, type Pick } from "./MapPicker";
@@ -96,10 +97,10 @@ function MediaTile({ m, cover, progress, onCover, onRemove }: { m: DraftMedia; c
   const state = m.preparing ? (progress ? `Compression ${Math.round(progress * 100)} %` : "Préparation…") : m.error ? null : !m.uploaded && m.kind !== "embed" ? "À envoyer" : null;
   return (
     <div class="mitem">
-      {src ? <img src={src} alt="" /> : <div style={{ display: "grid", placeItems: "center", height: "100%", fontSize: "26px" }}>{m.kind === "embed" ? "▶︎" : "⏳"}</div>}
+      {src ? <img src={src} alt="" /> : <div style={{ display: "grid", placeItems: "center", height: "100%", fontSize: "26px" }}>{m.kind === "embed" ? <Play class="mitem__ph" /> : <span class="spin" aria-hidden="true" />}</div>}
       {m.kind !== "photo" && <span class="mitem__badge">{m.kind === "embed" ? "Lien" : m.duration_s ? `${Math.round(m.duration_s)} s` : "Vidéo"}</span>}
-      {m.kind === "photo" && !m.error && <button type="button" class="mitem__star" aria-pressed={cover} aria-label="Photo de couverture" onClick={onCover}>★</button>}
-      <button type="button" class="mitem__del" aria-label="Retirer" onClick={onRemove}>✕</button>
+      {m.kind === "photo" && !m.error && <button type="button" class="mitem__star" aria-pressed={cover} aria-label="Photo de couverture" onClick={onCover}><Star /></button>}
+      <button type="button" class="mitem__del" aria-label="Retirer" onClick={onRemove}><Close /></button>
       {state && <span class="mitem__badge" style={{ top: "auto", bottom: "6px" }}>{state}</span>}
       {m.error && <div class="mitem__err">{m.error}</div>}
     </div>
@@ -411,9 +412,7 @@ export function Editor({ id }: { id: string }) {
           }} />
         </label>
         <div class="cell">
-          <div class="seg" role="group" aria-label="Type de journée">
-            {kinds.map(([k, label]) => <button type="button" aria-pressed={d.kind === k} onClick={() => update({ kind: k })}>{label}</button>)}
-          </div>
+          <Seg label="Type de journée" value={d.kind} onChange={(k) => update({ kind: k })} options={kinds.map(([k, label]) => ({ value: k, label }))} />
         </div>
       </div>
 
@@ -434,8 +433,8 @@ export function Editor({ id }: { id: string }) {
                 <span class="where"><strong class="num">km {fmtKm(d.end_km, "fr", 1)}</strong>{leg ? `, ${leg}` : ""}</span>
               )}
               <div class="pickrow">
-                <button class="btn" type="button" onClick={useGps} disabled={gpsBusy}>{gpsBusy ? "Localisation…" : "📍 Ma position"}</button>
-                <button class="btn" type="button" onClick={() => setPicking("end")}>🗺️ Sur la carte</button>
+                <button class="btn" type="button" onClick={useGps} disabled={gpsBusy}>{gpsBusy ? "Localisation…" : <><Locate />Ma position</>}</button>
+                <button class="btn" type="button" onClick={() => setPicking("end")}><MapIcon />Sur la carte</button>
               </div>
               {photoGps && (
                 <button class="textbtn" type="button" style={{ textAlign: "left" }} onClick={() => {

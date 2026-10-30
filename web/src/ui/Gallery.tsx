@@ -12,9 +12,9 @@ function youtubeId(url: string): string | null {
 
 function embedHtml(url: string): string {
   const yt = youtubeId(url);
-  if (yt) return `<iframe src="https://www.youtube-nocookie.com/embed/${yt}?playsinline=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Vidéo"></iframe>`;
+  if (yt) return `<iframe src="https://www.youtube-nocookie.com/embed/${yt}?playsinline=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="${t("video")}"></iframe>`;
   const vm = /vimeo\.com\/(\d+)/.exec(url);
-  if (vm) return `<iframe src="https://player.vimeo.com/video/${vm[1]}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="Vidéo"></iframe>`;
+  if (vm) return `<iframe src="https://player.vimeo.com/video/${vm[1]}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="${t("video")}"></iframe>`;
   return `<a href="${encodeURI(url)}" target="_blank" rel="noopener" style="color:#fff;font:600 17px system-ui">${t("openVideo")}</a>`;
 }
 
@@ -37,10 +37,10 @@ export async function openLightbox(list: Media[], index: number) {
     bgOpacity: 0.94,
     showHideAnimationType: "fade",
     closeTitle: t("close"),
-    zoomTitle: "Zoom",
-    arrowPrevTitle: "←",
-    arrowNextTitle: "→",
-    errorMsg: "Image indisponible",
+    zoomTitle: t("zoom"),
+    arrowPrevTitle: t("photoPrev"),
+    arrowNextTitle: t("photoNext"),
+    errorMsg: t("photoMissing"),
     padding: { top: 40, bottom: 70, left: 0, right: 0 },
   });
   lb.on("uiRegister", () => {

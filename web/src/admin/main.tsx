@@ -4,10 +4,12 @@ import "@fontsource-variable/literata/opsz.css";
 import "../styles/app.css";
 import "./admin.css";
 import { MOCK } from "../config";
+import { installIconFx } from "../ui/iconfx";
 import { AdminApp } from "./AdminApp";
 import { initAuth, isAdmin, session } from "./sb";
 
 document.body.classList.add("admin");
+installIconFx();
 
 if (MOCK) {
   // development preview without a backend

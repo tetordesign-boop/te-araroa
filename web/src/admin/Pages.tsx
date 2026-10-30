@@ -2,7 +2,7 @@ import { useEffect, useState } from "preact/hooks";
 import { FUNCTIONS_URL } from "../config";
 import { fmtDate, fmtKm, nzToday, relTime } from "../lib/format";
 import type { Settings } from "../types";
-import { ChevronLeft, ChevronRight } from "../ui/icons";
+import { ChevronLeft, ChevronRight, Locate } from "../ui/icons";
 import { draftForToday, draftFromDay, openDraft } from "./Editor";
 import { InstallHint } from "./InstallHint";
 import { home, open, say } from "./nav";
@@ -123,7 +123,7 @@ export function Dashboard() {
       <button class="bigbtn bigbtn--primary" type="button" onClick={startToday}>
         {local.some((d) => d.date === today) || adminDays.value.some((d) => d.date === today) ? "Reprendre l'étape du jour" : "Publier l'étape du jour"}
       </button>
-      <button class="bigbtn bigbtn--secondary" type="button" onClick={() => open({ name: "checkin" })}>📍 Partager ma position</button>
+      <button class="bigbtn bigbtn--secondary" type="button" onClick={() => open({ name: "checkin" })}><Locate />Partager ma position</button>
 
       {local.length > 0 && (
         <>
@@ -433,7 +433,7 @@ export function Help() {
       <div class="group">
         <ol class="steps">
           <li>Touche <strong>Publier l'étape du jour</strong>.</li>
-          <li>Arrivée : <strong>📍 Ma position</strong> si tu es au bout de l'étape, sinon <strong>Sur la carte</strong> ou <strong>Lieu de ma dernière photo</strong>. Distance, montée et descente se calculent seules.</li>
+          <li>Arrivée : <strong>Ma position</strong> si tu es au bout de l'étape, sinon <strong>Sur la carte</strong> ou <strong>Lieu de ma dernière photo</strong>. Distance, montée et descente se calculent seules.</li>
           <li>Écris ou dicte ton récit (le micro du clavier), choisis météo et humeur, ajoute photos et vidéos. ★ choisit la couverture.</li>
           <li>Touche <strong>Publier</strong>. Tu peux revenir corriger une étape plus tard : touche-la dans la liste, modifie, puis Publier à nouveau.</li>
         </ol>

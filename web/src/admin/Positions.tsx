@@ -7,7 +7,7 @@ import { MOCK, OFFLINE_MAP } from "../config";
 import { fmtDate, fmtKm, nzToday, relTime } from "../lib/format";
 import type { LngLat } from "../lib/geo";
 import { buildStyle } from "../map/style";
-import { ChevronLeft, ChevronRight } from "../ui/icons";
+import { ChevronLeft, ChevronRight, Locate } from "../ui/icons";
 import { home, open, say } from "./nav";
 import { adminRoute, adminSettings } from "./server";
 import { sba } from "./sb";
@@ -168,7 +168,7 @@ export function Positions() {
 
       {list && list.length > 0 && <PointsMap list={list} />}
 
-      <button class="bigbtn bigbtn--primary" type="button" onClick={() => open({ name: "checkin" })}>📍 Envoyer ma position maintenant</button>
+      <button class="bigbtn bigbtn--primary" type="button" onClick={() => open({ name: "checkin" })}><Locate />Envoyer ma position maintenant</button>
 
       {!ownFresh && (
         <>

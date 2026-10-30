@@ -8,6 +8,7 @@ import { startData } from "./lib/data";
 import { loadPlaces } from "./lib/places";
 import { installTapSounds } from "./lib/sound";
 import { App } from "./ui/App";
+import { installIconFx } from "./ui/iconfx";
 
 document.documentElement.lang = lang.value;
 // the presentation's words wait (a moment at most) for their own fonts, rather than come in with stand-ins and jump
@@ -21,6 +22,7 @@ if (document.documentElement.classList.contains("is-intro") && document.fonts?.l
 startData();
 loadPlaces();
 installTapSounds();
+installIconFx();
 if (window.matchMedia("(pointer: coarse)").matches) {
   // Safari's own pinch-zoom of the page (the map and the photos have their own zoom)
   for (const ev of ["gesturestart", "gesturechange"]) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });

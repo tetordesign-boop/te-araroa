@@ -16,6 +16,17 @@ The site follows an Apple-Maps-like structure (map full screen, a glass sheet wi
 
 Four web components Ewan likes set the level (October 2026): a liquid-glass navigation bar with WebGL water, glass folder cards, a curved row of images on a cylinder, a perspective tunnel of cards. They are not pasted: each was rewritten in Preact and plain CSS (the prompts assumed React, Tailwind and shadcn, which the site doesn't use), given a job on the site, drawn in its night palette, and checked like the rest (phones, sideways, tablets, computers, reduced motion, no WebGL, keyboard). No stock photos: on this site a picture means Ewan took it.
 
+## The liquid material, everywhere
+
+What was learned from design skills shared on GitHub (Apple's Liquid Glass rules as written up by the apple-liquid-glass skill, LottieFiles' motion design skill, Impeccable's polish, delight, animate and craft-floor references, UI UX Pro Max), applied to the whole site and the Carnet:
+
+- **Glass is for the chrome, not the content.** The sheet and the panel, the floating buttons, the cards and pills over the map, the navigation, the toast, the photo viewer's buttons are glass. What sits inside the sheet stays solid. The glass has a lit top edge and a rim of light that is brightest upper left, faint along the sides and picks up again lower right (`.glass::before`, `--rim-1` to `--rim-3`), like a bevel catching light rather than a sticker's outline. The scrolling map-modes card draws its rim with shadows.
+- **Solid surfaces catch the same light** on their top edge (`--lit`: lists, cards, actions, fields, chips, round buttons, segmented controls; the Carnet's groups and buttons). Under a mouse they lift toward you: a little lighter, the edge brighter (`--lit-hover`). The orange buttons are a drop of light: lit from above, deeper below.
+- **One motion language.** The spring (`--spring`) for anything let go, `--ease-out` for arrivals; three durations, `--dur-1` 160 ms for feedback, `--dur-2` 320 ms for a change, `--dur-3` 600 ms for an entrance; exits faster than entrances. A segmented control's selection slides and squashes on its way (`ui/Seg.tsx`: the language, the Carnet's kind of day).
+- **Every icon has a scene** (`ui/iconfx.ts`, by `data-icon`): the eye blinks, "play" and the chevrons step the way they point, a close cross turns away, the share arrow lifts, the search glass tilts, "locate" launches, the map unfolds, the orbit turns, the pencil scribbles, the cover star spins in; the others hop. No emoji or typed glyph stands in for an icon any more (the Carnet's 📍, 🗺️, ★, ✕, ⏳, the replay's ✕).
+- **States answer.** A missing field in a note shakes and gets the focus; a note sent draws its tick. The parts nobody draws are themed too: the caret is orange, links under text have their offset.
+- **Less transparency** (`prefers-reduced-transparency`): solid surfaces, no blur, the same rims. Reduced motion: no scenes, no squash.
+
 ## Navigation
 
 `ui/LiquidNav.tsx`, after "Waterline" (Nimbus UI): Ewan, Journal, Explorer, Stats, in a pill of night glass with a drop of lake water for the current tab. On a phone it floats at the bottom over the sheet (as in iOS 26), whose lowest height grew from 236 to 300 px so the same things show above it; beside the map it sits at the foot of the panel or the card. The sheet's content fades out under it (`.lnav-fade`).

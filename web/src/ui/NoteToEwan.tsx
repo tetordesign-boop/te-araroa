@@ -37,13 +37,19 @@ export function NoteToEwan({ dayId }: { dayId: string | null }) {
   const open = () => { setSent(null); setState({ kind: "idle" }); setWriting(true); };
   const cancel = () => { setWriting(false); setState({ kind: "idle" }); requestAnimationFrame(() => writeBtn.current?.focus({ preventScroll: true })); };
 
+  /** a missing field says so with a little shake, the way a wrong password does */
+  const shake = (el: HTMLElement | null) => {
+    if (!el?.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    el.animate([{ transform: "none" }, { transform: "translateX(-8px)" }, { transform: "translateX(7px)" }, { transform: "translateX(-4px)" }, { transform: "translateX(2px)" }, { transform: "none" }], { duration: 360, easing: "ease-in-out" });
+  };
+
   const submit = async (e?: Event) => {
     e?.preventDefault();
     if (trap) return; // bots fill every field
     const a = name.trim(), b = body.trim();
     // (said next to the button and the field gets the focus, rather than a send button that stays grey without a reason)
-    if (!a) { setState({ kind: "error", msg: t("noteNeedName") }); nameField.current?.focus(); return; }
-    if (!b) { setState({ kind: "error", msg: t("noteNeedBody") }); bodyField.current?.focus(); return; }
+    if (!a) { setState({ kind: "error", msg: t("noteNeedName") }); nameField.current?.focus(); shake(nameField.current); return; }
+    if (!b) { setState({ kind: "error", msg: t("noteNeedBody") }); bodyField.current?.focus(); shake(bodyField.current); return; }
     if (state.kind === "sending") return;
     setState({ kind: "sending" });
     try { localStorage.setItem(NAME_KEY, a); } catch (_) { /* ignore */ }
@@ -67,7 +73,11 @@ export function NoteToEwan({ dayId }: { dayId: string | null }) {
 
       {sent && !writing && (
         <div class="note__receipt" ref={receipt} tabIndex={-1}>
-          <p class="note__done">{t("noteSent")}</p>
+          <p class="note__done">
+            {/* the tick draws itself as the note leaves */}
+            <svg class="note__tick" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="M7 12.4l3.3 3.3L17.2 8.8" /></svg>
+            {t("noteSent")}
+          </p>
           <blockquote class="note__echo">
             <p>{typo(sent.body)}</p>
             <footer>{sent.author}</footer>
