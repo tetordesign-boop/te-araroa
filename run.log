@@ -1,0 +1,19 @@
+p-m-intro 30417ms ok [waited 14.5s]
+  SAYS English / Te Araroa / avec Ewan / 1 334 km à pied sur l'île du Sud de la Nouvelle-Zélande, de Ship Cove à Bluff. / Le premier jour s'écrira à Ship Cove. / Suivre Ewan
+p-m-home 28394ms ok [waited 16.4s]
+  SAYS Le premier jour s'écrira à Ship Cove. / Ship Cove / Bluff / Survol en 3D / Je marche les 1 334 km de l'île du Sud sur le Te Araroa, de Ship Cove à Bluff. Ici, je publie chaque jour où je suis, mes photos et quelques mots dès que j'ai du réseau. / Laissez-moi un mot dans le livre de refuge, je les lirai le soir au refuge ! / Sur la route / Explorer / Prochain col / Kenepuru Saddle / km 29, ≈ 164 m / Prochaine étape / Anakiwa / km 70, ≈ 9 m / Prochain refuge / Captain Creek Hut / km 133, ≈ 124 m / Un mot pour Ewan / Écrivez-lui ici. Seul Ewan lit ces mots : ils n'apparaissent nulle part sur le site. Il les reçoit dès qu'il a du réseau. / Écrire à Ewan / À propos / Français / English
+p-l-home 30934ms ok [waited 16.2s]
+p-t-home 32203ms ok [waited 16.4s]
+p-d-home 44110ms ok [waited 16.3s]
+  SAYS archivo-latin-wdth-normal-DY7AcnAa.woff2 | fonts true
+p-m-carnet 6486ms ok [waited 6.3s]
+  SAYS Carnet de route / Connecte-toi pour publier tes étapes depuis le sentier. / Ajoute le carnet à ton écran d'accueil / Touche  Partager, puis « Sur l'écran d'accueil ». Ouvre-le ensuite depuis l'icône Carnet et connecte-toi là : c'est ce qui le fait marcher sans réseau et garde tes brouillons à l'abri. / E-mail / Mot de passe / Se connecter / J'ai un code (première fois)
+p-m-nav-journal 32148ms ok [waited 14.3s, acted 17.4s]
+  SAYS Journal | #/journal
+p-m-shelf 28136ms ok [waited 14.3s, acted 17.6s]
+  SAYS Ship Cove – Anakiwa (70 km, 32 lieux) ; Anakiwa – St Arnaud (183 km, 45 lieux) ; St Arnaud – Boyle Village (130 km, 45 lieux) ; Boyle Village – Arthur's Pass (113 km, 30 lieux) ; Arthur's Pass – Lake Tekapo (208 km, 58 lieux) ; Lake Tekapo – Lake Hāwea (166 km, 19 lieux) ; Lake Hāwea – Queenstown (126 km, 32 lieux) ; Queenstown – Bluff (339 km, 46 lieux)
+p-m-shelf-open 33749ms ok [waited 14.2s, acted 18.4s]
+  SAYS Camping Top of the Inlet km 17 | Camping Miners Camp & Farmstay km 17 | Camping Schoolhouse Bay Campsite km 6 | Col Kenepuru Saddle km 29
+p-d-shelf-open 42001ms ok [waited 14.2s, acted 19.8s]
+p-m-voyage 21548ms ok [waited 10.1s]
+  SAYS Pas encore de photos : elles arriveront ici dès qu'Ewan sera en route.
