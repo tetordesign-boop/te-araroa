@@ -973,7 +973,9 @@ canvas.gf-art[data-ready] { opacity: 1; filter: none; }
 .gf-root[data-entered] .gf-front { transition-delay: 0s, 0.42s, 0.42s; }
 
 /* the shelf of sections, in the explorer */
-.shelf-head { position: relative; z-index: 0; }
+.shelf-head { position: relative; z-index: 0; transition: opacity 0.35s ease; }
+/* a folder open: its files rise where the title was, the title steps back */
+.block:has(.gf-root[data-open]) .shelf-head { opacity: 0; }
 .shelf {
   gap: 14px; align-items: flex-end; scroll-snap-type: x mandatory;
   /* the files rise above the folders when one is open: that room is inside the shelf, and the title sits in it */
