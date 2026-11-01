@@ -153,6 +153,7 @@ async function refreshPositions() {
 }
 
 let reloadTimer: number | undefined;
+let joined = false;
 function scheduleReload(ms = 1500) {
   clearTimeout(reloadTimer);
   reloadTimer = window.setTimeout(() => loadAll(), ms);
@@ -180,7 +181,11 @@ export function startData() {
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "days" }, () => scheduleReload())
       .on("postgres_changes", { event: "*", schema: "public", table: "media" }, () => scheduleReload(4000))
-      .subscribe();
+      .subscribe((state) => {
+        // Joined again after a drop (the live service waking up after a quiet spell, a phone coming back from sleep):
+        // the feed doesn't replay what changed in between, so fetch it.
+        if (state === "SUBSCRIBED") { if (joined) scheduleReload(500); joined = true; }
+      });
   } catch (e) {
     console.warn("realtime unavailable", e);
   }
