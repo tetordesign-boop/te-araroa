@@ -73,7 +73,9 @@ float H(vec2 p){float dp=pillD(p);return lens(dp,uPill.w*.36)*2.4+lens(dropD(p),
 float caus(vec2 p,float t){vec2 q=p;float c=0.;for(int i=0;i<3;i++){q+=vec2(sin(q.y*1.1+t),cos(q.x*1.3-t*.7))*.6;c+=1./(1.+16.*abs(sin(q.x)*sin(q.y)));}return c/3.;}
 void main(){
  vec2 p=vec2(gl_FragCoord.x,uRes.y*uDpr-gl_FragCoord.y)/uDpr;
- float dp=pillD(p);float dd=dropD(p);
+ float dp=pillD(p);
+ if(dp>1.5){gl_FragColor=vec4(0.);return;}
+ float dd=dropD(p);
  float h0=H(p);vec3 n=normalize(vec3(h0-H(p+vec2(1.,0.)),h0-H(p+vec2(0.,1.)),1.));
  vec3 V=vec3(0.,0.,1.);
  float spec=pow(max(dot(reflect(-normalize(vec3(-.45,-.8,.85)),n),V),0.),70.);
@@ -185,7 +187,7 @@ export function LiquidNav({ inert }: { inert?: boolean }) {
     const r = T.r * (1 - 0.3 * thin) * s.there;
     if (s.glc) {
       const { gl: g, u } = s.glc;
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       g.viewport(0, 0, g.drawingBufferWidth, g.drawingBufferHeight);
       g.uniform2f(u.uRes, s.w + PAD * 2, s.h + PAD * 2);
       g.uniform1f(u.uDpr, dpr);
@@ -226,7 +228,7 @@ export function LiquidNav({ inert }: { inert?: boolean }) {
     s.there += (s.thereTo - s.there) * Math.min(1, dt * (s.reduce ? 60 : 7));
     if (Math.abs(s.thereTo - s.there) < 0.004) s.there = s.thereTo;
     const ambTo = now < s.ambUntil ? 1 : 0;
-    s.amb += (ambTo - s.amb) * Math.min(1, dt * (ambTo ? 3 : 0.8));
+    s.amb += (ambTo - s.amb) * Math.min(1, dt * (ambTo ? 3 : 2.4));
     if (s.amb < 0.004 && !ambTo) s.amb = 0;
     const bodies = [s.a, s.b];
     let still = true;
@@ -303,7 +305,7 @@ export function LiquidNav({ inert }: { inert?: boolean }) {
     s.raf = requestAnimationFrame(tick);
   };
   /** the water swells for a moment (a touch, a new tab), then calms */
-  const stir = (ms = 2200) => {
+  const stir = (ms = 1100) => {
     const s = st.current;
     if (s.reduce) { loop(); return; }
     s.ambUntil = Math.max(s.ambUntil, performance.now() + ms);
@@ -339,7 +341,7 @@ export function LiquidNav({ inert }: { inert?: boolean }) {
     }
     const cv = canvasRef.current;
     if (cv) {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5); // (water needs no more: it is soft)
       const W = s.w + PAD * 2, H = s.h + PAD * 2;
       if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
         cv.width = Math.round(W * dpr);

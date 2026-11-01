@@ -56,7 +56,7 @@ function Status() {
   }
   return (
     <div class={`status${state === "stale" ? " is-stale" : ""}`}>
-      <span class="status__dot" aria-hidden="true" />
+      <span class="status__dot" aria-hidden="true" key={p.id} />
       <span class="status__text">
         <strong>{state === "live" ? t("live") : t("lastKnown")}</strong>{where ? `, ${where}` : ""}
       </span>

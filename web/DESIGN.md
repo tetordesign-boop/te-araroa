@@ -82,6 +82,16 @@ A real scene rather than a sign: Ewan seen from behind on the trail at night, hi
 - A press in the sheet may wander 10 px (a finger) or 5 px (a mouse) and still be a tap: buttons are never swallowed by a would-be drag. A gesture the browser takes over (a sideways swipe on a shelf) is not a tap either.
 - The page itself never zooms on a phone (no double-tap zoom, Safari's pinch is cancelled): the map and the photos zoom. Holding a control doesn't select its words or open a link preview.
 
+## Keeping it smooth on a phone
+
+Measured in November 2026, with the gestures a visitor makes (dragging the sheet, panning the map, changing tabs) on a 3× phone screen:
+
+- **The map draws at 2 device pixels per CSS pixel at most** (`pixelRatio` in `map/map.ts`, and in the Carnet's two maps): at 3× the relief, the shading and the terrain cost 2.25 times more for no visible difference. Multisampling is kept for screens under 2× only.
+- **Blurs only where they make the glass.** Each blur is redrawn whenever what lies under it changes, and under the sheet the map moves constantly. The chrome over the map blurs 16 px, the sheet 22 px. On a phone, the navigation and the folders' glass (which lie on the already frosted sheet) use a denser tint instead of a second blur; the fade under the navigation is a plain gradient (a blur under a mask is costly, and Safari draws that pair badly). A hidden toast is `visibility: hidden`.
+- **Nothing moves at rest.** Ewan's point and its halo pulse four times when a new position comes in, then stop (they used to pulse forever, which kept the phone redrawing the blurs on every frame). The navigation's water calms within about two seconds of a touch, draws at 1.5× at most and nothing outside the pill.
+- **Dragging the sheet** tells only the few things riding on it where its top is (`--sheet-visible` on the map's credits, the replay button and bar, the plain trail drawing) and the page itself once it rests: a variable changed on the page would restyle every element on every frame.
+- **Less to download.** Visitors get only the two parts of Supabase the site uses (the database and the live feed), not the sign-in and file storage the Carnet needs; the explorer's folders and the photo voyage come with their own code, fetched once the page has settled. The photo band uses 8 strips per tile on a phone.
+
 ## The map
 
 `src/map/style.ts`, night palette (`DARK`):

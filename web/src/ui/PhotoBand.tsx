@@ -5,7 +5,8 @@
 // apart. Transform-only, on the compositor; it stops when off screen, and stands still with reduced motion.
 import { useEffect, useId, useRef, useState } from "preact/hooks";
 
-const SLICES = 12;
+// (fewer strips on a phone: each is a layer to composite, and at that size 8 facets already read as a curve)
+const SLICES = typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches ? 8 : 12;
 /** camera distance, as a multiple of the cylinder's radius: just past the axis, so the ends swell toward you */
 const CAMERA = 1.6;
 /** a tile is never wider than this share of the band */

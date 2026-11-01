@@ -23,7 +23,7 @@
   /* night */
   --night: #0C1526;
   --night-deep: #070E1B;
-  --surface: rgba(13, 21, 38, 0.8);       /* the sheet */
+  --surface: rgba(13, 21, 38, 0.84);      /* the sheet */
   --surface-solid: #111C30;
   --glass-bg: rgba(15, 24, 43, 0.72);     /* small floating controls */
   --raise: rgba(140, 170, 222, 0.085);    /* platters: lists, shelves, actions */
@@ -170,8 +170,9 @@ strong, b { font-weight: 650; }
 .glass {
   position: relative;
   background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(24px) saturate(1.7);
-  backdrop-filter: blur(24px) saturate(1.7);
+  /* (a blur costs in proportion to its radius, on every frame the map moves under it: 16 px is enough to frost) */
+  -webkit-backdrop-filter: blur(16px) saturate(1.7);
+  backdrop-filter: blur(16px) saturate(1.7);
   border: 0;
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1), var(--shadow-float);
 }
@@ -230,12 +231,12 @@ strong, b { font-weight: 650; }
 
 .toast {
   position: absolute; z-index: 60; left: 50%; top: calc(var(--safe-t) + 68px);
-  transform: translate(-50%, -12px) scale(0.96); opacity: 0;
+  transform: translate(-50%, -12px) scale(0.96); opacity: 0; visibility: hidden; /* (hidden, its blur costs nothing) */
   padding: 11px 18px; border-radius: 999px; font-size: 15px; font-weight: 650;
-  transition: opacity 0.2s ease, transform 0.5s var(--spring);
+  transition: opacity 0.2s ease, transform 0.5s var(--spring), visibility 0s linear 0.5s;
   pointer-events: none; white-space: nowrap;
 }
-.toast.is-on { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.toast.is-on { opacity: 1; visibility: visible; transform: translate(-50%, 0) scale(1); transition-delay: 0s; }
 
 /* ------------------------------------------------------------------ sheet (phone) / panel (computer) */
 /* On phones the sheet's position is set by script (it follows the finger, then springs): no CSS transform here. */
@@ -254,9 +255,10 @@ strong, b { font-weight: 650; }
 }
 .sheet.glass {
   background: var(--surface);
-  -webkit-backdrop-filter: blur(32px) saturate(1.45);
-  backdrop-filter: blur(32px) saturate(1.45);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08), var(--shadow-sheet);
+  -webkit-backdrop-filter: blur(22px) saturate(1.45);
+  backdrop-filter: blur(22px) saturate(1.45);
+  /* (its rim is drawn by shadows: a masked ring the size of the sheet would cost a layer for nothing) */
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1), inset 1px 1px 0 rgba(226, 236, 255, 0.16), inset -1px -1px 0 rgba(226, 236, 255, 0.07), var(--shadow-sheet);
 }
 .sheet__grip {
   flex: none; height: 26px; display: grid; place-items: center; touch-action: none; cursor: grab;
@@ -369,9 +371,8 @@ strong, b { font-weight: 650; }
   position: absolute; z-index: 34; pointer-events: none;
   left: calc(var(--safe-l) + 9px); right: calc(var(--safe-r) + 9px); bottom: calc(var(--safe-b) + 9px); /* (inside the sheet's border) */
   height: calc(var(--nav-h) + 26px); border-radius: 0 0 calc(var(--r-sheet) - 1px) calc(var(--r-sheet) - 1px);
-  background: linear-gradient(180deg, rgba(12, 20, 36, 0) 0%, rgba(12, 20, 36, 0.78) 34%, rgba(12, 20, 36, 0.94) 100%);
-  -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 34%); mask-image: linear-gradient(180deg, transparent 0%, #000 34%);
+  /* (a plain gradient: a blur under a mask here is costly, and Safari draws that pair badly) */
+  background: linear-gradient(180deg, rgba(12, 20, 36, 0) 0%, rgba(12, 20, 36, 0.8) 34%, rgba(12, 20, 36, 0.95) 100%);
   transition: opacity 0.3s ease;
 }
 /* out of the way during the presentation and the flyover, and on a phone while typing (the keyboard is there) */
@@ -452,9 +453,10 @@ html.is-intro .lnav-fade, html.is-trail-mode .lnav-fade { opacity: 0; }
 .now { padding-top: 2px; }
 .status { display: flex; align-items: center; gap: 10px; min-height: 24px; }
 .status__dot { position: relative; width: 9px; height: 9px; border-radius: 50%; background: var(--marker); flex: none; box-shadow: 0 0 10px 1px var(--marker-glow); }
+/* (it pulses a few times when a new position comes in, then rests: an endless pulse keeps the phone drawing) */
 .status__dot::after {
   content: ""; position: absolute; inset: -5px; border-radius: 50%; background: var(--marker);
-  opacity: 0.35; animation: pulse 2.4s var(--ease-out) infinite;
+  opacity: 0.35; animation: pulse 2.4s var(--ease-out) 4 both;
 }
 .status.is-stale .status__dot { background: var(--ink-3); box-shadow: none; }
 .status.is-stale .status__dot::after { display: none; }
@@ -760,7 +762,7 @@ textarea.field { min-height: 108px; line-height: 1.45; font-family: var(--font-v
 }
 .live-pin__halo {
   position: absolute; width: 26px; height: 26px; border-radius: 50%; background: var(--marker);
-  animation: pulse 2.4s var(--ease-out) infinite;
+  animation: pulse 2.4s var(--ease-out) 4 both;
 }
 .live-pin__label {
   position: absolute; left: 24px; top: 50%; transform: translateY(-50%);
@@ -1509,6 +1511,18 @@ html.is-intro .maplibregl-ctrl-bottom-right { bottom: auto; top: calc(var(--safe
 @media (min-width: 900px), (min-width: 600px) and (max-height: 520px) {
   html.is-intro .sheet { translate: calc(-100% - 40px) 0; }
   html.is-intro .maplibregl-ctrl-bottom-right { top: auto; bottom: 8px; }
+}
+
+/* ------------------------------------------------------------------ on phones: fewer blurs
+   Every blur is redrawn whenever what is under it changes, and under the sheet the map moves all the time. A phone
+   keeps the blurs that make the glass (the sheet, the buttons over the map) and drops the ones stacked on top of
+   them: the navigation and the folders' glass lie on the sheet, which is already frosted, so a denser tint does the
+   same there (and Safari draws a blur inside a blur badly). */
+@media (pointer: coarse) {
+  .lnav__glass { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(19, 30, 53, 0.9); }
+  .gf-front, .gf-key { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .gf-tint { background: linear-gradient(180deg, rgba(18, 28, 48, 0.62) 0%, rgba(12, 20, 36, 0.8) 46%, rgba(8, 14, 27, 0.96) 100%); }
+  .gf-key { background: linear-gradient(180deg, rgba(60, 78, 112, 0.7) 0%, rgba(34, 48, 74, 0.8) 100%); }
 }
 
 /* =====================================================================

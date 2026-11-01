@@ -78,7 +78,7 @@ function PointsMap({ list }: { list: Pos[] }) {
       const style = buildStyle("satellite", { dark: false, linzKey: adminSettings.value?.linz_api_key, land });
       delete (style as { terrain?: unknown }).terrain; // flat and exact
       const first = list[0] ? [list[0].lng, list[0].lat] as LngLat : adminRoute.value.pointAt(0);
-      const m = new maplibregl.Map({ container: el.current, style, center: first, zoom: 11, attributionControl: { compact: true }, maxPitch: 0, dragRotate: false });
+      const m = new maplibregl.Map({ container: el.current, style, center: first, zoom: 11, attributionControl: { compact: true }, maxPitch: 0, dragRotate: false, pixelRatio: Math.min(window.devicePixelRatio || 1, 2) });
       map.current = m;
       m.on("load", () => {
         const r = adminRoute.value;

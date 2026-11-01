@@ -11,6 +11,8 @@ import { detent, isDesktop, mapApi, type Detent } from "./state";
 const PEEK = 300;
 const ORDER: Detent[] = ["full", "half", "peek"];
 const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+/** what rides on the top of the sheet: the map's credits, the 3D replay button and its bar, the plain trail drawing */
+const FOLLOWERS = ".maplibregl-ctrl-bottom-right, .replay-fab, .replay-hud, .mapfb";
 
 export function Sheet({ children, label, inert }: { children: ComponentChildren; label: string; inert?: boolean }) {
   const ref = useRef<HTMLElement>(null);
@@ -27,14 +29,23 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
   };
   const yFor = (d: Detent) => geo.current.sheetH - heights()[d];
 
-  /** Put the sheet at y (px down from fully open) and tell the floating buttons where its top is. */
-  const place = (y: number) => {
+  /**
+   * Put the sheet at y (px down from fully open) and tell the floating buttons where its top is. While it moves, only
+   * the few things that ride on it are told (a variable changed on the page itself would restyle every element of the
+   * page on every frame); once it rests, the page is.
+   */
+  const place = (y: number, rest = false) => {
     const el = ref.current;
     if (!el) return;
     anim.current.y = y;
     el.style.transform = isDesktop.value ? "" : `translate3d(0, ${y.toFixed(1)}px, 0)`;
-    const visible = isDesktop.value ? 0 : Math.max(0, geo.current.sheetH - y);
-    document.documentElement.style.setProperty("--sheet-visible", `${visible.toFixed(0)}px`);
+    const visible = `${(isDesktop.value ? 0 : Math.max(0, geo.current.sheetH - y)).toFixed(0)}px`;
+    if (rest) {
+      for (const f of document.querySelectorAll<HTMLElement>(FOLLOWERS)) f.style.removeProperty("--sheet-visible");
+      document.documentElement.style.setProperty("--sheet-visible", visible);
+    } else {
+      for (const f of document.querySelectorAll<HTMLElement>(FOLLOWERS)) f.style.setProperty("--sheet-visible", visible);
+    }
   };
 
   /** Spring to a detent, starting with the speed the finger left it at (px/ms). */
@@ -42,7 +53,7 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
     const a = anim.current;
     cancelAnimationFrame(a.raf);
     a.target = yFor(to);
-    if (reduceMotion() || !Number.isFinite(a.y)) { place(a.target); return; }
+    if (reduceMotion() || !Number.isFinite(a.y)) { place(a.target, true); return; }
     a.v = velocity * 1000; // px/s
     let last = 0;
     const k = 420, c = 2 * Math.sqrt(k) * 0.86; // a touch under critical: lands with a whisper of overshoot
@@ -57,7 +68,7 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
         a.v += (-k * (y - a.target) - c * a.v) * dt;
         y += a.v * dt;
       }
-      if (Math.abs(y - a.target) < 0.4 && Math.abs(a.v) < 12) { place(a.target); return; }
+      if (Math.abs(y - a.target) < 0.4 && Math.abs(a.v) < 12) { place(a.target, true); return; }
       place(y);
       a.raf = requestAnimationFrame(step);
     };
@@ -70,7 +81,7 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
     if (!el) return;
     const measure = () => {
       geo.current = { sheetH: el.offsetHeight, vh: window.innerHeight };
-      if (!anim.current.dragging) { cancelAnimationFrame(anim.current.raf); place(yFor(detent.peek())); }
+      if (!anim.current.dragging) { cancelAnimationFrame(anim.current.raf); place(yFor(detent.peek()), true); }
     };
     measure();
     const ro = new ResizeObserver(measure);

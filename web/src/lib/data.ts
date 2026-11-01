@@ -1,5 +1,6 @@
 import { batch, computed, signal } from "@preact/signals";
-import { createClient } from "@supabase/supabase-js";
+import { PostgrestClient } from "@supabase/postgrest-js";
+import { RealtimeClient } from "@supabase/realtime-js";
 import { LIVE_THRESHOLD_MIN, MOCK, SUPABASE_KEY, SUPABASE_URL, TRAIL_URL } from "../config";
 import { hikerName } from "../i18n";
 import type { Day, DayReactions, Media, Position, ReactionKey, Settings, Trail } from "../types";
@@ -7,9 +8,27 @@ import liteTrail from "../data/trail-lite.json";
 import { mergeRanges, Route, type LngLat } from "./geo";
 import { daysBetween, nzToday } from "./format";
 
-export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: false, autoRefreshToken: false },
+/**
+ * The database, for visitors: reads, the two functions they may call (reactions, notes) and the live feed. Built from
+ * the two parts of supabase-js the site uses rather than the whole client, whose sign-in and file-storage parts
+ * (about 400 KB of code to download and parse on every first visit) only the Carnet needs. The requests carry the
+ * same headers supabase-js sends without a session: the publishable key as `apikey` and as the bearer token.
+ */
+const rest = new PostgrestClient(`${SUPABASE_URL}/rest/v1`, {
+  headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
 });
+let realtime: RealtimeClient | null = null;
+export const sb = {
+  from: (table: string) => rest.from(table),
+  rpc: (fn: string, args?: Record<string, unknown>) => rest.rpc(fn, args),
+  channel: (name: string) => {
+    realtime ??= new RealtimeClient(`${SUPABASE_URL.replace(/^http/, "ws")}/realtime/v1`, {
+      params: { apikey: SUPABASE_KEY },
+      accessToken: async () => SUPABASE_KEY,
+    });
+    return realtime.channel(name);
+  },
+};
 
 // ---------------------------------------------------------------- state
 export const settings = signal<Settings | null>(null);

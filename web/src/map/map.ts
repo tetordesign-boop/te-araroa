@@ -132,7 +132,11 @@ export class TrailMap {
       cooperativeGestures: false,
       // a fingertip wobbles a few pixels on a tap: below this the map neither moves nor misses the tap
       clickTolerance: window.matchMedia("(pointer: coarse)").matches ? 7 : 3,
-      canvasContextAttributes: { antialias: true },
+      // Phones draw at 3 device pixels per CSS pixel: the relief, the shading and the terrain cost 2.25 times more
+      // there than at 2, for a difference nobody sees on a map. And at 2 and above the edges are already fine, so the
+      // (expensive) multisampling is kept for ordinary screens only.
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      canvasContextAttributes: { antialias: (window.devicePixelRatio || 1) < 2 },
     } as maplibregl.MapOptions);
     this.map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
     this.map.on("style.load", () => { void this.installOverlays(); });
@@ -701,6 +705,7 @@ export class TrailMap {
     this.src("flight")?.setData(multi(lines));
   }
 
+  private liveAt: LngLat | null = null;
   setLive(live: LiveData | null) {
     this.live = live;
     this.updateLive();
@@ -719,6 +724,13 @@ export class TrailMap {
       this.liveMarker = new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat(live.c).addTo(this.map);
     }
     const el = this.liveMarker.getElement();
+    // the halo pulses a few times when a new position comes in, then rests (an endless pulse keeps the phone busy)
+    const moved = !this.liveAt || this.liveAt[0] !== live.c[0] || this.liveAt[1] !== live.c[1];
+    if (moved && this.liveAt) {
+      const halo = el.querySelector<HTMLElement>(".live-pin__halo");
+      if (halo) { halo.style.animation = "none"; void halo.offsetWidth; halo.style.animation = ""; }
+    }
+    this.liveAt = live.c;
     el.classList.toggle("is-stale", live.stale);
     el.setAttribute("aria-label", live.label);
     const tag = el.querySelector(".live-pin__label");

@@ -25,12 +25,16 @@ import { startReplay } from "./replayControl";
 import { Sheet } from "./Sheet";
 import { Intro } from "./Intro";
 import { LiquidNav } from "./LiquidNav";
-import { PhotoTunnel } from "./PhotoTunnel";
+import { lazy, whenIdle } from "./lazy";
 import {
   arrival, arrivalDue, cameraShow, detent, FLYOVER_RE, go, goBack, introOpen, isDesktop, mapApi, mapBearing, mapFailed, replayState, searchQuery, toastMsg,
   trailMode, tunnelOpen, view,
 } from "./state";
 import { startTrailMode, TrailMode } from "./TrailMode";
+
+/** the photo voyage, with its own code: fetched once the page has settled, if there are photos to fly through */
+const PhotoTunnel = lazy(() => import("./PhotoTunnel").then((m) => m.PhotoTunnel));
+whenIdle(() => { if (media.peek().length >= 3) PhotoTunnel.preload(); });
 
 const mapData = computed<MapData>(() => {
   const byId = new Map(days.value.map((d) => [d.id, d]));

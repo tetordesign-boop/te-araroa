@@ -36,6 +36,19 @@ const prefs = (v) => (p) => p.addInitScript((v) => { try { localStorage.setItem(
 const click = (sel) => (p) => p.click(sel);
 const wait = (ms) => (p) => p.waitForTimeout(ms);
 const seq = (...fs) => async (p) => { for (const f of fs) await f(p); };
+/** reload while listening: the REST answers (status, table or function) and the realtime replies (status, topic) */
+const watchData = async (p) => {
+  const log = [];
+  p.on("response", (r) => { const u = r.url(); if (u.includes("/rest/v1/")) log.push(`${r.status()} ${u.split("/rest/v1/")[1].split("?")[0]}`); });
+  p.on("websocket", (ws) => {
+    log.push(`ws open ${ws.url().split("?")[0].split("/").slice(-2).join("/")}`);
+    ws.on("framereceived", (f) => { const t = String(f.payload); if (t.includes("phx_reply")) log.push(`ws reply ${(t.match(/"status":"(\w+)"/) || [])[1] || "?"} ${(t.match(/"topic":"([^"]+)"/) || [])[1] || ""}`); });
+  });
+  p.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") log.push(`console ${m.type()}: ${m.text().slice(0, 140)}`); });
+  await p.reload({ waitUntil: "domcontentloaded" });
+  await p.waitForTimeout(14000);
+  await p.evaluate((l) => { window.__qa = l.join(" | "); }, log);
+};
 /** the explorer's shelf of sections at the top of the sheet */
 const toShelf = (p) => p.evaluate(() => {
   const b = document.querySelector(".sheet__body"), h = document.querySelector(".shelf-head");
@@ -112,6 +125,8 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "p-m-shelf-open", ctx: mobile(false), url: "#/explorer", plain: 14000, act: seq(toShelf, wait(1500), tap(".gf-hit"), wait(2600)), probe: "[...document.querySelectorAll('.gf-root[data-open] .gf-sheet')].map((x) => x.innerText.replace(/\\n/g, ' ')).join(' | ')" },
   { id: "p-d-shelf-open", ctx: desktop(false), url: "#/explorer", plain: 14000, act: seq(toShelf, wait(1500), tap(".gf-hit"), wait(2600)) },
   { id: "p-m-voyage", ctx: mobile(false), url: "#/voyage", plain: 10000, probe: "document.querySelector('.tun')?.innerText" },
+  // the database as visitors reach it: each request's status, and the live feed's channel joined
+  { id: "p-m-data", ctx: mobile(false), url: "", plain: 3000, act: watchData, probe: "window.__qa" },
 ];
 
 const log = [];

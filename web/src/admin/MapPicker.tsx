@@ -22,7 +22,7 @@ export function MapPicker({ route, around, onPick, onClose }: { route: Route; ar
       if (OFFLINE_MAP) land = (await import("../dev/nz-land.json")).default as unknown as GeoJSON.Feature;
       const style = buildStyle("satellite", { dark: false, linzKey: adminSettings.value?.linz_api_key, land });
       delete (style as { terrain?: unknown }).terrain; // flat & precise for picking
-      map = new maplibregl.Map({ container: el.current!, style, center: around, zoom: 13, attributionControl: false, maxPitch: 0 });
+      map = new maplibregl.Map({ container: el.current!, style, center: around, zoom: 13, attributionControl: false, maxPitch: 0, pixelRatio: Math.min(window.devicePixelRatio || 1, 2) });
       map.on("load", () => {
         const lines = route.parts.map((p) => Array.from(p.lng, (x, i) => [x, p.lat[i]]));
         map!.addSource("route", { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "MultiLineString", coordinates: lines } } });
