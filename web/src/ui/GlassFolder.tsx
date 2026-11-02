@@ -6,6 +6,7 @@
 // domain-warped noise field shaded as a liquid surface, painted once per recipe over a few frames.
 import type { ComponentChildren, JSX } from "preact";
 import { useEffect, useId, useRef, useState } from "preact/hooks";
+import { Play } from "./icons";
 
 export type ArtRecipe = {
   /** `marble` folds the colours through each other; `streak` pulls them into a long exposure */
@@ -22,10 +23,16 @@ export type FolderFile = {
   key: string;
   name: string;
   meta?: string;
-  /** a photo: the file is a picture */
+  /** a photo: the file is a print of it */
   image?: string;
+  /** the print is a video's picture (it gets a play mark) */
+  video?: boolean;
+  /** an empty frame, for a photo still to come: `body` says what */
+  pending?: boolean;
   /** otherwise a sheet of paper: what is written on it */
   body?: ComponentChildren;
+  /** what the link says to a screen reader, when the name and meta aren't enough */
+  label?: string;
   href: string;
   onSelect: () => void;
 };
@@ -371,9 +378,10 @@ export function GlassFolder(props: GlassFolderProps) {
               const slot = fanSlot(v, visible.length);
               const jitter = rng(hashString(file.key));
               const picture = !!file.image;
+              const kind = picture ? " gf-sheet--photo" : file.pending ? " gf-sheet--soon" : "";
               return (
                 <div key={file.key} role="listitem" class="gf-sheet-slot">
-                  <a class={`gf-sheet${picture ? " gf-sheet--photo" : ""}`} href={file.href}
+                  <a class={`gf-sheet${kind}`} href={file.href} aria-label={file.label}
                     onClick={(e) => { e.preventDefault(); file.onSelect(); }}
                     style={{
                       "--gf-slot": slot, "--gf-depth": visible.length - 1 - v,
@@ -381,8 +389,11 @@ export function GlassFolder(props: GlassFolderProps) {
                       zIndex: v + 1,
                     } as JSX.CSSProperties}>
                     {picture
-                      ? <img class="gf-sheet-art" src={file.image} alt="" width={SHEET_W} height={SHEET_H} draggable={false} loading="lazy" decoding="async" />
-                      : <span class="gf-paper">{file.body}</span>}
+                      ? <>
+                        <img class="gf-sheet-art" src={file.image} alt="" width={SHEET_W} height={SHEET_H} draggable={false} loading="lazy" decoding="async" />
+                        {file.video && <span class="gf-sheet-play" aria-hidden="true"><Play /></span>}
+                      </>
+                      : <span class={file.pending ? "gf-soon" : "gf-paper"}>{file.body}</span>}
                     <span class="gf-sheet-head">
                       <span class="gf-sheet-name">{file.name}</span>
                       {file.meta ? <span class="gf-sheet-meta num">{file.meta}</span> : null}

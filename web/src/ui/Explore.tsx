@@ -11,11 +11,6 @@ import { altText, openPlace, PlaceBadge, placeKindLabel, placeName, relationShor
 import { Check, ChevronRight, Close, Play, Search } from "./icons";
 import { detent, go, searchQuery, view } from "./state";
 import { startTrailMode } from "./TrailMode";
-import { lazy, whenIdle } from "./lazy";
-
-/** (the folders come with their own code, fetched once the page has settled) */
-const TrailSections = lazy(() => import("./TrailSections").then((m) => m.TrailSections));
-whenIdle(TrailSections.preload);
 
 const GROUP_KIND = { huts: "hut", camps: "camp", summits: "pass", sights: "fall" } as const;
 
@@ -163,8 +158,6 @@ export function ExploreView() {
             </span>
             <ChevronRight class="row__chev" />
           </button>
-
-          <TrailSections />
 
           {ahead.length > 0 && (
             <section class="block">

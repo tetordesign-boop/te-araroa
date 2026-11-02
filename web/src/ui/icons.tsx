@@ -1,8 +1,4 @@
 import type { JSX } from "preact";
-import sceneFace from "../brand/scene-face.webp";
-import sceneTile from "../brand/scene-tile.webp";
-import sceneDusk from "../brand/scene-tile-dusk.webp";
-import sceneFull from "../brand/scene.webp";
 
 type P = JSX.SVGAttributes<SVGSVGElement>;
 const base = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": true } as const;
@@ -31,17 +27,20 @@ export const Compass = (p: P) => (
     <path d="M12 21.2l-3.4-9.2h6.8z" fill="currentColor" opacity=".55" />
   </svg>
 );
+export const Camera = (p: P) => <svg {...base} data-icon="camera" {...p}><path d="M4 8.6A2.4 2.4 0 016.4 6.2h1.9l1.5-2.2h4.4l1.5 2.2h1.9A2.4 2.4 0 0120 8.6v8a2.4 2.4 0 01-2.4 2.4H6.4A2.4 2.4 0 014 16.6z" /><circle cx="12" cy="12.4" r="3.5" /></svg>;
+export const ArrowRight = (p: P) => <svg {...base} data-icon="arrow-right" {...p} stroke-width={2.3}><path d="M4.5 12h14.5M13.5 6l6 6-6 6" /></svg>;
 export const Check = (p: P) => <svg {...base} data-icon="check" {...p} stroke-width={2.6}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
 export const Star = (p: P) => <svg {...base} data-icon="star" {...p} fill="currentColor" stroke="none"><path d="M12 3.6l2.5 5.3 5.8.7-4.3 4 1.1 5.7L12 16.5l-5.1 2.8 1.1-5.7-4.3-4 5.8-.7z" /></svg>;
 export const Trail = (p: P) => <svg {...base} data-icon="trail" {...p} fill="currentColor" stroke="none"><path d="M12 4.2c.5 0 .9.2 1.1.6l7.3 12.6c.5.9-.1 2-1.1 2H4.7c-1 0-1.6-1.1-1.1-2l7.3-12.6c.2-.4.6-.6 1.1-.6z" /></svg>;
 
 /**
- * The brand image, "Le sentier, la nuit" (drawn by scripts/brand/scene.mjs, which also makes the app icons): Ewan
- * seen from behind on the trail at night, his orange pack, the orange triangle of a trail marker, the Southern Alps.
- * kind: "face" his back and pack, for 30 to 48 px (round, in the brand pill); "tile" the scene around him, the app
- * icon; "dusk" the Carnet's icon, the same scene at dusk; "full" the whole picture ("À propos").
+ * The brand: "TA", the trail's initials, very heavy and very wide, and the orange point that is Ewan (the one that
+ * shows him on the map). Type only. Its size is the font size of the element (`.mark` in app.css); the files (app
+ * icons, favicons, link preview) are drawn from the same recipe by scripts/brand/mark.mjs. `carnet`: turned round,
+ * dark on orange, for Ewan's Carnet.
  */
-const SCENE = { face: sceneFace, tile: sceneTile, dusk: sceneDusk, full: sceneFull };
-export const BrandMark = ({ kind = "tile", ...p }: JSX.ImgHTMLAttributes<HTMLImageElement> & { kind?: keyof typeof SCENE }) => (
-  <img src={SCENE[kind]} alt="" aria-hidden="true" draggable={false} decoding="async" {...p} />
+export const Mark = ({ class: cls = "", carnet }: { class?: string; carnet?: boolean }) => (
+  <span class={`mark${carnet ? " mark--carnet" : ""}${cls ? ` ${cls}` : ""}`} aria-hidden="true">
+    <span class="mark__ta" translate={false}>TA</span><span class="mark__dot" />
+  </span>
 );

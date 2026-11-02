@@ -137,13 +137,20 @@ export class Route {
     return out;
   }
 
-  /** Snap a position onto the route. Returns km along the route and the distance to it. */
-  nearest(pt: LngLat): { km: number; dist: number; point: LngLat } {
+  /** Snap a position onto the route (only onto the stretch between `within`'s two km, when given). Returns km along
+   * the route and the distance to it. */
+  nearest(pt: LngLat, within?: [number, number]): { km: number; dist: number; point: LngLat } {
     const cos = Math.cos(rad(pt[1]));
     const px = pt[0] * cos, py = pt[1];
+    const lo = within ? Math.min(within[0], within[1]) : -Infinity, hi = within ? Math.max(within[0], within[1]) : Infinity;
     let best = { d2: Infinity, km: 0, x: 0, y: 0 };
     for (const p of this.parts) {
-      for (let i = 0; i < p.km.length - 1; i++) {
+      const n = p.km.length;
+      if (!n || p.km[n - 1] < lo || p.km[0] > hi) continue;
+      // (the first segment that reaches `lo`: the km are in order along a part)
+      let a = 0, b = n - 1;
+      while (a < b) { const m = (a + b) >> 1; if (p.km[m + 1] < lo) a = m + 1; else b = m; }
+      for (let i = a; i < n - 1 && p.km[i] <= hi; i++) {
         const ax = p.lng[i] * cos, ay = p.lat[i];
         const bx = p.lng[i + 1] * cos, by = p.lat[i + 1];
         const dx = bx - ax, dy = by - ay;

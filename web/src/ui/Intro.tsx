@@ -7,7 +7,7 @@ import { lang, setLang, t } from "../i18n";
 import { clock, dayOnTrail, days, latestPosition, liveState, phase, progressKm, route, settings, status } from "../lib/data";
 import { daysBetween, fmtKm, nzToday } from "../lib/format";
 import { play } from "../lib/sound";
-import { BrandMark } from "./icons";
+import { Mark } from "./icons";
 import { arrivalDue, go, introOpen, mapApi, rememberIntro } from "./state";
 
 /** From "About": the presentation again, and the arrival after it. */
@@ -87,7 +87,7 @@ export function Intro() {
         {l === "fr" ? "English" : "Français"}
       </button>
       <div class="intro__body">
-        <BrandMark class="intro__mark" kind="tile" />
+        <Mark class="intro__mark" />
         <h1 class="intro__title" id="intro-title">
           <span class="intro__line" translate={false}>{title}</span>
           <span class="intro__line">{t("introWith")}</span>

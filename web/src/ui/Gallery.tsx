@@ -20,7 +20,8 @@ function embedHtml(url: string): string {
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-export async function openLightbox(list: Media[], index: number) {
+/** The photos, full screen. `labels`: a line over each caption (in an album that mixes days: which day it's from). */
+export async function openLightbox(list: Media[], index: number, labels?: string[]) {
   const [{ default: PhotoSwipeLightbox }] = await Promise.all([import("photoswipe/lightbox"), import("photoswipe/style.css")]);
   const l = lang.value;
   const dataSource = list.map((m) => {
@@ -48,7 +49,15 @@ export async function openLightbox(list: Media[], index: number) {
       name: "custom-caption", order: 9, isButton: false, appendTo: "root",
       onInit: (el, pswp) => {
         el.className = "pswp__custom-caption";
-        const upd = () => { el.textContent = captions[pswp.currIndex] ?? ""; };
+        const upd = () => {
+          const label = labels?.[pswp.currIndex];
+          const text = document.createTextNode(captions[pswp.currIndex] ?? "");
+          if (!label) { el.replaceChildren(text); return; }
+          const head = document.createElement("strong");
+          head.className = "pswp__caption-label";
+          head.textContent = label;
+          el.replaceChildren(head, text);
+        };
         pswp.on("change", upd);
         upd();
       },

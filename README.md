@@ -12,7 +12,7 @@ Les proches suivent sa position, ses étapes, ses photos et lui écrivent des mo
 | `supabase/functions/` | Fonctions serveur : import du tracé officiel, suivi OwnTracks, création du compte admin |
 | `scripts/data/` | Fabrique les lieux du sentier (OpenStreetMap) et le profil d'altitude, dans GitHub Actions |
 | `scripts/qa/` | Captures d'écran du site sur la vraie carte, dans GitHub Actions |
-| `scripts/brand/` | L'image « Le sentier, la nuit » (Ewan de dos sur le sentier, la balise triangle, les Alpes du Sud) : la scène dessinée en code (`scene.mjs`, de nuit pour le site, au crépuscule pour le Carnet), les icônes et les images du site (`icons.mjs`), l'aperçu des liens (`og.mjs`) |
+| `scripts/brand/` | La marque « TA » et le point orange, en texte seul (`mark.mjs`) : les icônes du site et du Carnet et les favicons (`icons.mjs`), l'aperçu des liens (`og.mjs`) |
 | `scripts/fonts/` | L'espace fine insécable de « 1 334 km », qui manque à Archivo et Literata : une police d'un seul caractère (`fine-space.py`) |
 
 ## Architecture

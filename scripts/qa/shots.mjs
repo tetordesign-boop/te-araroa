@@ -49,7 +49,7 @@ const watchData = async (p) => {
   await p.waitForTimeout(14000);
   await p.evaluate((l) => { window.__qa = l.join(" | "); }, log);
 };
-/** the explorer's shelf of sections at the top of the sheet */
+/** the journal's albums (the shelf of sections) at the top of the sheet */
 const toShelf = (p) => p.evaluate(() => {
   const b = document.querySelector(".sheet__body"), h = document.querySelector(".shelf-head");
   if (b && h) b.scrollTop += h.getBoundingClientRect().top - b.getBoundingClientRect().top - 12;
@@ -121,9 +121,10 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "p-m-carnet", ctx: mobile(false), url: "admin/", plain: 6000, probe: "document.body.innerText" },
   // the navigation, the sections and the voyage, online
   { id: "p-m-nav-journal", ctx: mobile(false), url: "", plain: 14000, act: seq(tap(".lnav__item--journal"), wait(2500)), probe: "document.querySelector('.lnav [aria-current]')?.innerText + ' | ' + location.hash" },
-  { id: "p-m-shelf", ctx: mobile(false), url: "#/explorer", plain: 14000, act: seq(toShelf, wait(3000)), probe: "[...document.querySelectorAll('.gf-root')].map((f) => f.querySelector('.gf-title').innerText + ' (' + f.querySelector('.gf-meta').innerText + ')').join(' ; ')" },
-  { id: "p-m-shelf-open", ctx: mobile(false), url: "#/explorer", plain: 14000, act: seq(toShelf, wait(1500), tap(".gf-hit"), wait(2600)), probe: "[...document.querySelectorAll('.gf-root[data-open] .gf-sheet')].map((x) => x.innerText.replace(/\\n/g, ' ')).join(' | ')" },
-  { id: "p-d-shelf-open", ctx: desktop(false), url: "#/explorer", plain: 14000, act: seq(toShelf, wait(1500), tap(".gf-hit"), wait(2600)) },
+  { id: "p-m-shelf", ctx: mobile(false), url: "#/journal", plain: 14000, act: seq(toShelf, wait(3000)), probe: "[...document.querySelectorAll('.gf-root')].map((f) => f.querySelector('.gf-title').innerText + ' (' + f.querySelector('.gf-meta').innerText + ')').join(' ; ')" },
+  { id: "p-m-shelf-open", ctx: mobile(false), url: "#/journal", plain: 14000, act: seq(toShelf, wait(1500), tap(".gf-hit"), wait(2600)), probe: "[...document.querySelectorAll('.gf-root[data-open] .gf-sheet')].map((x) => x.innerText.replace(/\\n/g, ' ')).join(' | ')" },
+  { id: "p-d-shelf-open", ctx: desktop(false), url: "#/journal", plain: 14000, act: seq(toShelf, wait(1500), tap(".gf-hit"), wait(2600)) },
+  { id: "p-m-about", ctx: mobile(false), url: "#/apropos", plain: 14000, act: seq((p) => p.evaluate(() => { const b = document.querySelector(".sheet__body"); if (b) b.scrollTop = b.scrollHeight; }), wait(1200)), probe: "(document.querySelector('.logo-note') ? 'logo section still there' : 'no logo section') + ' | ' + document.querySelector('.brand__title')?.innerText" },
   { id: "p-m-voyage", ctx: mobile(false), url: "#/voyage", plain: 10000, probe: "document.querySelector('.tun')?.innerText" },
   // the database as visitors reach it: each request's status, and the live feed's channel joined
   { id: "p-m-data", ctx: mobile(false), url: "", plain: 3000, act: watchData, probe: "window.__qa" },

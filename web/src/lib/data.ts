@@ -313,6 +313,36 @@ export const mediaPositions = computed(() => {
   return out;
 });
 
+/**
+ * Where along the trail each photo was taken, in km: its GPS snapped onto the stretch walked that day (a photo from
+ * a town off the trail still counts where he left it), else spread along the day like on the map. This is what files
+ * the photos into the sections' albums (ui/TrailSections.tsx).
+ */
+export const mediaKm = computed(() => {
+  const out = new Map<string, number>();
+  const r = route.value;
+  for (const d of days.value) {
+    const list = mediaByDay.value.get(d.id) ?? [];
+    if (!list.length) continue;
+    const k0 = d.start_km ?? d.end_km, k1 = d.end_km ?? d.start_km;
+    const near: [number, number] | undefined = k0 !== null && k1 !== null ? [Math.min(k0, k1) - 10, Math.max(k0, k1) + 10] : undefined;
+    const end = k1 ?? (d.end_lng !== null && d.end_lat !== null ? r.nearest([d.end_lng, d.end_lat]).km : null);
+    const timed = list.filter((m) => m.taken_at).map((m) => new Date(m.taken_at!).getTime());
+    const t0 = timed.length ? Math.min(...timed) : 0, t1 = timed.length ? Math.max(...timed) : 0;
+    list.forEach((m, i) => {
+      if (m.lat !== null && m.lng !== null) { out.set(m.id, r.nearest([m.lng, m.lat], near).km); return; }
+      if (k0 !== null && k1 !== null && Math.abs(k1 - k0) > 0.05) {
+        let f = (i + 0.5) / list.length;
+        if (m.taken_at && t1 > t0) f = (new Date(m.taken_at).getTime() - t0) / (t1 - t0) * 0.9 + 0.05;
+        out.set(m.id, k0 + (k1 - k0) * f);
+      } else if (end !== null) {
+        out.set(m.id, end);
+      }
+    });
+  }
+  return out;
+});
+
 export function dayTitle(d: Day, l: "fr" | "en"): string {
   const t = l === "en" && d.title_en ? d.title_en : d.title;
   if (t) return t;

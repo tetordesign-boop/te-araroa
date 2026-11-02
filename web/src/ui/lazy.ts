@@ -1,4 +1,4 @@
-// A part of the page loaded only when it is first shown (the explorer's folders, the photo voyage), so the first
+// A part of the page loaded only when it is first shown (the journal's albums, the photo voyage), so the first
 // visit downloads and parses less. Fetched in the background a few seconds after the page settles, so it is
 // usually there before anyone asks for it.
 import { h, type ComponentType } from "preact";
