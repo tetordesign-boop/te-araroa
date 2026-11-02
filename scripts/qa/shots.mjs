@@ -54,6 +54,22 @@ const toShelf = (p) => p.evaluate(() => {
   const b = document.querySelector(".sheet__body"), h = document.querySelector(".shelf-head");
   if (b && h) b.scrollTop += h.getBoundingClientRect().top - b.getBoundingClientRect().top - 12;
 });
+/**
+ * The Carnet with no network, as on the trail: a second visit under the service worker (which keeps the app's code),
+ * then the network cut and the page opened again. What it says goes to window.__qa.
+ */
+const carnetOffline = async (p) => {
+  await p.evaluate(() => navigator.serviceWorker?.ready.then(() => true));
+  await p.reload({ waitUntil: "load" });
+  await p.waitForTimeout(5000);
+  await p.context().setOffline(true);
+  const status = await p.reload({ waitUntil: "load", timeout: 20000 }).then((r) => r?.status() ?? "no response", (e) => `reload failed: ${e.message.split("\n")[0]}`);
+  await p.waitForTimeout(5000);
+  await p.evaluate((st) => {
+    window.__qa = `reload offline: ${st} | navigator.onLine ${navigator.onLine} | worker ${!!navigator.serviceWorker?.controller} | ${document.body.innerText.replace(/\s+/g, " ").slice(0, 220)}`;
+  }, status);
+};
+
 /** what the page says, for the log (probe: an expression evaluated in the page) */
 const probe = async (p, s) => {
   if (!s.probe) return "";
@@ -119,6 +135,7 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "p-t-home", ctx: tablet(), url: "", plain: 16000 },
   { id: "p-d-home", ctx: desktop(false), url: "", plain: 16000, probe: "[...document.querySelectorAll('link[rel=preload]')].map((l) => l.href.split('/').pop()).join(' ') + ' | fonts ' + document.fonts.check('860 100px \"Archivo Variable\"')" },
   { id: "p-m-carnet", ctx: mobile(false), url: "admin/", plain: 6000, probe: "document.body.innerText" },
+  { id: "p-m-carnet-offline", ctx: mobile(false), url: "admin/", plain: 6000, act: carnetOffline, probe: "window.__qa" },
   // the navigation, the sections and the voyage, online
   { id: "p-m-nav-journal", ctx: mobile(false), url: "", plain: 14000, act: seq(tap(".lnav__item--journal"), wait(2500)), probe: "document.querySelector('.lnav [aria-current]')?.innerText + ' | ' + location.hash" },
   { id: "p-m-shelf", ctx: mobile(false), url: "#/journal", plain: 14000, act: seq(toShelf, wait(3000)), probe: "[...document.querySelectorAll('.gf-root')].map((f) => f.querySelector('.gf-title').innerText + ' (' + f.querySelector('.gf-meta').innerText + ')').join(' ; ')" },
