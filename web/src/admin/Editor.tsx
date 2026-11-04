@@ -416,6 +416,17 @@ export function Editor({ id }: { id: string }) {
         </div>
       </div>
 
+      {/* an étape kept to the Carnet: a test, or a day written ahead and shown later */}
+      <div class="group">
+        <label class="switchrow">
+          <span class="switchrow__text">
+            Visible sur le site
+            <small>{d.published ? "Tes proches la verront dès qu'elle sera publiée." : "Elle reste dans ton Carnet, personne d'autre ne la voit. Pratique pour un essai."}</small>
+          </span>
+          <input type="checkbox" role="switch" checked={d.published} onChange={(e) => update({ published: (e.target as HTMLInputElement).checked })} />
+        </label>
+      </div>
+
       {d.kind !== "rest" && (
         <>
           <div class="group__title">Parcours</div>
