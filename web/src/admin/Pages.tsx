@@ -287,6 +287,15 @@ export function Notes() {
   );
 }
 
+/** Copies a setting to paste in another app (OwnTracks), and says so. */
+function CopyBtn({ text, what }: { text: string; what: string }) {
+  return (
+    <button class="textbtn" type="button" onClick={async () => {
+      try { await navigator.clipboard.writeText(text); say(`${what} copié`); } catch { say("Copie impossible : sélectionne le texte et copie-le."); }
+    }}>Copier</button>
+  );
+}
+
 // ------------------------------------------------------------------ automatic tracking (OwnTracks)
 export function Tracking() {
   const [pw, setPw] = useState<string | null>(null);
@@ -310,11 +319,27 @@ export function Tracking() {
       <div class="group">
         <ol class="steps">
           <li>Installe OwnTracks depuis l'App Store.<br /><a class="textbtn" href="https://apps.apple.com/app/owntracks/id692424691" target="_blank" rel="noopener">Ouvrir l'App Store</a></li>
-          <li>Reviens ici et touche le bouton : OwnTracks s'ouvre et se règle tout seul.<br />
-            {inline ? <a class="textbtn" href={inline}>Configurer OwnTracks</a> : <span class="cell__meta">Chargement…</span>}</li>
-          <li>Dans OwnTracks, autorise la localisation « Toujours », puis choisis le mode « Significant » (économe en batterie).</li>
+          <li>Dans OwnTracks, touche ⓘ en haut à gauche, puis Settings, et remplis les réglages ci-dessous (les boutons « Copier » t'évitent de taper).</li>
+          <li>Autorise la localisation « Toujours », puis choisis le mode « Significant » (économe en batterie) en haut de la carte.</li>
+          <li>Pour envoyer un point tout de suite, touche la flèche d'envoi en haut à droite de la carte.</li>
         </ol>
       </div>
+      <div class="group__title">Les réglages d'OwnTracks</div>
+      <div class="group">
+        <div class="cell"><span>Mode</span><span class="cell__value">HTTP</span></div>
+        <div class="cell cell--stack"><span>URL</span><span class="code">{url}</span><CopyBtn text={url} what="Adresse" /></div>
+        <div class="cell"><span>Authentication</span><span class="cell__value">Activé</span></div>
+        <div class="cell"><span>UserID</span><span class="cell__value">ewan</span></div>
+        <div class="cell"><span>Password</span>
+          <span class="cell__value">
+            <button class="textbtn" type="button" onClick={() => setShow(!show)}>{show ? <span class="code">{pw ?? "…"}</span> : "Afficher"}</button>
+            {pw && <CopyBtn text={pw} what="Mot de passe" />}
+          </span>
+        </div>
+        <div class="cell"><span>DeviceID</span><span class="cell__value">iphone</span></div>
+        <div class="cell"><span>TrackerID</span><span class="cell__value">EW</span></div>
+      </div>
+      <p class="note">Garde ce mot de passe pour toi : il permet d'écrire des positions sur ton site.</p>
       <div class="group">
         <button class="cell" type="button" onClick={() => open({ name: "positions" })}>
           <span class="cell__main">
@@ -326,16 +351,10 @@ export function Tracking() {
       </div>
       <div class="group__title">Le mettre en pause</div>
       <p class="group__foot" style={{ marginTop: 0 }}>Dans OwnTracks, touche le bouton de mode en haut de la carte et choisis « Quiet » : plus rien ne part. Choisis à nouveau « Significant » pour reprendre. Un point envoyé par erreur se supprime dans <button class="textbtn" type="button" onClick={() => open({ name: "positions" })}>Ma position</button>.</p>
-      <div class="group__title">Réglage manuel (si le bouton ne marche pas)</div>
-      <div class="group">
-        <div class="cell"><span>Mode</span><span class="cell__value">HTTP</span></div>
-        <div class="cell cell--stack"><span>URL</span><span class="code">{url}</span></div>
-        <div class="cell"><span>Identifiant</span><span class="cell__value">ewan</span></div>
-        <div class="cell"><span>Mot de passe</span>
-          <button class="textbtn" type="button" onClick={() => setShow(!show)}>{show ? <span class="code">{pw ?? "…"}</span> : "Afficher"}</button>
-        </div>
-      </div>
-      <p class="note">Garde ce mot de passe pour toi : il permet d'écrire des positions sur ton site.</p>
+      {/* (OwnTracks for iPhone refuses a configuration link unless it's allowed in its own settings, since 2026) */}
+      {inline && (
+        <p class="group__foot">Si tu as autorisé la configuration par lien dans les réglages d'OwnTracks, <a class="textbtn" href={inline}>ce lien</a> remplit tout d'un coup.</p>
+      )}
     </div>
   );
 }
