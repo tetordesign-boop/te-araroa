@@ -16,7 +16,7 @@ import { ExploreView, openSearch } from "./Explore";
 import { endEyeView, startEyeView } from "./eye";
 import { Home } from "./Home";
 import { dayKm } from "./Home";
-import { Close, Compass, Eye, Locate, MapIcon, Orbit, Replay, Search } from "./icons";
+import { Close, Compass, Expand, Eye, Locate, MapIcon, Orbit, Replay, Search, Shrink } from "./icons";
 import { MapFallback } from "./MapFallback";
 import { MapModes, mapPrefs, modesClosedAt, modesOpen } from "./MapModes";
 import { About, Journal, Stats } from "./Pages";
@@ -133,6 +133,7 @@ function Controls() {
   const is3d = map3d.value;
   const b = mapBearing.value;
   const turned = Math.abs(((b + 540) % 360) - 180) > 3; // the map is turned more than 3° off north
+  const mapOnly = detent.value === "map";
   return (
     <nav class="controls" aria-label={t("mapModes")}>
       <div class="controls__group glass" inert={!!trailMode.value || introOpen.value || tunnelOpen.value}>
@@ -145,6 +146,14 @@ function Controls() {
         <button type="button" onClick={() => { const c = focusTarget(); if (c) mapApi.value?.flyTo(c, 12.5); else mapApi.value?.overview(route.value); }} aria-label={t("recenter")} title={t("recenter")}>
           <Locate class={liveState.value === "live" ? "is-on" : ""} />
         </button>
+        {/* on a phone: the map almost whole (the sheet down to its grip), and back */}
+        {!isDesktop.value && (
+          <button type="button" class={mapOnly ? "is-on" : ""} aria-pressed={mapOnly}
+            onClick={() => { detent.value = mapOnly ? "peek" : "map"; play("snap"); }}
+            aria-label={mapOnly ? t("showPanel") : t("mapOnly")} title={mapOnly ? t("showPanel") : t("mapOnly")}>
+            {mapOnly ? <Shrink /> : <Expand />}
+          </button>
+        )}
       </div>
       {turned && (
         <button type="button" class="compass glass" aria-label={t("compass")} title={t("compass")}

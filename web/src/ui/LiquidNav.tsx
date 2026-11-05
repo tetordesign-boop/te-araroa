@@ -437,7 +437,7 @@ export function LiquidNav({ inert }: { inert?: boolean }) {
       // the current tab again: back to its top (and, for Ewan, the sheet a little higher)
       const body = document.querySelector<HTMLElement>(".sheet__body");
       if (body && body.scrollTop > 0) body.scrollTo({ top: 0, behavior: st.current.reduce ? "auto" : "smooth" });
-      else if (tab.name === "home" && detent.peek() === "peek") detent.value = "half";
+      else if (tab.name === "home" && (detent.peek() === "peek" || detent.peek() === "map")) detent.value = "half";
       return;
     }
     go({ name: tab.name }); // (from a day or a place too: back to the tab itself)

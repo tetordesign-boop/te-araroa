@@ -1,4 +1,4 @@
-import { useMemo } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { lang, t } from "../i18n";
 import { coverOf, dayByNumber, dayTitle, days, mediaByDay, route } from "../lib/data";
 import type { Day } from "../types";
@@ -8,6 +8,12 @@ import { NoteToEwan } from "./NoteToEwan";
 import { ChevronLeft, ChevronRight, Close, Share } from "./icons";
 import { Reactions } from "./Reactions";
 import { go, goBack, hrefFor, toast } from "./state";
+
+const TOUCH = typeof matchMedia !== "undefined" && matchMedia("(hover: none)").matches;
+const HINT_KEY = "day-swipe-hint";
+const hintsLeft = () => { try { return Number(localStorage.getItem(HINT_KEY) ?? 3); } catch { return 0; } };
+const countHint = () => { try { localStorage.setItem(HINT_KEY, String(Math.max(0, hintsLeft() - 1))); } catch { /* private mode */ } };
+const seenHint = () => { try { localStorage.setItem(HINT_KEY, "0"); } catch { /* private mode */ } };
 
 function PagerItem({ d, dir }: { d: Day; dir: "prev" | "next" }) {
   const l = lang.value;
@@ -30,6 +36,10 @@ export function DayView({ n, photo }: { n: number; photo?: string }) {
   const prev = idx > 0 ? list[idx - 1] : null;
   const next = idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null;
   const leg = useMemo(() => (d && d.start_km !== null ? route.value.legAt(d.start_km + 0.2) : null), [d?.id, route.value]);
+  const swipe = useRef<{ x: number; y: number; t: number } | null>(null);
+  // the swipe, said in words the first few times a day is opened on a touch screen (once it's been used, never again)
+  const [hint] = useState(() => !!(prev || next) && TOUCH && hintsLeft() > 0);
+  useEffect(() => { if (hint) countHint(); }, []);
 
   if (!d) {
     return (
@@ -57,13 +67,34 @@ export function DayView({ n, photo }: { n: number; photo?: string }) {
     } catch (_) { /* cancelled */ }
   };
   const goDay = (x: Day | null) => x && go({ name: "day", n: x.day_number }, { replace: true });
+  // a swipe across the page turns it: to the left the next day, to the right the one before (not from the screen's
+  // very edges, where the phone has its own gestures, nor across the photos' own strips)
+  const swipeStart = (e: TouchEvent) => {
+    const p = e.touches[0];
+    swipe.current = e.touches.length === 1 && p.clientX > 24 && p.clientX < window.innerWidth - 24 && !(e.target as Element).closest(".hscroll, input, textarea")
+      ? { x: p.clientX, y: p.clientY, t: e.timeStamp } : null;
+  };
+  const swipeEnd = (e: TouchEvent) => {
+    const s = swipe.current;
+    swipe.current = null;
+    const p = e.changedTouches[0];
+    if (!s || !p) return;
+    const dx = p.clientX - s.x, dy = p.clientY - s.y;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < 2 * Math.abs(dy) || e.timeStamp - s.t > 700) return;
+    const to = dx < 0 ? next : prev;
+    if (!to) return;
+    seenHint();
+    goDay(to);
+  };
 
   return (
     <article class="day">
       <div class="dhead">
-        <div class="seg seg--icons" role="group" aria-label={t("days")}>
-          <button type="button" aria-label={t("prevDay")} disabled={!prev} onClick={() => goDay(prev)}><ChevronLeft /></button>
-          <button type="button" aria-label={t("nextDay")} disabled={!next} onClick={() => goDay(next)}><ChevronRight /></button>
+        {/* where this day stands, with the days either side (a swipe across the page does the same) */}
+        <div class="seg seg--icons daynav" role="group" aria-label={t("days")}>
+          <button type="button" aria-label={prev ? `${t("prevDay")} : ${t("day", { n: prev.day_number })}` : t("prevDay")} disabled={!prev} onClick={() => goDay(prev)}><ChevronLeft /></button>
+          <span class="daynav__now num">{t("day", { n: d.day_number })}</span>
+          <button type="button" aria-label={next ? `${t("nextDay")} : ${t("day", { n: next.day_number })}` : t("nextDay")} disabled={!next} onClick={() => goDay(next)}><ChevronRight /></button>
         </div>
         <div class="dhead__actions">
           <button class="iconbtn" type="button" aria-label={t("share")} onClick={share}><Share /></button>
@@ -71,7 +102,8 @@ export function DayView({ n, photo }: { n: number; photo?: string }) {
         </div>
       </div>
 
-      <div class="view" key={d.id}>
+      <div class="view" key={d.id} onTouchStart={swipeStart} onTouchEnd={swipeEnd}>
+      {hint && <p class="fine daynav__hint">{t("swipeDays")}</p>}
       <DayBody d={d} media={media} cover={cover} leg={leg} openId={photo} />
 
       <Reactions dayId={d.id} />

@@ -10,7 +10,8 @@ export type View =
   | { name: "stats" }
   | { name: "about" };
 
-export type Detent = "peek" | "half" | "full";
+/** the sheet's heights on a phone: "map" leaves the map almost whole, only its grip showing above the navigation */
+export type Detent = "map" | "peek" | "half" | "full";
 
 function parse(hash: string): View {
   const h = hash.replace(/^#\/?/, "");
@@ -137,7 +138,7 @@ export function go(v: View, opts: { replace?: boolean } = {}) {
   else if (location.hash !== href) { history.pushState(null, "", href); depth++; }
   view.value = v;
   if (v.name === "day" || v.name === "place") detent.value = isDesktop.value ? "full" : detent.value === "full" && v.name === "day" ? "full" : "half";
-  else if (v.name === "home") detent.value = detent.value === "full" ? "half" : detent.value;
+  else if (v.name === "home") detent.value = detent.value === "full" || detent.value === "map" ? "half" : detent.value;
   else detent.value = "full";
 }
 
@@ -149,7 +150,7 @@ window.addEventListener("popstate", () => {
   const v = parse(location.hash);
   view.value = v;
   if (v.name === "home" && detent.value === "full") detent.value = "half";
-  else if ((v.name === "place" || v.name === "day") && !isDesktop.value && detent.value === "peek") detent.value = "half";
+  else if ((v.name === "place" || v.name === "day") && !isDesktop.value && (detent.value === "peek" || detent.value === "map")) detent.value = "half";
   else if (v.name === "explore" || v.name === "journal" || v.name === "stats" || v.name === "about") detent.value = "full";
 });
 

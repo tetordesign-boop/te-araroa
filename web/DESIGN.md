@@ -42,6 +42,8 @@ What was learned from design skills shared on GitHub (Apple's Liquid Glass rules
 
 ## The journal, day after day
 
+A day says it opens: on the home page the latest day's card ends with "Voir le jour" and an arrow, and in the journal each row has its arrow at rest (quiet), brighter when lit. On a day, the top shows "‹ Jour 12 ›" (the day between its neighbours), and a swipe across the page turns to the next day (to the left) or the one before (to the right), said in words under it the first three times on a touch screen.
+
 `LogItem` in `ui/Pages.tsx`, after "Interactive Hover Links" (21st.dev): the days on the trail's spine, each a link that answers. Lit, the title brightens and its letters ripple (the whole word steps back, then each letter springs home in turn; letters are split only while lit, so the font keeps its kerning at rest), the day's photo springs up tilted like a print, an arrow slides in and the day's station on the spine lights orange. A mouse lights the row under it and the photo, bigger, drifts toward the pointer under the words (which keep a shadow to read over it); the keyboard lights the row it's on; a phone has no hover, so there the row at the reading line (a little above the middle of the screen) lights as the list goes by, once it has settled. Reduced motion: the colours and the arrow only.
 
 ## The journey in photos
@@ -80,6 +82,7 @@ Type only. "TA", the trail's initials, very heavy and very wide (Archivo 900 at 
 ## Handling
 
 - The sheet is positioned by script (`ui/Sheet.tsx`): no React render while dragging, a spring integrated in small steps on real time, velocity from the events' own timestamps (a busy phone delivers moves late), rubber band past its ends, a clear flick always moves one height. Fully open, the content scrolls and pulls the sheet down once it is back at the top.
+- On a phone the sheet has four heights: full, half, peek, and "map", where only its grip shows above the navigation and the map is almost whole. A swipe down from peek, or the map's own button (the corners, under the recentre button; pressed again it brings the panel back), takes it there; a tap on the grip, the strip or a tab brings it back up.
 - The map never moves when the sheet does: the new padding is applied in place, and only the next flight frames things in the free part.
 - Taps on the map look 22 px around the finger and take the place drawn closest; a tap on nothing closes the place card (and only the map modes card, if that is what was open). On touch screens the map ignores the first 7 px a finger wobbles (`clickTolerance`), so a tap neither nudges the map nor gets lost.
 - A press in the sheet may wander 10 px (a finger) or 5 px (a mouse) and still be a tap: buttons are never swallowed by a would-be drag. A gesture the browser takes over (a sideways swipe on a shelf) is not a tap either.
@@ -93,6 +96,7 @@ Measured in November 2026, with the gestures a visitor makes (dragging the sheet
 - **Blurs only where they make the glass.** Each blur is redrawn whenever what lies under it changes, and under the sheet the map moves constantly. The chrome over the map blurs 16 px, the sheet 22 px. On a phone, the navigation and the folders' glass (which lie on the already frosted sheet) use a denser tint instead of a second blur; the fade under the navigation is a plain gradient (a blur under a mask is costly, and Safari draws that pair badly). A hidden toast is `visibility: hidden`.
 - **Nothing moves at rest.** Ewan's point and its halo pulse four times when a new position comes in, then stop (they used to pulse forever, which kept the phone redrawing the blurs on every frame). The navigation's water calms within about two seconds of a touch, draws at 1.5× at most and nothing outside the pill.
 - **Dragging the sheet** tells only the few things riding on it where its top is (`--sheet-visible` on the map's credits, the replay button and bar, the plain trail drawing) and the page itself once it rests: a variable changed on the page would restyle every element on every frame.
+- **No 3D relief from afar.** Below zoom 7.6 (the whole island) the terrain is switched off, and back on from 8.2, during the zoom itself: it can't be seen from that far, and it was what made zooming out slow (the ground rebuilt for dozens of tiles on every frame).
 - **Less to download.** Visitors get only the two parts of Supabase the site uses (the database and the live feed), not the sign-in and file storage the Carnet needs; the journal's albums and the photo voyage come with their own code, fetched once the page has settled. The photo band uses 8 strips per tile on a phone.
 
 ## The map

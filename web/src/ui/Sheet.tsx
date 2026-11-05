@@ -7,9 +7,16 @@ import { t } from "../i18n";
 import { play } from "../lib/sound";
 import { detent, isDesktop, mapApi, type Detent } from "./state";
 
-// what the lowest height shows: where Ewan is and his kilometres, above the navigation that floats over its foot
+// what the low height shows: where Ewan is and his kilometres, above the navigation that floats over its foot (below
+// it, "map": the map almost whole, the sheet down to its grip; a swipe down or the map's own button takes it there)
 const PEEK = 300;
-const ORDER: Detent[] = ["full", "half", "peek"];
+const ORDER: Detent[] = ["full", "half", "peek", "map"];
+/** the map almost whole: of the sheet, only its grip shows, above the navigation floating over its foot */
+const mapHeight = () => {
+  const nav = document.querySelector<HTMLElement>(".lnav");
+  const top = nav ? nav.getBoundingClientRect().top : window.innerHeight - 80;
+  return Math.max(60, Math.round(window.innerHeight - top + 24));
+};
 const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 /** what rides on the top of the sheet: the map's credits, the 3D replay button and its bar, the plain trail drawing */
 const FOLLOWERS = ".maplibregl-ctrl-bottom-right, .replay-fab, .replay-hud, .mapfb";
@@ -25,7 +32,7 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
     const { sheetH, vh } = geo.current;
     const peek = Math.min(PEEK, sheetH * 0.5);
     const half = Math.min(sheetH, Math.max(peek + 90, Math.round(vh * 0.55)));
-    return { peek, half, full: sheetH };
+    return { map: Math.min(mapHeight(), peek - 40), peek, half, full: sheetH };
   };
   const yFor = (d: Detent) => geo.current.sheetH - heights()[d];
 
@@ -121,7 +128,7 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
     let drag: { y0: number; start: number; moved: boolean; id: number | "touch"; onGrip: boolean; samples: [number, number][]; slop: number } | null = null;
 
     const clampWithRubber = (y: number) => {
-      const top = 0, bottom = yFor("peek");
+      const top = 0, bottom = yFor("map");
       if (y < top) return top - Math.sqrt(top - y) * 4; // pulled above full: resists
       if (y > bottom) return bottom + Math.sqrt(y - bottom) * 6; // pushed below peek: resists
       return y;
@@ -155,7 +162,8 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
         if (!tapTarget) return; // cancelled (the browser took the gesture): nothing happened
         // a tap: on the grip it cycles the heights; on the empty part of a low sheet it opens it a bit more
         const cur = detent.peek();
-        if (d.onGrip) { detent.value = cur === "peek" ? "half" : cur === "half" ? "full" : "half"; play("snap"); }
+        if (d.onGrip) { detent.value = cur === "map" ? "peek" : cur === "peek" ? "half" : cur === "half" ? "full" : "half"; play("snap"); }
+        else if (cur === "map") { detent.value = "peek"; play("snap"); }
         else if (cur === "peek" && !(tapTarget as HTMLElement).closest?.("a,button,input,textarea,label,[role=button]")) { detent.value = "half"; play("snap"); }
         return;
       }
@@ -173,7 +181,7 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
       let to = ORDER.reduce((best, x) => (Math.abs(yFor(x) - projected) < Math.abs(yFor(best) - projected) ? x : best), detent.peek());
       // a clear flick always moves at least one step
       const i = ORDER.indexOf(detent.peek());
-      if (to === detent.peek() && Math.abs(v) > 0.45) to = v > 0 ? ORDER[Math.min(2, i + 1)] : ORDER[Math.max(0, i - 1)];
+      if (to === detent.peek() && Math.abs(v) > 0.45) to = v > 0 ? ORDER[Math.min(ORDER.length - 1, i + 1)] : ORDER[Math.max(0, i - 1)];
       if (to === detent.peek()) settle(to, v);
       else { anim.current.flickV = v; detent.value = to; play("snap"); } // the effect above springs there, with this speed
     };
@@ -256,11 +264,11 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
       inert={inert}
       onClickCapture={onClickCapture as unknown as (e: Event) => void}
     >
-      <div class="sheet__grip" role="button" tabIndex={0} data-sfx="none" aria-label={current === "full" ? t("collapse") : t("expand")}
+      <div class="sheet__grip" role="button" tabIndex={0} data-sfx="none" aria-label={current === "full" ? t("collapse") : current === "map" ? t("showPanel") : t("expand")}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            detent.value = current === "full" ? "peek" : current === "peek" ? "half" : "full";
+            detent.value = current === "full" ? "peek" : current === "map" ? "peek" : current === "peek" ? "half" : "full";
             play("snap");
           }
         }}>

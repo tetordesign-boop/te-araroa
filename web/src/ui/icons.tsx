@@ -27,6 +27,8 @@ export const Compass = (p: P) => (
     <path d="M12 21.2l-3.4-9.2h6.8z" fill="currentColor" opacity=".55" />
   </svg>
 );
+export const Expand = (p: P) => <svg {...base} data-icon="expand" {...p}><path d="M4 9.5V4h5.5M20 9.5V4h-5.5M4 14.5V20h5.5M20 14.5V20h-5.5" /></svg>;
+export const Shrink = (p: P) => <svg {...base} data-icon="shrink" {...p}><path d="M9.5 4v5.5H4M14.5 4v5.5H20M9.5 20v-5.5H4M14.5 20v-5.5H20" /></svg>;
 export const Camera = (p: P) => <svg {...base} data-icon="camera" {...p}><path d="M4 8.6A2.4 2.4 0 016.4 6.2h1.9l1.5-2.2h4.4l1.5 2.2h1.9A2.4 2.4 0 0120 8.6v8a2.4 2.4 0 01-2.4 2.4H6.4A2.4 2.4 0 014 16.6z" /><circle cx="12" cy="12.4" r="3.5" /></svg>;
 export const ArrowRight = (p: P) => <svg {...base} data-icon="arrow-right" {...p} stroke-width={2.3}><path d="M4.5 12h14.5M13.5 6l6 6-6 6" /></svg>;
 export const Check = (p: P) => <svg {...base} data-icon="check" {...p} stroke-width={2.6}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;

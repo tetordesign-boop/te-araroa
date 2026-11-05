@@ -173,6 +173,18 @@ export class TrailMap {
       this.updatePhotoMarkers();
     });
     this.map.on("click", (e) => this.handleClick(e.point));
+    // The 3D relief only where it shows. From afar (the whole island) it can't be seen, and it is what made zooming
+    // out slow: the ground's mesh rebuilt for dozens of tiles on every frame. It goes below zoom 7.6 and comes back
+    // from 8.2 (apart, so a zoom hovering at one value doesn't switch it on and off), during the move itself.
+    const relief = () => {
+      const m = this.map;
+      if (!m.getSource("dem")) return;
+      const z = m.getZoom(), on = !!m.getTerrain();
+      if (on && z < 7.6) m.setTerrain(null);
+      else if (!on && z >= 8.2) m.setTerrain({ source: "dem", exaggeration: 1.3 });
+    };
+    this.map.on("zoom", relief);
+    this.map.on("style.load", relief);
     // with a mouse, the place under the pointer gets a ring before it is clicked
     let hoverRaf = 0;
     this.map.on("mousemove", (e) => {

@@ -13,7 +13,7 @@ import { startEyeView } from "./eye";
 import { openSearch } from "./Explore";
 import { NoteToEwan } from "./NoteToEwan";
 import { Seg } from "./Seg";
-import { ChevronRight, Eye, Play, Search, Trail } from "./icons";
+import { ArrowRight, ChevronRight, Eye, Play, Search, Trail } from "./icons";
 import { altText, openPlace, PlaceBadge, placeName } from "./Place";
 import { arrival, go, hrefFor, isDesktop } from "./state";
 import { startTrailMode } from "./TrailMode";
@@ -217,6 +217,8 @@ function Feature({ d }: { d: Day }) {
             {d.ascent_m ? `, ${t("climbM", { m: fmtInt(d.ascent_m, l) })}` : ""}
           </p>
         ) : null}
+        {/* (the whole card opens the day: said here, for whoever wouldn't guess) */}
+        <span class="feature__more" aria-hidden="true">{t("seeDay")}<ArrowRight /></span>
       </div>
     </a>
   );
