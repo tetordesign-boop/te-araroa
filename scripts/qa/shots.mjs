@@ -55,8 +55,11 @@ const toShelf = (p) => p.evaluate(() => {
   if (b && h) b.scrollTop += h.getBoundingClientRect().top - b.getBoundingClientRect().top - 12;
 });
 /**
- * The Carnet with no network, as on the trail: a second visit under the service worker (which keeps the app's code),
- * then the network cut and the page opened again. What it says goes to window.__qa.
+ * The Carnet with no network: a second visit under the service worker, then the network cut and the page opened
+ * again. What it says goes to window.__qa.
+ * Not proof on its own: the browser's offline switch (and request blocking) doesn't cut the service worker off, which
+ * still reaches the network. The real test stops the server (see the November 2026 fix in public/sw.js): a first
+ * visit, the server stopped, the page opened again.
  */
 const carnetOffline = async (p) => {
   await p.evaluate(() => navigator.serviceWorker?.ready.then(() => true));
