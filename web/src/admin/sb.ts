@@ -14,6 +14,9 @@ export const sba = createClient(SUPABASE_URL, SUPABASE_KEY, {
 export const session = signal<Session | null>(null);
 /** null = not decided yet, true/false = decided. Network trouble never turns true into false. */
 export const isAdmin = signal<boolean | null>(null);
+/** a sign-in under way, until the server has said whether the account is Ewan's: the sign-in page stays (busy)
+ * meanwhile, rather than a glimpse of "Accès refusé" before the answer */
+export const signingIn = signal(false);
 
 function storedSession(): Session | null {
   try {
@@ -80,15 +83,19 @@ export async function checkAdmin() {
 }
 
 export async function signIn(email: string, password: string): Promise<string | null> {
+  signingIn.value = true;
   try {
     const { data, error } = await sba.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
     if (error) return error.message.includes("Invalid login") ? "E-mail ou mot de passe incorrect." : error.message;
+    isAdmin.value = null; // (not known yet for this account)
     session.value = data.session;
+    // (a bad signal here leaves it undecided: "Connexion…" and Réessayer, never a false "Accès refusé")
     await checkAdmin();
-    if (isAdmin.value === null) isAdmin.value = false;
     return null;
   } catch (_) {
     return "Pas de connexion. La première connexion demande du réseau.";
+  } finally {
+    signingIn.value = false;
   }
 }
 

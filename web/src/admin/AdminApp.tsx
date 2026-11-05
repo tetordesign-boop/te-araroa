@@ -5,7 +5,7 @@ import { Editor } from "./Editor";
 import { flash, page } from "./nav";
 import { Checkin, Dashboard, Help, Notes, SettingsPage, Tracking } from "./Pages";
 import { Positions } from "./Positions";
-import { checkAdmin, isAdmin, session, signOut } from "./sb";
+import { checkAdmin, isAdmin, session, signingIn, signOut } from "./sb";
 import { adminDays, adminMedia, adminRoute, adminSettings, loadRoute, loadServer, readAdminCache } from "./server";
 import { afterSync, loadDrafts, startSyncLoop } from "./store";
 
@@ -38,7 +38,7 @@ export function AdminApp() {
     window.addEventListener("online", () => { loadServer(); loadRoute(); window.setTimeout(warm, 2500); });
   }, [admin]);
 
-  if (!session.value) return <AuthPage />;
+  if (!session.value || (signingIn.value && admin !== true)) return <AuthPage />;
   if (admin === null) {
     return (
       <div class="auth">
