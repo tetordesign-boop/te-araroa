@@ -7,7 +7,7 @@ import { draftForToday, draftFromDay, openDraft } from "./Editor";
 import { InstallHint } from "./InstallHint";
 import { home, open, say } from "./nav";
 import { adminDays, adminRoute, adminSettings, loadServer } from "./server";
-import { sba, signOut } from "./sb";
+import { sba, session, signOut } from "./sb";
 import { fetchPositions, type Pos } from "./Positions";
 import { drafts, online, outbox, queuePosition, syncAll, syncing } from "./store";
 
@@ -166,6 +166,7 @@ export function Dashboard() {
         <button class="cell" type="button" onClick={() => open({ name: "settings" })}><span class="cell__main"><span class="cell__title">Réglages</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "help" })}><span class="cell__main"><span class="cell__title">Mode d'emploi</span><span class="cell__meta">Sans réseau, photos, position, en cas de souci</span></span><ChevronRight class="cell__chev" /></button>
       </div>
+      <PasswordChange />
       <div class="group">
         <button class="cell danger" type="button" onClick={() => { if (confirm("Se déconnecter ? Les brouillons non envoyés restent sur ce téléphone.")) signOut(); }}>Se déconnecter</button>
       </div>
@@ -284,6 +285,65 @@ export function Notes() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Ewan's own password, changed from the Carnet (the iPhone offers a strong one and keeps it in its passwords). */
+function PasswordChange() {
+  const [editing, setEditing] = useState(false);
+  const [a, setA] = useState("");
+  const [b, setB] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const email = session.value?.user?.email ?? "";
+  const save = async (e: Event) => {
+    e.preventDefault();
+    if (a.length < 8) { setErr("Au moins 8 caractères."); return; }
+    if (a !== b) { setErr("Les deux mots de passe ne sont pas pareils."); return; }
+    if (!navigator.onLine) { setErr("Il faut du réseau pour changer de mot de passe."); return; }
+    setBusy(true); setErr(null);
+    const { error } = await sba.auth.updateUser({ password: a }).catch((x: unknown) => ({ error: x as Error }));
+    setBusy(false);
+    if (error) {
+      const m = error.message ?? "";
+      setErr(/same|different from the old/i.test(m) ? "C'est déjà ton mot de passe actuel."
+        : /weak|short|at least/i.test(m) ? "Trop faible : au moins 8 caractères, avec des lettres et des chiffres."
+        : /reauth|nonce/i.test(m) ? "Reconnecte-toi d'abord (Se déconnecter, puis reconnexion), puis réessaie."
+        : "Le changement a échoué. Réessaie quand tu as un bon réseau.");
+      return;
+    }
+    setA(""); setB(""); setEditing(false);
+    say("Mot de passe changé.");
+  };
+  if (!editing) {
+    return (
+      <div class="group">
+        <button class="cell" type="button" onClick={() => setEditing(true)}>
+          <span class="cell__main"><span class="cell__title">Changer mon mot de passe</span><span class="cell__meta">{email}</span></span>
+          <ChevronRight class="cell__chev" />
+        </button>
+      </div>
+    );
+  }
+  return (
+    <form onSubmit={save}>
+      <div class="group__title">Nouveau mot de passe</div>
+      <div class="group">
+        {/* (for the iPhone's password manager: which account this is) */}
+        <input type="email" autoComplete="username" value={email} readOnly hidden />
+        <label class="cell">
+          <span>Nouveau</span>
+          <input type="password" value={a} onInput={(e) => setA((e.target as HTMLInputElement).value)} autoComplete="new-password" minLength={8} placeholder="8 caractères min." required />
+        </label>
+        <label class="cell">
+          <span>Encore une fois</span>
+          <input type="password" value={b} onInput={(e) => setB((e.target as HTMLInputElement).value)} autoComplete="new-password" minLength={8} required />
+        </label>
+      </div>
+      {err && <p class="danger" style={{ margin: "-8px 4px 12px" }}>{err}</p>}
+      <button class="bigbtn bigbtn--primary" type="submit" disabled={busy}>{busy ? "Un instant…" : "Enregistrer le mot de passe"}</button>
+      <button class="bigbtn bigbtn--secondary" type="button" onClick={() => { setEditing(false); setA(""); setB(""); setErr(null); }}>Annuler</button>
+    </form>
   );
 }
 
