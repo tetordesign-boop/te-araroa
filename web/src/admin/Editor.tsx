@@ -9,8 +9,8 @@ import { profileFor } from "./elevation";
 import { MapPicker, type Pick } from "./MapPicker";
 import { home, open as openPage, say } from "./nav";
 import { prepareVideo, preparePhoto } from "./media";
-import { adminDays, adminMedia, adminRoute, adminSettings, loadServer } from "./server";
-import { dropDraft, dropMediaBlobs, drafts, getBlob, kick, online, putBlob, saveDraft, type Draft, type DraftMedia } from "./store";
+import { adminMedia, adminRoute, adminSettings } from "./server";
+import { dropDraft, dropMediaBlobs, drafts, getBlob, kick, liveDays, online, putBlob, queueDeletion, saveDraft, type Draft, type DraftMedia } from "./store";
 import { sba } from "./sb";
 
 const WEATHER = ["☀️", "🌤️", "⛅", "☁️", "🌧️", "⛈️", "🌨️", "🌬️", "🌫️"];
@@ -25,12 +25,12 @@ export const memDrafts = new Map<string, Draft>();
 export function dayNumberFor(date: string): number {
   const s = adminSettings.value?.start_date;
   if (s && date >= s) return daysBetween(s, date) + 1;
-  const before = adminDays.value.filter((d) => d.date < date);
+  const before = liveDays.value.filter((d) => d.date < date);
   return (before.length ? Math.max(...before.map((d) => d.day_number)) : 0) + 1;
 }
 
 function previousEnd(date: string, exceptId?: string) {
-  const all = [...adminDays.value, ...drafts.value].filter((d) => d.date < date && d.id !== exceptId && d.end_km !== null);
+  const all = [...liveDays.value, ...drafts.value].filter((d) => d.date < date && d.id !== exceptId && d.end_km !== null);
   all.sort((a, b) => a.date.localeCompare(b.date));
   const last = all[all.length - 1];
   if (!last) return { km: 0, name: "Ship Cove", point: adminRoute.value.pointAt(0) };
@@ -71,7 +71,7 @@ export function draftForToday(): Draft {
   const today = nzToday();
   const existingDraft = drafts.value.find((d) => d.date === today);
   if (existingDraft) return existingDraft;
-  const published = adminDays.value.find((d) => d.date === today);
+  const published = liveDays.value.find((d) => d.date === today);
   return published ? draftFromDay(published) : newDraft(today);
 }
 
@@ -143,7 +143,6 @@ export function Editor({ id }: { id: string }) {
   const [showEn, setShowEn] = useState(false);
   const [link, setLink] = useState("");
   const [progress, setProgress] = useState<Record<string, number>>({});
-  const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // flush a pending save when leaving the screen
@@ -352,31 +351,20 @@ export function Editor({ id }: { id: string }) {
   const remove = async () => {
     const cur = dRef.current;
     if (!cur) return;
-    if (!confirm(cur.isNew ? "Supprimer ce brouillon ?" : `Supprimer définitivement le jour ${cur.day_number} et ses photos ?`)) return;
+    const sure = cur.isNew
+      ? confirm("Supprimer ce brouillon ?")
+      : confirm(`Supprimer le jour ${cur.day_number} et ses photos ? Les numéros des jours se remettent d'eux-mêmes.\n\nPour seulement le retirer du site sans rien perdre, éteins plutôt « Visible sur le site ».`);
+    if (!sure) return;
     if (!cur.isNew) {
-      if (!navigator.onLine) { say("Il faut du réseau pour supprimer une étape publiée."); return; }
-      setBusy(true);
-      try {
-        const { data: rows } = await sba.from("media").select("path,thumb_path").eq("day_id", cur.id);
-        const paths = [...(rows ?? []), ...cur.removedMedia].flatMap((m) => [m.path, m.thumb_path]).filter(Boolean) as string[];
-        if (paths.length) {
-          const { error: es } = await sba.storage.from("media").remove(paths);
-          if (es) throw es;
-        }
-        const { error } = await sba.from("days").delete().eq("id", cur.id);
-        if (error) throw error;
-      } catch (e) {
-        setBusy(false);
-        say(`Suppression impossible : ${(e as Error).message}`);
-        return;
-      }
-      setBusy(false);
-      loadServer();
+      // done at once with a signal, else as soon as there is one (store.ts): its photos on the server go with it
+      const paths = [...adminMedia.value.filter((m) => m.day_id === cur.id), ...cur.media.filter((m) => m.uploaded), ...cur.removedMedia]
+        .flatMap((m) => [m.path, m.thumb_path]).filter(Boolean) as string[];
+      await queueDeletion({ id: cur.id, day_number: cur.day_number, date: cur.date, paths });
     }
     clearTimeout(saveTimer.current);
     closed.current = true;
     await dropDraft(cur.id);
-    say("Étape supprimée.");
+    say(cur.isNew ? "Brouillon supprimé." : online.value ? "Étape supprimée." : "Étape supprimée du Carnet. Elle quittera le site dès que tu as du réseau.", 3600);
     home();
   };
 
@@ -561,7 +549,7 @@ export function Editor({ id }: { id: string }) {
       <button class="bigbtn bigbtn--secondary" type="button" onClick={preview}><Eye />Aperçu sur le site</button>
       <button class="bigbtn bigbtn--primary" type="button" onClick={publish}>Publier le jour {d.day_number}</button>
       {publishedVersion && <button class="bigbtn bigbtn--secondary" type="button" onClick={discard}>Annuler mes modifications</button>}
-      <button class="bigbtn bigbtn--secondary danger" type="button" disabled={busy} onClick={remove}>{d.isNew ? "Supprimer le brouillon" : "Supprimer l'étape"}</button>
+      <button class="bigbtn bigbtn--secondary danger" type="button" onClick={remove}>{d.isNew ? "Supprimer le brouillon" : "Supprimer l'étape"}</button>
     </div>
   );
 }

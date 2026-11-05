@@ -9,7 +9,7 @@ import { home, open, say } from "./nav";
 import { adminDays, adminRoute, adminSettings, loadServer } from "./server";
 import { sba, session, signOut } from "./sb";
 import { fetchPositions, type Pos } from "./Positions";
-import { drafts, online, outbox, queuePosition, syncAll, syncing } from "./store";
+import { deletionError, deletions, drafts, liveDays, online, outbox, queuePosition, renumberDays, syncAll, syncing } from "./store";
 
 const siteUrl = () => new URL("../", location.href).toString();
 
@@ -25,10 +25,11 @@ function Bar({ title, back = true, right }: { title: string; back?: boolean; rig
 
 export function SyncPill() {
   const s = syncing.value;
-  const waiting = drafts.value.filter((d) => d.status === "queued" || d.status === "error" || d.status === "syncing").length + outbox.value;
+  const waiting = drafts.value.filter((d) => d.status === "queued" || d.status === "error" || d.status === "syncing").length + outbox.value + deletions.value.length;
   const failed = drafts.value.find((d) => d.status === "error");
   if (s) return <div class="syncpill is-busy" role="status"><span class="syncpill__dot" />Envoi de {s.label}… {Math.round(s.progress * 100)} %</div>;
   if (failed && online.value) return <button class="syncpill is-error" type="button" onClick={() => syncAll(true)}><span class="syncpill__dot" />Envoi en échec, toucher pour réessayer</button>;
+  if (deletionError.value && deletions.value.length && online.value) return <button class="syncpill is-error" type="button" onClick={() => syncAll(true)}><span class="syncpill__dot" />Suppression en échec : {deletionError.value}</button>;
   if (waiting && !online.value) return <div class="syncpill is-waiting" role="status"><span class="syncpill__dot" />{waiting} en attente de réseau</div>;
   if (waiting) return <div class="syncpill is-busy" role="status"><span class="syncpill__dot" />{waiting} en cours d'envoi</div>;
   return <div class="syncpill" role="status"><span class="syncpill__dot" />{online.value ? "Tout est en ligne" : "Hors ligne, rien en attente"}</div>;
@@ -96,7 +97,7 @@ function BeforeDeparture({ s, lastOwn }: { s: Settings; lastOwn: Pos | null | un
 export function Dashboard() {
   const s = adminSettings.value;
   const today = nzToday();
-  const days = [...adminDays.value].reverse();
+  const days = [...liveDays.value].reverse();
   const local = drafts.value;
   const name = s?.hiker_name || "Ewan";
   const lastPoint = useLastPoint();
@@ -121,7 +122,7 @@ export function Dashboard() {
       {s && <BeforeDeparture s={s} lastOwn={lastOwn} />}
 
       <button class="bigbtn bigbtn--primary" type="button" onClick={startToday}>
-        {local.some((d) => d.date === today) || adminDays.value.some((d) => d.date === today) ? "Reprendre l'étape du jour" : "Publier l'étape du jour"}
+        {local.some((d) => d.date === today) || liveDays.value.some((d) => d.date === today) ? "Reprendre l'étape du jour" : "Publier l'étape du jour"}
       </button>
       <button class="bigbtn bigbtn--secondary" type="button" onClick={() => open({ name: "checkin" })}><Locate />Partager ma position</button>
 
@@ -438,7 +439,10 @@ export function SettingsPage() {
     }).eq("id", 1);
     setSaving(false);
     if (error) { say(`Erreur : ${error.message}`); return; }
+    const moved = (adminSettings.value?.start_date ?? null) !== (start_date ?? null);
     await loadServer();
+    // a new start date numbers the days from it
+    if (moved) await renumberDays().catch(() => say("Réglages enregistrés. La numérotation des jours se fera au prochain envoi."));
     say("Réglages enregistrés.");
   };
 

@@ -3,17 +3,19 @@
 //
 // Concurrency rule: the editor saves whole drafts (saveDraft); the sync engine only ever patches
 // upload/status fields onto a fresh read of the stored draft (patchStored), so neither overwrites the other.
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import { createStore, del, entries, get, set } from "idb-keyval";
 import { SUPABASE_KEY, SUPABASE_URL } from "../config";
+import { daysBetween } from "../lib/format";
 import type { Day, Media } from "../types";
 import { profileFor } from "./elevation";
 import { sba } from "./sb";
-import { adminRoute, adminSettings } from "./server";
+import { adminDays, adminRoute, adminSettings, loadServer } from "./server";
 
 const draftsDb = createStore("ta-admin-drafts", "drafts");
 const blobsDb = createStore("ta-admin-blobs", "blobs");
 const outboxDb = createStore("ta-admin-outbox", "positions");
+const deletionsDb = createStore("ta-admin-deletions", "days");
 
 export type DraftStatus = "editing" | "queued" | "syncing" | "error" | "done";
 
@@ -73,6 +75,7 @@ export async function loadDrafts() {
   for (const d of all) if (d.status === "syncing") { d.status = "queued"; await set(d.id, d, draftsDb); }
   drafts.value = sortDrafts(all);
   outbox.value = (await entries(outboxDb)).length;
+  await loadDeletions();
 }
 
 export const readStored = (id: string) => get<Draft>(id, draftsDb);
@@ -133,6 +136,100 @@ async function flushPositions() {
   if (error) throw error;
   for (const [k] of items) await del(k, outboxDb);
   outbox.value = (await entries(outboxDb)).length;
+}
+
+// ------------------------------------------------------------------ deleting a published day
+// A deletion waits on the phone like a day to publish: done at once with a signal, else as soon as there is one. The
+// day leaves the Carnet's lists straight away; the site loses it (and renumbers) when the deletion reaches it.
+export interface PendingDeletion { id: string; day_number: number; date: string; paths: string[] }
+export const deletions = signal<PendingDeletion[]>([]);
+export const deletionError = signal<string | null>(null);
+
+/** The days on the server, less those being deleted from the phone. */
+export const liveDays = computed(() => {
+  const gone = new Set(deletions.value.map((x) => x.id));
+  return gone.size ? adminDays.value.filter((d) => !gone.has(d.id)) : adminDays.value;
+});
+
+export async function loadDeletions() {
+  deletions.value = (await entries<string, PendingDeletion>(deletionsDb)).map(([, v]) => v);
+}
+
+export async function queueDeletion(x: PendingDeletion) {
+  await set(x.id, x, deletionsDb);
+  await loadDeletions();
+  kick(true);
+}
+
+/** Sends the deletions waiting; true if any went through. */
+async function flushDeletions(): Promise<boolean> {
+  const items = await entries<string, PendingDeletion>(deletionsDb);
+  if (!items.length) return false;
+  let done = false;
+  try {
+    for (const [, x] of items) {
+      const { data: rows, error: e0 } = await sba.from("media").select("path,thumb_path").eq("day_id", x.id);
+      if (e0) throw e0;
+      const paths = [...new Set([...x.paths, ...(rows ?? []).flatMap((m) => [m.path, m.thumb_path])])].filter(Boolean) as string[];
+      if (paths.length) {
+        const { error } = await sba.storage.from("media").remove(paths);
+        if (error) throw error;
+      }
+      const { error } = await sba.from("days").delete().eq("id", x.id); // (its photos' rows, notes and hearts go with it)
+      if (error) throw error;
+      await del(x.id, deletionsDb);
+      adminDays.value = adminDays.value.filter((d) => d.id !== x.id); // (gone here too, before the next reload)
+      done = true;
+    }
+    deletionError.value = null;
+  } catch (e) {
+    deletionError.value = isNetworkError(e) ? null : friendly(e);
+    if (!isNetworkError(e)) console.warn("deletion", e);
+  } finally {
+    await loadDeletions();
+  }
+  return done;
+}
+
+// ------------------------------------------------------------------ day numbers
+/**
+ * Days count from Ship Cove: on the calendar from the start date (day 5 is the trip's fifth day, posted or not), and
+ * one after another by date before it, or without one. After a day is deleted, moved to another date, or the start
+ * date changes, the numbers are put right on the server (the site follows by itself) and on the drafts on the phone,
+ * whose numbers would otherwise go back up with them.
+ */
+export async function renumberDays(): Promise<number> {
+  const start = adminSettings.value?.start_date ?? null;
+  const { data, error } = await sba.from("days").select("id,date,day_number").order("date");
+  if (error) throw error;
+  const rows = (data ?? []) as { id: string; date: string; day_number: number }[];
+  const numbers = (list: { id: string; date: string }[]) => {
+    const out = new Map<string, number>();
+    let rank = 0;
+    for (const r of [...list].sort((a, b) => a.date.localeCompare(b.date))) {
+      if (start && r.date >= start) out.set(r.id, daysBetween(start, r.date) + 1);
+      else out.set(r.id, ++rank);
+    }
+    return out;
+  };
+  let changed = 0;
+  const onServer = numbers(rows);
+  for (const r of rows) {
+    const n = onServer.get(r.id)!;
+    if (n === r.day_number) continue;
+    const { error: e } = await sba.from("days").update({ day_number: n }).eq("id", r.id);
+    if (e) throw e;
+    changed++;
+  }
+  // the drafts: a published day's draft takes its new number, a new day its place among them all
+  const ids = new Set(rows.map((r) => r.id));
+  const withDrafts = numbers([...rows, ...drafts.value.filter((d) => !ids.has(d.id))]);
+  for (const d of drafts.value) {
+    const n = ids.has(d.id) ? onServer.get(d.id) : withDrafts.get(d.id);
+    if (n && n !== d.day_number) await patchStored(d.id, (x) => { x.day_number = n; });
+  }
+  if (changed) await loadServer();
+  return changed;
 }
 
 // ------------------------------------------------------------------ errors
@@ -328,11 +425,13 @@ export async function syncAll(force = false): Promise<void> {
   running = true;
   try {
     try { await flushPositions(); } catch (e) { console.warn("positions", e); }
+    let changed = await flushDeletions();
     const now = Date.now();
     const due = drafts.value.filter((x) => (x.status === "queued" || x.status === "error") && (force || !x.nextTryAt || x.nextTryAt <= now));
     for (const d of due) {
       try {
         await syncDraft(d.id);
+        changed = true;
       } catch (e) {
         const net = isNetworkError(e);
         await patchStored(d.id, (x) => {
@@ -346,6 +445,8 @@ export async function syncAll(force = false): Promise<void> {
         });
       }
     }
+    // a day gone, or sent with a new date: the numbers after it follow
+    if (changed) { try { await renumberDays(); } catch (e) { console.warn("renumber", e); } }
   } finally {
     running = false;
     syncing.value = null;
@@ -361,7 +462,7 @@ export function kick(force = false) { window.setTimeout(() => syncAll(force), 30
 export function startSyncLoop() {
   kick(true);
   window.setInterval(() => {
-    const pending = outbox.value > 0 || drafts.value.some((d) => d.status === "queued" || d.status === "error");
+    const pending = outbox.value > 0 || deletions.value.length > 0 || drafts.value.some((d) => d.status === "queued" || d.status === "error");
     if (pending && navigator.onLine && document.visibilityState === "visible") syncAll();
   }, 15_000);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") kick(true); });
