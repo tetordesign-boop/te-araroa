@@ -343,12 +343,7 @@ export const mediaKm = computed(() => {
   return out;
 });
 
-export function dayTitle(d: Day, l: "fr" | "en"): string {
-  const t = l === "en" && d.title_en ? d.title_en : d.title;
-  if (t) return t;
-  if (d.start_name && d.end_name && d.start_name !== d.end_name) return `${d.start_name} → ${d.end_name}`;
-  return d.end_name ?? d.start_name ?? "";
-}
+export { dayTitle } from "./day";
 
 export function coverOf(d: Day): Media | null {
   const list = mediaByDay.value.get(d.id) ?? [];

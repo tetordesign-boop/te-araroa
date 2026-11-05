@@ -2,6 +2,7 @@ import { useEffect } from "preact/hooks";
 import { MOCK } from "../config";
 import { AuthPage } from "./AuthPage";
 import { Editor } from "./Editor";
+import { Preview } from "./Preview";
 import { flash, page } from "./nav";
 import { Checkin, Dashboard, Help, Notes, SettingsPage, Tracking } from "./Pages";
 import { Positions } from "./Positions";
@@ -73,6 +74,7 @@ export function AdminApp() {
         : p.name === "settings" ? <SettingsPage />
         : p.name === "tracking" ? <Tracking />
         : p.name === "help" ? <Help />
+        : p.name === "preview" ? <Preview id={p.id} />
         : <Dashboard />}
       <div class={`toast glass${flash.value ? " is-on" : ""}`} role="status" aria-live="polite" style={{ position: "fixed" }}>{flash.value}</div>
     </>

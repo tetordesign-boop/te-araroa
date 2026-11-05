@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { mediaUrl } from "../config";
 import { daysBetween, fmtKm, nzToday } from "../lib/format";
 import type { Day, DayKind } from "../types";
-import { ChevronLeft, Close, Locate, MapIcon, Play, Star } from "../ui/icons";
+import { ChevronLeft, Close, Eye, Locate, MapIcon, Play, Star } from "../ui/icons";
 import { Seg } from "../ui/Seg";
 import { shortPlace } from "../ui/TrailStrip";
 import { profileFor } from "./elevation";
 import { MapPicker, type Pick } from "./MapPicker";
-import { home, say } from "./nav";
+import { home, open as openPage, say } from "./nav";
 import { prepareVideo, preparePhoto } from "./media";
 import { adminDays, adminMedia, adminRoute, adminSettings, loadServer } from "./server";
 import { dropDraft, dropMediaBlobs, drafts, getBlob, kick, online, putBlob, saveDraft, type Draft, type DraftMedia } from "./store";
@@ -392,6 +392,12 @@ export function Editor({ id }: { id: string }) {
   }
 
   const leg = d.end_km !== null ? route.legAt(d.end_km) : null;
+  // the day as the site will show it (saved first: the preview reads the draft on the phone)
+  const preview = async () => {
+    clearTimeout(saveTimer.current);
+    if (dRef.current) await saveDraft(dRef.current);
+    openPage({ name: "preview", id: d.id });
+  };
   const kinds: [DayKind, string][] = [["hike", "Marche"], ["rest", "Repos"], ["transport", "Transfert"]];
   const publishedVersion = !d.isNew;
 
@@ -552,6 +558,7 @@ export function Editor({ id }: { id: string }) {
       </div>
       <p class="group__foot">★ choisit la photo de couverture. Les photos sont allégées sur ton téléphone avant l'envoi ; les vidéos de plus de 2 minutes passent mieux en lien YouTube.</p>
 
+      <button class="bigbtn bigbtn--secondary" type="button" onClick={preview}><Eye />Aperçu sur le site</button>
       <button class="bigbtn bigbtn--primary" type="button" onClick={publish}>Publier le jour {d.day_number}</button>
       {publishedVersion && <button class="bigbtn bigbtn--secondary" type="button" onClick={discard}>Annuler mes modifications</button>}
       <button class="bigbtn bigbtn--secondary danger" type="button" disabled={busy} onClick={remove}>{d.isNew ? "Supprimer le brouillon" : "Supprimer l'étape"}</button>

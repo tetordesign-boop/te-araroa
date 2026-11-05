@@ -176,3 +176,12 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 .help .group { padding: 4px 0; }
 .help .steps li { font-size: 16px; }
 .help .key { color: var(--ink-2); }
+
+/* "Aperçu" (Preview.tsx): the day inside a panel like the site's own, with the site's styles */
+.preview__note { margin: 6px 4px 12px; }
+.preview__frame {
+  --gutter: 18px;
+  margin: 0 -4px 28px; padding: 4px 18px 30px; border-radius: 26px;
+  background: rgba(15, 24, 43, 0.94);
+  box-shadow: inset 0 0 0 1px rgba(170, 200, 240, 0.14), 0 18px 40px -20px rgba(0, 0, 0, 0.8);
+}

@@ -7,6 +7,8 @@ import {
 import { addDays, daysBetween, fmtDate, fmtInt, fmtKm, nzHour, nzTime, nzToday, relTimeShort, typo } from "../lib/format";
 import { nextPlace, places, type Place } from "../lib/places";
 import type { Day, Lang } from "../types";
+import { dayKm, titleOf } from "../lib/day";
+export { dayKm, titleOf };
 import { startEyeView } from "./eye";
 import { openSearch } from "./Explore";
 import { NoteToEwan } from "./NoteToEwan";
@@ -19,7 +21,6 @@ import { shortPlace, TrailStrip } from "./TrailStrip";
 import { useWeather } from "./WeatherClock";
 
 // ------------------------------------------------------------------ helpers shared with the other views
-export const dayKm = (d: Day) => d.distance_km ?? (d.start_km !== null && d.end_km !== null ? d.end_km - d.start_km : null);
 
 /** "aujourd'hui", "hier", or the date. */
 export function dayWhen(date: string, l: Lang, today: string): string {
@@ -34,9 +35,6 @@ export function excerpt(d: Day, l: Lang): string | null {
   return s ? typo(s.split(/\n{2,}/)[0].trim()) : null;
 }
 
-export function titleOf(d: Day, l: Lang): string {
-  return typo(dayTitle(d, l) || (d.kind === "rest" ? t("rest") : t("noTitle", { n: d.day_number })));
-}
 
 const open = (d: Day) => (e: Event) => { e.preventDefault(); go({ name: "day", n: d.day_number }); };
 
