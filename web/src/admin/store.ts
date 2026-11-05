@@ -161,6 +161,13 @@ function friendly(e: unknown): string {
   const msg = (e as Error)?.message ?? String(e);
   if (s === 413 || /exceeded|too large|payload/i.test(msg)) return "Fichier trop lourd ou stockage plein (1 Go). Retire une vidéo ou libère de la place.";
   if (s === 401 || s === 403 || /jwt|unauthor|permission|row-level/i.test(msg)) return "Session expirée : reconnecte-toi (Réglages › Se déconnecter puis reconnexion).";
+  // the server's own checks on a day, in words
+  if (/days_distance_km_check/.test(msg)) return "Plus de 200 km dans la journée : vérifie le départ et l'arrivée (en bus ou en stop, choisis Transfert).";
+  if (/days_(title|title_en)_check/.test(msg)) return "Titre trop long (140 signes au plus).";
+  if (/days_(story|story_en)_check/.test(msg)) return "Récit trop long (20 000 signes au plus).";
+  if (/days_(start|end)_name_check/.test(msg)) return "Nom de lieu trop long (80 signes au plus).";
+  if (/days_date_key|duplicate key.*date/i.test(msg)) return "Une autre étape porte déjà cette date.";
+  if (/violates check constraint/.test(msg)) return "Le serveur refuse une valeur de l'étape : vérifie les chiffres (distance, montée, durée).";
   return msg.slice(0, 160);
 }
 

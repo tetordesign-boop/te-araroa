@@ -1,5 +1,7 @@
 import { defineConfig, type Plugin } from "vite";
 import preact from "@preact/preset-vite";
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 /** Link previews (WhatsApp, iMessage, Messenger) need absolute URLs: set SITE_URL when building for production. */
@@ -36,9 +38,30 @@ function preloadFonts(): Plugin {
   };
 }
 
+/** Writes this build's files into the service worker (public/sw.js, `BUILD`), so it keeps them all on the phone from
+ * the moment it installs, and is itself new with every version of the site. */
+function precacheList(): Plugin {
+  let outDir = "dist";
+  return {
+    name: "precache-list",
+    apply: "build",
+    configResolved(c) { outDir = c.build.outDir; },
+    closeBundle() {
+      const dir = resolve(__dirname, outDir);
+      const files = readdirSync(resolve(dir, "assets")).sort().map((f) => `assets/${f}`);
+      const id = createHash("sha256").update(files.join("\n")).digest("hex").slice(0, 12);
+      const sw = resolve(dir, "sw.js");
+      const src = readFileSync(sw, "utf8");
+      const line = 'const BUILD = { id: "dev", files: [] };';
+      if (!src.includes(line)) throw new Error("sw.js: BUILD line not found");
+      writeFileSync(sw, src.replace(line, `const BUILD = ${JSON.stringify({ id, files })};`));
+    },
+  };
+}
+
 export default defineConfig({
   base: "./",
-  plugins: [preact(), absoluteShareLinks(), preloadFonts()],
+  plugins: [preact(), absoluteShareLinks(), preloadFonts(), precacheList()],
   build: {
     target: "es2020",
     sourcemap: false,

@@ -15,6 +15,8 @@ import { sba } from "./sb";
 
 const WEATHER = ["☀️", "🌤️", "⛅", "☁️", "🌧️", "⛈️", "🌨️", "🌬️", "🌫️"];
 const MOODS = ["😄", "😊", "😌", "😐", "😩", "🥵", "🥶", "😴", "🤕"];
+/** more than this walked in a day is a mistake in the start or the arrival (the server refuses over 200) */
+const MAX_DAY_KM = 120;
 
 /** Drafts opened from a published day live here until the first change (nothing is stored for a mere look). */
 export const memDrafts = new Map<string, Draft>();
@@ -320,8 +322,15 @@ export function Editor({ id }: { id: string }) {
     if (cur.kind !== "rest" && cur.end_km === null) { say("Indique d'abord ton point d'arrivée."); return; }
     if (cur.media.some((m) => m.preparing)) { say("Attends la fin de la préparation des photos."); return; }
     if (cur.media.some((m) => m.error)) { say("Retire d'abord les fichiers en erreur (en rouge)."); return; }
+    // nobody walks this far in a day: a start or an arrival is wrong (a first day starts at Ship Cove, km 0)
+    if (cur.kind === "hike" && cur.distance_km !== null && cur.distance_km > MAX_DAY_KM) {
+      say(`${fmtKm(cur.distance_km, "fr", 1)} km en une journée : vérifie le départ (km ${fmtKm(cur.start_km ?? 0, "fr", 1)}) et l'arrivée. En bus ou en stop, choisis Transfert.`);
+      return;
+    }
     const end = cur.kind === "rest"
-      ? { end_km: cur.start_km, end_lng: cur.start_lng, end_lat: cur.start_lat, end_name: cur.end_name ?? cur.start_name, distance_km: 0 } : {};
+      ? { end_km: cur.start_km, end_lng: cur.start_lng, end_lat: cur.start_lat, end_name: cur.end_name ?? cur.start_name, distance_km: 0 }
+      // (a transfer isn't walked: its km along the trail stay, as a distance it means nothing)
+      : cur.kind === "transport" ? { distance_km: null } : {};
     clearTimeout(saveTimer.current);
     closed.current = true;
     await saveDraft({ ...cur, ...end, status: "queued", error: null, attempts: 0, nextTryAt: 0 });

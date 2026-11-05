@@ -14,9 +14,16 @@
     <link rel="icon" href="../icons/favicon-carnet.png" type="image/png" />
     <link rel="apple-touch-icon" href="../icons/carnet-180.png" />
     <link rel="manifest" href="manifest.webmanifest" />
+    <style>
+      /* until the Carnet's own code runs: its night, and (only if it hasn't come after a few seconds) what to do */
+      html, body { margin: 0; background: #0C1526; color: #F3F6FB; }
+      .boot-note { max-width: 30em; margin: 34vh auto 0; padding: 0 24px; font: 17px/1.5 -apple-system, system-ui, sans-serif; opacity: 0; animation: boot-in 0.4s 5s forwards; }
+      .boot-note button { margin-top: 14px; padding: 12px 20px; border: 0; border-radius: 12px; font: 600 16px -apple-system, system-ui, sans-serif; color: #0C1526; background: #FF6B12; }
+      @keyframes boot-in { to { opacity: 1; } }
+    </style>
   </head>
   <body>
-    <div id="admin"></div>
+    <div id="admin"><div class="boot-note"><p>Le Carnet ne s'est pas ouvert. Sans réseau, il lui faut avoir été ouvert une fois avec du réseau sur ce téléphone, quelques secondes, depuis sa dernière mise à jour.</p><button type="button" onclick="location.reload()">Réessayer</button></div></div>
     <script type="module" src="/src/admin/main.tsx"></script>
   </body>
 </html>

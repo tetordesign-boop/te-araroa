@@ -18,7 +18,9 @@ if (MOCK) {
 } else {
   initAuth();
 }
-render(<AdminApp />, document.getElementById("admin")!);
+const root = document.getElementById("admin")!;
+root.textContent = ""; // (the note shown only if this code never arrives)
+render(<AdminApp />, root);
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => {

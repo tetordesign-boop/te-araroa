@@ -9,6 +9,14 @@ const KEEP = [SHELL, ASSETS, TILES, MEDIA, DATA];
 const SCOPE = new URL("./", self.location.href).href;
 const SHELL_FILES = ["./", "./index.html", "./admin/", "./admin/index.html", "./manifest.webmanifest", "./admin/manifest.webmanifest"];
 const NAV_TIMEOUT_MS = 3500;
+// This version's files (its code, styles and fonts), written in at build time (vite.config.js `precacheList`): they
+// are all fetched when this worker installs, so the pages open with no signal even if they were never fully loaded
+// with one. A new version of the site is a new worker, which fetches its own.
+const BUILD = { id: "dev", files: [] };
+const CURRENT = new Set(BUILD.files.map((f) => new URL(f, SCOPE).href));
+// a file is found by its address alone: a page asks for its code with headers (Origin…) that the worker's own fetch
+// at install didn't send, and a "Vary" on the reply would otherwise make the copy on the phone not count
+const ANY = { ignoreVary: true };
 // files of the site that keep their names when they change (the icons, the manifest, the link preview), unlike
 // the hashed files in assets/
 const UNHASHED = /\.(png|svg|webmanifest|jpg)$/;
@@ -16,7 +24,19 @@ const unhashed = (path) => UNHASHED.test(path) && !/\/assets\//.test(path);
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
-  event.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_FILES)).catch(() => {}));
+  event.waitUntil((async () => {
+    // the code first, then the pages that use it (fresh, not the browser's ten-minute copy): never a page whose
+    // code isn't on the phone
+    const assets = await caches.open(ASSETS);
+    await Promise.all([...CURRENT].map(async (url) => {
+      if (await assets.match(url, ANY)) return; // (a font that hasn't changed: already here)
+      try { const res = await fetch(url, { cache: "reload" }); if (res.ok) await assets.put(url, res); } catch (_) { /* next time */ }
+    }));
+    const shell = await caches.open(SHELL);
+    await Promise.all(SHELL_FILES.map(async (f) => {
+      try { const res = await fetch(new Request(f, { cache: "reload" })); if (res.ok) await shell.put(new URL(f, SCOPE).href, res); } catch (_) { /* keep the old copy */ }
+    }));
+  })());
 });
 
 self.addEventListener("activate", (event) => {
@@ -32,10 +52,37 @@ self.addEventListener("activate", (event) => {
   })());
 });
 
+/** Keep at most `max` entries, the oldest going first, but never this version's own files. */
 async function trim(cacheName, max) {
   const cache = await caches.open(cacheName);
-  const keys = await cache.keys();
-  for (let i = 0; i < keys.length - max; i++) await cache.delete(keys[i]);
+  const keys = (await cache.keys()).filter((k) => !CURRENT.has(k.url));
+  const over = keys.length - max;
+  for (let i = 0; i < over; i++) await cache.delete(keys[i]);
+}
+
+/** The code and styles a page asks for in its HTML (assets/…), as full addresses. */
+function assetsOf(html, base) {
+  const out = new Set();
+  for (const m of html.matchAll(/(?:src|href)="([^"]*assets\/[^"]+)"/g)) out.add(new URL(m[1], base).href);
+  return [...out];
+}
+
+/**
+ * A fresh page from the network replaces the copy on the phone only once the code it asks for is on the phone too
+ * (else, opened later with no signal, it would stay black).
+ */
+async function keepPage(cache, req, res) {
+  try {
+    const html = await res.clone().text();
+    const assets = await caches.open(ASSETS);
+    for (const url of assetsOf(html, req.url)) {
+      if (await assets.match(url, ANY)) continue;
+      const a = await fetch(url);
+      if (!a.ok) return;
+      await assets.put(url, a);
+    }
+    await cache.put(req, res);
+  } catch (_) { /* no signal halfway: the old copy stays, with its code */ }
 }
 
 /**
@@ -45,16 +92,13 @@ async function trim(cacheName, max) {
 async function navigate(event) {
   const req = event.request;
   const cache = await caches.open(SHELL);
-  const network = fetch(req).then((res) => {
-    if (res.ok && res.type === "basic") cache.put(req, res.clone()).catch(() => {});
-    return res;
-  });
-  event.waitUntil(network.then(() => {}, () => {}));
+  const network = fetch(req);
+  event.waitUntil(network.then((res) => (res.ok && res.type === "basic" ? keepPage(cache, req, res.clone()) : undefined), () => {}));
   const fallback = async () => {
-    const hit = await cache.match(req, { ignoreSearch: true });
+    const hit = await cache.match(req, { ignoreSearch: true, ignoreVary: true });
     if (hit) return hit;
     const admin = new URL(req.url).pathname.includes("/admin");
-    return cache.match(new URL(admin ? "admin/index.html" : "index.html", SCOPE).href);
+    return cache.match(new URL(admin ? "admin/index.html" : "index.html", SCOPE).href, ANY);
   };
   let timer;
   const slow = new Promise((resolve) => { timer = setTimeout(resolve, NAV_TIMEOUT_MS, "slow"); });
@@ -74,7 +118,7 @@ async function navigate(event) {
 
 async function cacheFirst(req, cacheName, max) {
   const cache = await caches.open(cacheName);
-  const hit = await cache.match(req);
+  const hit = await cache.match(req, ANY);
   if (hit) return hit;
   const res = await fetch(req);
   if (res.ok && res.status === 200) {
