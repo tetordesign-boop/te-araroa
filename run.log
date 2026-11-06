@@ -1,0 +1,6 @@
+m-home-half 146045ms ok [settled 47.1s, arrived 49.6s, settled 83s, acted 83.1s, settled 110.9s]
+m-day-half 131084ms ok [settled 48.8s, arrived 62.5s, settled 103.8s]
+d-home 190945ms ok [settled 56.1s, arrived 71.1s, settled 116.4s]
+d-day 228537ms ok [settled 49.6s, arrived 49.9s, settled 163.4s]
+p-m-carnet 6847ms ok [waited 6.7s]
+  SAYS TA / Carnet de route / Connecte-toi pour publier tes étapes depuis le sentier. / Ajoute le carnet à ton écran d'accueil / Touche  Partager, puis « Sur l'écran d'accueil ». Ouvre-le ensuite depuis l'icône Carnet et connecte-toi là : c'est ce qui le fait marcher sans réseau et garde tes brouillons à l'abri. / E-mail / Mot de passe / Se connecter / J'ai un code (première fois)
