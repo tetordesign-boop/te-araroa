@@ -62,7 +62,8 @@ const toShelf = (p) => p.evaluate(() => {
  * visit, the server stopped, the page opened again.
  */
 const carnetOffline = async (p) => {
-  await p.evaluate(() => navigator.serviceWorker?.ready.then(() => true));
+  // (the development server registers no service worker: "ready" would never come, and the run waited until its limit)
+  await p.evaluate(() => Promise.race([navigator.serviceWorker?.ready.then(() => true), new Promise((r) => setTimeout(() => r(false), 8000))]));
   await p.reload({ waitUntil: "load" });
   await p.waitForTimeout(5000);
   await p.context().setOffline(true);
