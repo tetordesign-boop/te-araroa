@@ -65,12 +65,16 @@ const liveData = computed<LiveData | null>(() => {
   if (!lp) return null;
   return {
     c: [lp.lng, lp.lat], stale: liveState.value === "stale", name: hikerName.value || "Ewan",
-    label: `${t(liveState.value === "live" ? "live" : "lastKnown")}, ${relTime(lp.recorded_at, lang.value)}`,
+    // (what VoiceOver says for his point on the map: the name written on it first, then the news)
+    label: `${hikerName.value || "Ewan"}, ${lc1(t(liveState.value === "live" ? "live" : "lastKnown"))}, ${relTime(lp.recorded_at, lang.value)}`,
   };
 });
 
 /** each kind of place answers a touch in its own voice: huts low, summits high */
 const POP_PITCH: Record<string, number> = { hut: 0.85, camp: 0.95, gap: 0.8, fall: 1.1, view: 1.15, pass: 1.25, peak: 1.4 };
+
+/** "En direct" → "en direct", for a label that goes after a name */
+const lc1 = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 /** whether the map is tilted, for the 2D / 3D button */
 const map3d = signal(false);
@@ -110,11 +114,13 @@ function Brand({ inPanel }: { inPanel?: boolean }) {
   const s = settings.value;
   const tag = (l === "en" ? s?.site_tagline_en : s?.site_tagline_fr) || t("whereNow");
   return (
-    <button class={`brand${inPanel ? " brand--panel" : " glass"}`} type="button" onClick={() => go({ name: "about" })} aria-label={t("about")}>
+    <button class={`brand${inPanel ? " brand--panel" : " glass"}`} type="button" onClick={() => go({ name: "about" })}>
       <span class="brand__text">
-        <span class="brand__title" translate={false}>{s?.site_title || "Te Araroa"}<span class="brand__dot" aria-hidden="true" /></span>
+        <span class="brand__title" translate={false}>{s?.site_title || "Te Araroa"}<span class="brand__dot" aria-hidden="true" /></span>{" "}
         <span class="brand__tag">{tag}</span>
       </span>
+      {/* (VoiceOver and voice control use the words written on the button, then where it leads) */}
+      <span class="sr-only">{`, ${t("about")}`}</span>
     </button>
   );
 }
@@ -140,7 +146,7 @@ function Controls() {
         <button type="button" data-modes-toggle onClick={() => (modesOpen.value = !open)} aria-expanded={open} aria-label={t("mapModes")} title={t("mapModes")} class={open ? "is-on" : ""}>
           <MapIcon />
         </button>
-        <button type="button" onClick={() => mapApi.value?.toggle3d()} aria-label={is3d ? t("view2d") : t("view3d")} title={is3d ? t("view2d") : t("view3d")}>
+        <button type="button" onClick={() => mapApi.value?.toggle3d()} aria-label={is3d ? `2D, ${lc1(t("view2d"))}` : t("view3d")} title={is3d ? t("view2d") : t("view3d")}>
           <span class="num">{is3d ? "2D" : "3D"}</span>
         </button>
         <button type="button" onClick={() => { const c = focusTarget(); if (c) mapApi.value?.flyTo(c, 12.5); else mapApi.value?.overview(route.value); }} aria-label={t("recenter")} title={t("recenter")}>

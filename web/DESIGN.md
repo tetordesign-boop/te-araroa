@@ -87,6 +87,8 @@ Type only. "TA", the trail's initials, very heavy and very wide (Archivo 900 at 
 - Taps on the map look 22 px around the finger and take the place drawn closest; a tap on nothing closes the place card (and only the map modes card, if that is what was open). On touch screens the map ignores the first 7 px a finger wobbles (`clickTolerance`), so a tap neither nudges the map nor gets lost.
 - A press in the sheet may wander 10 px (a finger) or 5 px (a mouse) and still be a tap: buttons are never swallowed by a would-be drag. A gesture the browser takes over (a sideways swipe on a shelf) is not a tap either.
 - The page itself never zooms on a phone (no double-tap zoom, Safari's pinch is cancelled): the map and the photos zoom. Holding a control doesn't select its words or open a link preview.
+- Every control takes a tap over at least 44 × 44 px (Apple's minimum), even where it is drawn smaller (the arrows between days, the round buttons, the photos on the map, Ewan's point): an invisible margin of the button itself (`::before`), the drawing doesn't change.
+- VoiceOver and voice control read the words written on a control first, then what it does ("Ewan, en direct, il y a 20 minutes"; "Te Araroa L'île du Sud à pied avec Ewan, À propos"): someone saying "touche Te Araroa" must reach it.
 
 ## Keeping it smooth on a phone
 
@@ -97,7 +99,7 @@ Measured in November 2026, with the gestures a visitor makes (dragging the sheet
 - **Nothing moves at rest.** Ewan's point and its halo pulse four times when a new position comes in, then stop (they used to pulse forever, which kept the phone redrawing the blurs on every frame). The navigation's water calms within about two seconds of a touch, draws at 1.5× at most and nothing outside the pill.
 - **Dragging the sheet** tells only the few things riding on it where its top is (`--sheet-visible` on the map's credits, the replay button and bar, the plain trail drawing) and the page itself once it rests: a variable changed on the page would restyle every element on every frame.
 - **No 3D relief from afar.** Below zoom 7.6 (the whole island) the terrain is switched off, and back on from 8.2, during the zoom itself: it can't be seen from that far, and it was what made zooming out slow (the ground rebuilt for dozens of tiles on every frame).
-- **Less to download.** Visitors get only the two parts of Supabase the site uses (the database and the live feed), not the sign-in and file storage the Carnet needs; the journal's albums and the photo voyage come with their own code, fetched once the page has settled. The photo band uses 8 strips per tile on a phone.
+- **Less to download.** Visitors get only the two parts of Supabase the site uses (the database and the live feed), not the sign-in and file storage the Carnet needs; the journal's albums and the photo voyage come with their own code, fetched once the page has settled. The photo band uses 8 strips per tile on a phone. The Carnet starts without the map engine (more than two thirds of what it downloaded): the place picker and "Ma position" fetch it when they open (the picker in the background once the Carnet has settled), and the offline cache holds it like the rest.
 
 ## The map
 

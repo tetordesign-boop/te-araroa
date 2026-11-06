@@ -4,9 +4,10 @@ import { daysBetween, fmtKm, nzToday } from "../lib/format";
 import type { Day, DayKind } from "../types";
 import { ChevronLeft, Close, Eye, Locate, MapIcon, Play, Star } from "../ui/icons";
 import { Seg } from "../ui/Seg";
+import { lazy, whenIdle } from "../ui/lazy";
 import { shortPlace } from "../ui/TrailStrip";
 import { profileFor } from "./elevation";
-import { MapPicker, type Pick } from "./MapPicker";
+import type { Pick } from "./MapPicker";
 import { home, open as openPage, say } from "./nav";
 import { prepareVideo, preparePhoto } from "./media";
 import { adminMedia, adminRoute, adminSettings } from "./server";
@@ -17,6 +18,11 @@ const WEATHER = ["☀️", "🌤️", "⛅", "☁️", "🌧️", "⛈️", "�
 const MOODS = ["😄", "😊", "😌", "😐", "😩", "🥵", "🥶", "😴", "🤕"];
 /** more than this walked in a day is a mistake in the start or the arrival (the server refuses over 200) */
 const MAX_DAY_KM = 120;
+
+/** The place picker carries the map engine: loaded on its own, in the background once the Carnet has settled (so it
+ * is there when "Choisir sur la carte" is touched, without weighing on the Carnet's start). */
+const MapPicker = lazy(() => import("./MapPicker").then((m) => m.MapPicker));
+whenIdle(MapPicker.preload);
 
 /** Drafts opened from a published day live here until the first change (nothing is stored for a mere look). */
 export const memDrafts = new Map<string, Draft>();

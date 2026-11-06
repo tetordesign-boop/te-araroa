@@ -42,31 +42,32 @@ export function AdminApp() {
   if (!session.value || (signingIn.value && admin !== true)) return <AuthPage />;
   if (admin === null) {
     return (
-      <div class="auth">
+      <main class="auth">
         <div class="auth__box">
           <h1>Connexion…</h1>
           <p>La toute première ouverture du carnet sur ce téléphone a besoin de réseau. Ensuite, il marche aussi hors ligne.</p>
           <button class="bigbtn bigbtn--primary" type="button" onClick={() => checkAdmin()}>Réessayer</button>
           <button class="bigbtn bigbtn--secondary" type="button" onClick={signOut}>Changer de compte</button>
         </div>
-      </div>
+      </main>
     );
   }
   if (admin === false) {
     return (
-      <div class="auth">
+      <main class="auth">
         <div class="auth__box">
           <h1>Accès refusé</h1>
           <p>Ce compte n'est pas administrateur de ce carnet.</p>
           <button class="bigbtn bigbtn--secondary" type="button" onClick={signOut}>Changer de compte</button>
         </div>
-      </div>
+      </main>
     );
   }
 
   const p = page.value;
   return (
     <>
+      <main>
       {p.name === "editor" ? <Editor id={p.id} />
         : p.name === "checkin" ? <Checkin />
         : p.name === "positions" ? <Positions />
@@ -76,6 +77,7 @@ export function AdminApp() {
         : p.name === "help" ? <Help />
         : p.name === "preview" ? <Preview id={p.id} />
         : <Dashboard />}
+      </main>
       <div class={`toast glass${flash.value ? " is-on" : ""}`} role="status" aria-live="polite" style={{ position: "fixed" }}>{flash.value}</div>
     </>
   );

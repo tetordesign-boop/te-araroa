@@ -93,7 +93,7 @@ function Now() {
   const a = arrival.value;
   const shown = a === null ? km : km * a;
   return (
-    <section class="now" aria-label={t("whereNow")}>
+    <section class="now">
       <Status />
       <div class="now__row">
         <div class="now__km">
@@ -149,12 +149,12 @@ function OnHisWay() {
         <h2 class="h-section">{ph === "before" ? t("onTheWayBefore") : t("onHisWay")}</h2>
         <a class="link" href="#/explorer" onClick={(e) => { e.preventDefault(); go({ name: "explore" }); }}>{t("exploreLink")}</a>
       </div>
-      <div class="hscroll nexts" role="list">
+      <div class="hscroll nexts">
         {items.map(([key, p]) => {
           const alt = altText(p, l);
           const dist = p.km - from;
           return (
-            <a role="listitem" class="next" href={`#/lieu/${encodeURIComponent(p.id)}`} onClick={(e) => { e.preventDefault(); openPlace(p.id); }}>
+            <a class="next" href={`#/lieu/${encodeURIComponent(p.id)}`} onClick={(e) => { e.preventDefault(); openPlace(p.id); }}>
               <span class="next__top"><PlaceBadge kind={p.t} size={24} /><span class="next__label">{t(key)}</span></span>
               <span class="next__name">{placeName(p, l)}</span>
               <span class="next__meta num">{ph === "before" ? `km ${fmtKm(p.km, l, p.km < 10 ? 1 : 0)}` : t("inKm", { km: fmtKm(dist, l, dist < 10 ? 1 : 0) })}{alt ? `, ${alt}` : ""}</span>
@@ -277,6 +277,8 @@ export function Home() {
 
   return (
     <div class="home">
+      {/* (every other page opens on its title; this one says it only to VoiceOver, which jumps from title to title) */}
+      <h1 class="sr-only">{t("whereNow")}</h1>
       {isDesktop.value && (
         <button class="searchbtn" type="button" onClick={openSearch}><Search />{t("searchPlaceholder")}</button>
       )}

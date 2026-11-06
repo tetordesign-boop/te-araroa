@@ -1,13 +1,10 @@
 // "Ma position": what the site has received from the phone (OwnTracks or by hand), on a map and in a list,
 // who can see each point, a way to test the chain end to end, and to delete a wrong point. Works from the phone.
-import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
-import { useEffect, useRef, useState } from "preact/hooks";
-import { MOCK, OFFLINE_MAP } from "../config";
+import { useEffect, useState } from "preact/hooks";
+import { MOCK } from "../config";
 import { fmtDate, fmtKm, nzToday, relTime } from "../lib/format";
-import type { LngLat } from "../lib/geo";
-import { buildStyle } from "../map/style";
 import { ChevronLeft, ChevronRight, Locate } from "../ui/icons";
+import { lazy } from "../ui/lazy";
 import { home, open, say } from "./nav";
 import { adminRoute, adminSettings } from "./server";
 import { sba } from "./sb";
@@ -16,6 +13,9 @@ export interface Pos {
   id: number; recorded_at: string; lng: number; lat: number;
   alt: number | null; acc: number | null; batt: number | null; source: string; note: string | null;
 }
+
+/** the map (and its engine) only once this page opens */
+const PointsMap = lazy(() => import("./PointsMap").then((m) => m.PointsMap));
 
 const SOURCE: Record<string, string> = { owntracks: "OwnTracks", checkin: "à la main", photo: "photo", manual: "à la main" };
 
@@ -48,63 +48,6 @@ export async function fetchPositions(limit = 50): Promise<Pos[]> {
 function where(p: Pos): string {
   const s = adminRoute.value.nearest([p.lng, p.lat]);
   return s.dist < 3000 ? `sur le sentier, km ${fmtKm(s.km, "fr", s.km < 10 ? 1 : 0)}` : `à ${fmtKm(s.dist / 1000, "fr", s.dist < 10_000 ? 1 : 0)} km du sentier`;
-}
-
-function PointsMap({ list }: { list: Pos[] }) {
-  const el = useRef<HTMLDivElement>(null);
-  const map = useRef<maplibregl.Map | null>(null);
-  const ready = useRef(false);
-
-  const draw = () => {
-    const m = map.current;
-    if (!m || !ready.current) return;
-    const pts = [...list].reverse().map((p) => [p.lng, p.lat] as LngLat); // oldest first
-    (m.getSource("track") as maplibregl.GeoJSONSource | undefined)?.setData({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: pts } });
-    (m.getSource("pts") as maplibregl.GeoJSONSource | undefined)?.setData({
-      type: "FeatureCollection",
-      features: list.map((p, i) => ({ type: "Feature", properties: { last: i === 0 }, geometry: { type: "Point", coordinates: [p.lng, p.lat] } })),
-    });
-    if (!pts.length) return;
-    const b = pts.reduce((bb, c) => bb.extend(c), new maplibregl.LngLatBounds(pts[0], pts[0]));
-    m.fitBounds(b, { padding: 50, maxZoom: 14, duration: 0 });
-  };
-
-  useEffect(() => {
-    let land: GeoJSON.Feature | undefined;
-    let alive = true;
-    (async () => {
-      if (OFFLINE_MAP) land = (await import("../dev/nz-land.json")).default as unknown as GeoJSON.Feature;
-      if (!alive || !el.current) return;
-      const style = buildStyle("satellite", { dark: false, linzKey: adminSettings.value?.linz_api_key, land });
-      delete (style as { terrain?: unknown }).terrain; // flat and exact
-      const first = list[0] ? [list[0].lng, list[0].lat] as LngLat : adminRoute.value.pointAt(0);
-      const m = new maplibregl.Map({ container: el.current, style, center: first, zoom: 11, attributionControl: { compact: true }, maxPitch: 0, dragRotate: false, pixelRatio: Math.min(window.devicePixelRatio || 1, 2) });
-      map.current = m;
-      m.on("load", () => {
-        const r = adminRoute.value;
-        m.addSource("route", { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "MultiLineString", coordinates: r.parts.map((p) => Array.from(p.lng, (x, i) => [x, p.lat[i]])) } } });
-        m.addLayer({ id: "route-casing", type: "line", source: "route", paint: { "line-color": "rgba(0,0,0,.45)", "line-width": 5 } });
-        m.addLayer({ id: "route", type: "line", source: "route", paint: { "line-color": "#fff", "line-width": 2.5 } });
-        m.addSource("track", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-        m.addLayer({ id: "track", type: "line", source: "track", paint: { "line-color": "#FF6B12", "line-width": 2.5, "line-dasharray": [1, 1.5] } });
-        m.addSource("pts", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-        m.addLayer({
-          id: "pts", type: "circle", source: "pts",
-          paint: {
-            "circle-radius": ["case", ["get", "last"], 9, 5],
-            "circle-color": ["case", ["get", "last"], "#FF6B12", "#FFB48A"],
-            "circle-stroke-color": "#fff", "circle-stroke-width": ["case", ["get", "last"], 3, 1.5],
-          },
-        });
-        ready.current = true;
-        draw();
-      });
-    })();
-    return () => { alive = false; ready.current = false; map.current?.remove(); map.current = null; };
-  }, []);
-
-  useEffect(draw, [list]);
-  return <div class="posmap" ref={el} />;
 }
 
 export function Positions() {

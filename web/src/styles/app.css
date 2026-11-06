@@ -464,6 +464,15 @@ html.is-intro .lnav-fade, html.is-trail-mode .lnav-fade { opacity: 0; }
 .daynav { align-items: center; }
 .daynav__now { padding: 0 4px; min-width: 4.4em; text-align: center; white-space: nowrap; font-size: 15px; font-weight: 720; font-stretch: 108%; color: var(--ink); }
 .daynav__hint { margin-top: 12px; color: var(--ink-2); }
+/* touch zones of at least 44 × 44 (Apple's minimum) around the controls drawn smaller: an invisible margin of the
+   button itself takes the tap, the drawing doesn't change */
+.iconbtn, .seg button { position: relative; }
+.iconbtn::before, .seg button::before, .photo-pin::before, .live-pin::before { content: ""; position: absolute; border-radius: inherit; }
+.iconbtn::before { inset: -2px; }
+.modes .iconbtn::before { inset: -6px; }
+.seg button::before { inset: -5px -2px; }
+.photo-pin::before { inset: -5px; } /* (from inside its 2 px border) */
+.live-pin::before { inset: -9px; border-radius: 50%; }
 /* "map": of the sheet only the grip shows above the navigation; what is in it waits, faded, until it comes back up */
 .sheet__body { transition: opacity 0.25s var(--ease-out); }
 .sheet[data-detent="map"] .sheet__body { opacity: 0; pointer-events: none; }

@@ -153,12 +153,12 @@ function NearPhotos({ p }: { p: Place }) {
   return (
     <section class="block pnear">
       <h2 class="h-section">{t("photosNear")}</h2>
-      <div class="hscroll" role="list">
+      <div class="hscroll">
         {near.map(({ m }) => {
           const d = byId.get(m.day_id);
           if (!d) return null;
           return (
-            <a role="listitem" class="pnear__item" href={hrefFor({ name: "day", n: d.day_number, photo: m.id })}
+            <a class="pnear__item" href={hrefFor({ name: "day", n: d.day_number, photo: m.id })}
               onClick={(e) => { e.preventDefault(); go({ name: "day", n: d.day_number, photo: m.id }); }}
               aria-label={`${t("day", { n: d.day_number })}, ${t("photoBy")}`}>
               <img src={mediaUrl(m.thumb_path ?? m.path)} alt="" loading="lazy" decoding="async" />

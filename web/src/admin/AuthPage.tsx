@@ -20,7 +20,7 @@ export function AuthPage() {
   };
 
   return (
-    <div class="auth">
+    <main class="auth">
       <form class="auth__box" onSubmit={submit}>
         <Mark class="auth__mark" carnet />
         <h1>Carnet de route</h1>
@@ -51,6 +51,6 @@ export function AuthPage() {
           {mode === "login" ? "J'ai un code (première fois)" : "J'ai déjà un accès"}
         </button>
       </form>
-    </div>
+    </main>
   );
 }
