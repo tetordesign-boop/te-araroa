@@ -29,16 +29,6 @@ if (window.matchMedia("(pointer: coarse)").matches) {
 }
 render(<App />, document.getElementById("app")!);
 
-// The page itself never scrolls (the sheet's content does). On iOS, once the keyboard has gone, the page can stay
-// pushed up by it, which leaves a bar of background at the foot of the screen: put it back.
-const unpush = () => { if (window.scrollY || document.documentElement.scrollTop) window.scrollTo(0, 0); };
-document.addEventListener("focusout", (e) => {
-  if ((e.target as Element | null)?.matches?.("input, textarea, [contenteditable]")) window.setTimeout(unpush, 150);
-});
-window.visualViewport?.addEventListener("resize", () => {
-  if (!document.activeElement?.matches?.("input, textarea, [contenteditable]")) unpush();
-});
-
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
