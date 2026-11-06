@@ -188,6 +188,8 @@ strong, b { font-weight: 650; }
 
 /* ------------------------------------------------------------------ app shell */
 #app { position: fixed; inset: 0; background: var(--night-deep); }
+/* (the home-screen app, main.tsx: a document as tall as the display, so iOS lays the page out down to its foot) */
+html.is-standalone, html.is-standalone body { height: 100vh; }
 #app > .map, #app > .map.maplibregl-map { position: absolute; inset: 0; width: 100%; height: 100%; }
 .map .maplibregl-canvas:focus-visible { outline: none; }
 

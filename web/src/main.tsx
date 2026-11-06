@@ -27,6 +27,13 @@ if (window.matchMedia("(pointer: coarse)").matches) {
   // Safari's own pinch-zoom of the page (the map and the photos have their own zoom)
   for (const ev of ["gesturestart", "gesturechange"]) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
 }
+// On the home screen (iOS 26 and later, with the see-through status bar) the page is laid out one status bar short of
+// the display, and iOS fills the foot with plain background. A document as tall as the whole display (100vh, the
+// large viewport) makes it lay the page out full height (app.css, html.is-standalone).
+const standalone = (navigator as Navigator & { standalone?: boolean }).standalone === true
+  || window.matchMedia?.("(display-mode: standalone)").matches;
+if (standalone) document.documentElement.classList.add("is-standalone");
+
 render(<App />, document.getElementById("app")!);
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
