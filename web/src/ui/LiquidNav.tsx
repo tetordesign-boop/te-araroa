@@ -6,7 +6,7 @@
 // Unlike the original, the water calms down a few seconds after a touch and the drawing stops: nothing moves on its own.
 import type { JSX } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
-import { hikerName, lang, t } from "../i18n";
+import { lang, t } from "../i18n";
 import { play } from "../lib/sound";
 import { detent, go, hrefFor, view, type View } from "./state";
 
@@ -164,7 +164,7 @@ function makeState() {
 export function LiquidNav({ inert }: { inert?: boolean }) {
   const l = lang.value;
   const tabs: Tab[] = [
-    { name: "home", label: hikerName.value || "Ewan", icon: IconEwan(), fx: "ping" },
+    { name: "home", label: t("me"), icon: IconEwan(), fx: "ping" },
     { name: "journal", label: t("navJournal"), icon: IconJournal(), fx: "page" },
     { name: "explore", label: t("navExplore"), icon: IconExplore(), fx: "needle" },
     { name: "stats", label: t("navStats"), icon: IconStats(), fx: "bars" },

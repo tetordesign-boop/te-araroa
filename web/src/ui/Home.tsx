@@ -1,5 +1,5 @@
 import { mediaUrl } from "../config";
-import { hikerName, lang, setLang, t, type Key } from "../i18n";
+import { lang, setLang, t, type Key } from "../i18n";
 import {
   clock, coverOf, dayOnTrail, dayTitle, days, latestPosition, livePlacement, liveState, mediaByDay,
   phase, progressKm, route, settings, walked,
@@ -74,7 +74,7 @@ function Conditions() {
   return (
     <p class="conditions">
       {wx ? `${t("wxLine", { icon: wx.icon, temp: wx.temp, label: wx.label })} ` : ""}
-      {night ? t("timeNight", { time, name: hikerName.value }) : t("timeDay", { time })}
+      {night ? t("timeNight", { time }) : t("timeDay", { time })}
     </p>
   );
 }

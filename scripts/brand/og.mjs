@@ -21,9 +21,9 @@ p { margin: 0; font-family: F, L; font-size: 28px; line-height: 1.4; color: #DCE
 </style></head><body>
 <div class="mark">${markHtml({ size: 96, radius: 22 })}</div>
 <div class="text">
-  <h1>Te Araroa<br>avec Ewan</h1>
+  <h1>Te Araroa<br>avec moi</h1>
   <div class="foot">
-    <p>À pied sur l'île du Sud, de Ship Cove à Bluff\u202f: sa position, ses photos et son journal, jour après jour.</p>
+    <p>Je marche l'île du Sud, de Ship Cove à Bluff\u202f: ma position, mes photos et mon journal, jour après jour.</p>
     <div class="km"><b>1 334</b><span class="u">km</span></div>
   </div>
 </div>

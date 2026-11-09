@@ -71,7 +71,7 @@ function BeforeDeparture({ s, lastOwn }: { s: Settings; lastOwn: Pos | null | un
     },
     {
       done: !oldIntro, title: "Ta présentation", page: "settings" as const,
-      meta: oldIntro ? "Elle parle encore du « livre de refuge » : les mots de tes proches sont maintenant privés, sous « Un mot pour Ewan »." : "À jour",
+      meta: oldIntro ? "Elle parle encore du « livre de refuge » : les mots de tes proches sont maintenant privés, sous « Écrivez-moi un mot »." : "À jour",
     },
   ];
   const left = items.filter((i) => !i.done).length;

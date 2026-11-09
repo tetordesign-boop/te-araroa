@@ -75,7 +75,7 @@ export function Preview({ id }: { id: string }) {
       </div>
       <p class="adm-sub preview__note">
         {d.published
-          ? "Comme tes proches la verront une fois publiée. En dessous, ils auront les cœurs et « Un mot pour Ewan »."
+          ? "Comme tes proches la verront une fois publiée. En dessous, ils auront les cœurs et « Écrivez-moi un mot »."
           : "Comme elle serait sur le site. « Visible sur le site » est éteint : pour l'instant, personne d'autre ne la voit."}
       </p>
       <div class="preview__frame">

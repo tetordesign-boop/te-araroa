@@ -77,8 +77,8 @@ export async function mockData(route: Route) {
   const start = "2026-11-28";
   const settings: Settings = {
     site_title: "Te Araroa",
-    site_tagline_fr: "L'île du Sud à pied avec Ewan",
-    site_tagline_en: "The South Island on foot with Ewan",
+    site_tagline_fr: "L'île du Sud à pied",
+    site_tagline_en: "The South Island on foot",
     hiker_name: "Ewan",
     intro_fr: "Salut ! Je pars marcher les 1 334 km de l'île du Sud sur le Te Araroa, de Ship Cove à Bluff.\n\nIci, je publie chaque jour où je suis, mes photos et quelques mots quand j'ai du réseau. Laissez-moi un mot en bas de la page : je suis seul à les lire, le soir au refuge.",
     intro_en: "Hi! I'm walking the 1,334 km of the South Island on Te Araroa, from Ship Cove to Bluff.\n\nI post where I am, my photos and a few words every day when I have signal. Leave me a note at the bottom of the page: only I read them, at night in the hut.",
