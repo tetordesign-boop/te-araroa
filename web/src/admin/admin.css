@@ -188,3 +188,14 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 
 /* the map credits: links you can tell from the text around them */
 .maplibregl-ctrl-attrib a { text-decoration: underline; text-underline-offset: 2px; }
+
+/* "Mon sac" */
+.gearedit__photo { display: block; width: 100%; height: auto; border-radius: 10px; }
+.gearedit__add { color: var(--marker-hot); font-weight: 600; }
+.gearedit__unit { color: var(--ink-2); flex: none; }
+.gearedit__item { background: var(--fill); box-shadow: inset 3px 0 0 var(--marker); }
+.gearedit__item .cell + .cell::before, .gearedit__item .switchrow { box-shadow: none; }
+.gearedit__item .switchrow { padding-left: 16px; padding-right: 16px; border-top: 1px solid var(--separator); }
+.cell textarea.short { min-height: 84px; }
+.gearedit .cell > .cell__value { margin-left: auto; }
+.cell textarea.plain { min-height: 140px; font-family: inherit; font-size: 16px; }

@@ -52,6 +52,10 @@ At the top of the journal, from three photos on (`ui/PhotoBand.tsx`, after "Tilt
 
 Its button opens the voyage (`ui/PhotoTunnel.tsx`, after "Perspective Tunnel Hero"), with its own address `#/voyage` (the back gesture closes it): every photo and video in order, coming out of the night toward you. A swipe up, the wheel or the arrow keys move forward, with the speed of the flick; the day you are in is written over the photos (a caption at the foot on a phone, the title in the middle on a computer); the trail runs to the vanishing point; a bar shows where you are in the trip and can be touched. A photo touched opens in its day.
 
+## My pack ("Mon sac")
+
+`ui/Pack.tsx`, at `#/sac`: the gear Ewan carries, as he writes it in the Carnet (`admin/Gear.tsx`, one JSON value `settings.gear`, `lib/gear.ts`). It opens on the base weight, the figure thru-hikers compare (in the pack, without what he wears, food or water), set like the stats' big line; then his photo of everything laid out, with his words under it; the other figures (worn, food and water, the pack leaving a town, items); a ladder of orange bars, "Où partent les grammes", each bar the way into its section (it scrolls there and lights its title); then the list, section by section, in grams, worn things tagged "porté", his remarks in his voice. A section's figure is the same as its bar (what it puts in the pack). The page and its ways in (a row on the home panel before departure and on "À propos", a link in the home footer) appear only once the list has an item. In the Carnet the list is edited item by item or pasted from Notes (one line per item with its weight; a "Dormir :" line files the next ones; LighterPack CSV too), kept on the phone until OK.
+
 ## The brand: "TA" and the point
 
 Type only. "TA", the trail's initials, very heavy and very wide (Archivo 900 at its widest), and an orange point: Ewan, the same point that shows him on the map. In November 2026 Ewan dropped the illustrated logo (Ewan from behind under the stars) and its explanation as "IA slop", and picked this one from three type-only directions in the spirit of the hover-links component.

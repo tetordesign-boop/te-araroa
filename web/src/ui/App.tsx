@@ -20,6 +20,7 @@ import { Close, Compass, Expand, Eye, Locate, MapIcon, Orbit, Replay, Search, Sh
 import { MapFallback } from "./MapFallback";
 import { MapModes, mapPrefs, modesClosedAt, modesOpen } from "./MapModes";
 import { About, Journal, Stats } from "./Pages";
+import { Pack } from "./Pack";
 import { PlaceView, placeName } from "./Place";
 import { startReplay } from "./replayControl";
 import { Sheet } from "./Sheet";
@@ -435,6 +436,7 @@ export function App() {
               : v.name === "journal" ? <Journal />
               : v.name === "stats" ? <Stats />
               : v.name === "about" ? <About />
+              : v.name === "pack" ? <Pack />
               : <Home />}
           </div>
         )}

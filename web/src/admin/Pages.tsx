@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { FUNCTIONS_URL } from "../config";
 import { fmtDate, fmtKm, nzToday, relTime } from "../lib/format";
+import { fmtWeight, gearTotals } from "../lib/gear";
 import type { Settings } from "../types";
 import { ChevronLeft, ChevronRight, Locate } from "../ui/icons";
 import { draftForToday, draftFromDay, openDraft } from "./Editor";
@@ -13,7 +14,7 @@ import { deletionError, deletions, drafts, liveDays, online, outbox, queuePositi
 
 const siteUrl = () => new URL("../", location.href).toString();
 
-function Bar({ title, back = true, right }: { title: string; back?: boolean; right?: preact.ComponentChildren }) {
+export function Bar({ title, back = true, right }: { title: string; back?: boolean; right?: preact.ComponentChildren }) {
   return (
     <div class="adm-bar">
       <span class="adm-bar__left">{back && <button class="textbtn" type="button" onClick={home}><ChevronLeft />Carnet</button>}</span>
@@ -171,6 +172,7 @@ export function Dashboard() {
         <button class="cell" type="button" onClick={() => open({ name: "positions" })}><span class="cell__main"><span class="cell__title">Ma position</span><span class="cell__meta">{lastLine(lastPoint)}</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "messages" })}><span class="cell__main"><span class="cell__title">Mots de tes proches</span><span class="cell__meta">{newNotes === null ? "Toi seul les lis" : newNotes === 0 ? "Aucun nouveau mot" : newNotes === 1 ? "1 nouveau mot" : `${newNotes} nouveaux mots`}</span></span>{!!newNotes && <span class="badge-count" aria-hidden="true">{newNotes}</span>}<ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "tracking" })}><span class="cell__main"><span class="cell__title">Suivi automatique</span><span class="cell__meta">OwnTracks sur ton iPhone</span></span><ChevronRight class="cell__chev" /></button>
+        <button class="cell" type="button" onClick={() => open({ name: "gear" })}><span class="cell__main"><span class="cell__title">Mon sac</span><span class="cell__meta">{gearLine()}</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "settings" })}><span class="cell__main"><span class="cell__title">Réglages</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "help" })}><span class="cell__main"><span class="cell__title">Mode d'emploi</span><span class="cell__meta">Publier, sans réseau, mots, position, en cas de souci</span></span><ChevronRight class="cell__chev" /></button>
       </div>
@@ -180,6 +182,14 @@ export function Dashboard() {
       </div>
     </div>
   );
+}
+
+/** the home cell's line for "Mon sac" */
+function gearLine() {
+  const items = adminSettings.value?.gear?.items ?? [];
+  if (!items.length) return "Ta liste de matériel, pour le site";
+  const tot = gearTotals(items);
+  return `${fmtWeight(tot.base, "fr")} dans le sac, ${tot.n} ${tot.n > 1 ? "objets" : "objet"}`;
 }
 
 // ------------------------------------------------------------------ check-in
@@ -356,7 +366,7 @@ function PasswordChange() {
 }
 
 /** Copies a setting to paste in another app (OwnTracks), and says so. */
-function CopyBtn({ text, what }: { text: string; what: string }) {
+export function CopyBtn({ text, what }: { text: string; what: string }) {
   return (
     <button class="textbtn" type="button" onClick={async () => {
       try { await navigator.clipboard.writeText(text); say(`${what} copié`); } catch { say("Copie impossible : sélectionne le texte et copie-le."); }
@@ -543,6 +553,9 @@ export function Help() {
       <h2>Photos et vidéos</h2>
       <p>Dans le sélecteur de photos, touche <strong>Options</strong> en haut et vérifie que <strong>Position</strong> est activée : tes photos apparaîtront à l'endroit exact sur la carte. Sinon elles sont rangées le long de l'étape.</p>
       <p>Les photos sont allégées avant l'envoi (moins de réseau, et le stockage gratuit de 1 Go tient toute la saison). Garde les vidéos courtes, moins d'une minute ; pour plus long, mets la vidéo sur YouTube et colle le lien.</p>
+
+      <h2>Mon sac</h2>
+      <p>La page « Mon sac » du site montre ton matériel et son poids. Écris ta liste dans <strong>Mon sac</strong>, sur l'accueil du carnet : touche un objet pour le modifier, ou colle d'un coup une liste depuis Notes (une ligne par objet, avec son poids). Ce que tu portes sur toi et la nourriture ne comptent pas dans le poids du sac. La page apparaît sur le site dès qu'il y a un objet.</p>
 
       <h2>Les mots de tes proches</h2>
       <p>Sur le site, tes proches t'écrivent sous <span class="key">« Écrivez-moi un mot »</span>, sans compte. Toi seul les lis : <strong>Mots de tes proches</strong> sur l'accueil du carnet, avec une pastille pour les nouveaux. Tu peux en supprimer un.</p>

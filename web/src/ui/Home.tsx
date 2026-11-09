@@ -14,6 +14,7 @@ import { openSearch } from "./Explore";
 import { NoteToEwan } from "./NoteToEwan";
 import { Seg } from "./Seg";
 import { ArrowRight, ChevronRight, Eye, Play, Search, Trail } from "./icons";
+import { PackRow } from "./Pack";
 import { altText, openPlace, PlaceBadge, placeName } from "./Place";
 import { arrival, go, hrefFor, isDesktop } from "./state";
 import { startTrailMode } from "./TrailMode";
@@ -260,6 +261,7 @@ function Footer() {
       {/* (the journal, the explorer and the stats are in the navigation at the bottom) */}
       <nav class="foot__links">
         <a href="#/apropos" onClick={(e) => { e.preventDefault(); go({ name: "about" }); }}>{t("about")}</a>
+        {!!settings.value?.gear?.items?.length && <a href="#/sac" onClick={(e) => { e.preventDefault(); go({ name: "pack" }); }}>{t("pack")}</a>}
       </nav>
       <LangSwitch />
     </footer>
@@ -287,6 +289,7 @@ export function Home() {
       {ph === "before" && intro && (
         <div class="prose voice block">{intro.split(/\n{2,}/).map((p) => <p>{typo(p)}</p>)}</div>
       )}
+      {ph === "before" && <PackRow block />}
 
       {latest && <Feature d={latest} />}
 

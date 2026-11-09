@@ -12,6 +12,7 @@ import { setSound, soundOn } from "../lib/sound";
 import { bandSupported, PhotoBand } from "./PhotoBand";
 import { go, goBack, hrefFor, openTunnel, tunnelOpen } from "./state";
 import { TrailStrip } from "./TrailStrip";
+import { PackRow } from "./Pack";
 import { lazy, whenIdle } from "./lazy";
 
 /** (the albums come with their own code, fetched once the page has settled) */
@@ -405,6 +406,7 @@ export function About() {
     <div class="page">
       <PageHead title={t("about")} />
       {intro && <div class="prose voice" style={{ marginTop: "16px" }}>{intro.split(/\n{2,}/).map((p) => <p>{typo(p)}</p>)}</div>}
+      <PackRow block />
 
       <section class="block">
         <h2 class="h-section" style={{ marginBottom: "14px" }}>{t("followTitle")}</h2>
