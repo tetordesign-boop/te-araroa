@@ -359,7 +359,7 @@ export function Editor({ id }: { id: string }) {
     if (!cur) return;
     const sure = cur.isNew
       ? confirm("Supprimer ce brouillon ?")
-      : confirm(`Supprimer le jour ${cur.day_number} et ses photos ? Les numéros des jours se remettent d'eux-mêmes.\n\nPour seulement le retirer du site sans rien perdre, éteins plutôt « Visible sur le site ».`);
+      : confirm(`Supprimer le jour ${cur.day_number} et ses photos ? Les numéros des jours se remettent d'eux-mêmes.\n\nPour seulement le retirer du site sans rien perdre, éteins plutôt « Visible sur le site ».`);
     if (!sure) return;
     if (!cur.isNew) {
       // done at once with a signal, else as soon as there is one (store.ts): its photos on the server go with it
@@ -399,7 +399,7 @@ export function Editor({ id }: { id: string }) {
     <div class="adm">
       <div class="adm-bar">
         <span class="adm-bar__left"><button class="textbtn" type="button" onClick={home}><ChevronLeft />Carnet</button></span>
-        <span class="adm-bar__title">Jour {d.day_number}</span>
+        <h1 class="adm-bar__title">Jour {d.day_number}</h1>
         <span class="adm-bar__right"><button class="textbtn textbtn--strong" type="button" onClick={publish}>Publier</button></span>
       </div>
 

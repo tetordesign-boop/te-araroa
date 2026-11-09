@@ -68,7 +68,7 @@ export function Preview({ id }: { id: string }) {
     <div class="adm adm--preview">
       <div class="adm-bar">
         <span class="adm-bar__left"><button class="textbtn" type="button" onClick={() => goBackOr({ name: "editor", id })}><ChevronLeft />Jour {d.day_number}</button></span>
-        <span class="adm-bar__title">Aperçu</span>
+        <h1 class="adm-bar__title">Aperçu</h1>
         <span class="adm-bar__right">
           <button class="textbtn" type="button" onClick={() => setLang(lang.value === "fr" ? "en" : "fr")}>{lang.value === "fr" ? "EN" : "FR"}</button>
         </span>
