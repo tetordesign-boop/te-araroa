@@ -129,9 +129,11 @@ const ready = new Promise<void>((res) => map.once("load", () => {
 
 const idle = () => new Promise<void>((res) => {
   let done = false; const fin = () => { if (!done) { done = true; res(); } };
-  map.once("idle", fin); map.triggerRepaint(); setTimeout(fin, 25000);
+  map.once("idle", fin); map.triggerRepaint(); setTimeout(fin, 120000);
 });
 let lastKm = -1;
+/** the drawn frame, straight from the map's canvas (a page screenshot would draw it all again) */
+(window as unknown as { capture: () => string }).capture = () => map.getCanvas().toDataURL("image/jpeg", 0.94);
 /** draws the frame at t (seconds of the film) and tells where the point and the towns land on screen */
 (window as unknown as { frame: (t: number) => Promise<unknown> }).frame = async (t: number) => {
   await ready;

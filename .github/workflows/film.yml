@@ -1,5 +1,6 @@
 # The film's 3D flight over the real relief (the development sandbox can't reach the map tiles).
-# Push a commit to bot/film to run; the result lands on the bot/film-out branch.
+# Push a commit to bot/film to run; the result lands on the bot/film-out branch. A frame takes about half a minute
+# without a GPU, so the flight is drawn by ten jobs at once and joined at the end.
 name: Film 3D
 on:
   push:
@@ -9,38 +10,75 @@ permissions:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 80
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     steps:
       - uses: actions/checkout@v4
+      - name: Only one job for stills
+        id: go
+        run: |
+          if grep -q '^stills' scripts/film/mode.txt && [ "${{ matrix.shard }}" != "0" ]; then echo "run=no" >> $GITHUB_OUTPUT; else echo "run=yes" >> $GITHUB_OUTPUT; fi
       - uses: actions/setup-node@v4
+        if: steps.go.outputs.run == 'yes'
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Install the site
+        if: steps.go.outputs.run == 'yes'
         working-directory: web
         run: npm ci
-      - name: Install the browser and ffmpeg
+      - name: Install the browser
+        if: steps.go.outputs.run == 'yes'
         working-directory: scripts/film
-        run: |
-          npm init -y >/dev/null && npm i --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
-          which ffmpeg || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+        run: npm init -y >/dev/null && npm i --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
       - name: Start the dev server
+        if: steps.go.outputs.run == 'yes'
         working-directory: web
         run: |
           nohup npx vite --port 5173 --strictPort > /tmp/vite.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:5173/ >/dev/null && break; sleep 1; done
       - name: Render
-        timeout-minutes: 70
+        if: steps.go.outputs.run == 'yes'
+        timeout-minutes: 65
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: 10
         run: |
           mkdir -p /tmp/film
           set -o pipefail
-          node scripts/film/render3d.mjs /tmp/film 2>&1 | tee /tmp/film/run.log
-      - name: Publish on bot/film-out
-        if: always()
+          node scripts/film/render3d.mjs /tmp/film 2>&1 | tee /tmp/film/run-${{ matrix.shard }}.log
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.go.outputs.run == 'yes'
+        with:
+          name: frames-${{ matrix.shard }}
+          path: /tmp/film
+          retention-days: 3
+  publish:
+    needs: render
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: frames-*
+          merge-multiple: true
+          path: /tmp/film
+      - name: Join the frames
         working-directory: /tmp/film
         run: |
-          cp /tmp/vite.log . || true
+          ls | head
+          if ls f*.jpg >/dev/null 2>&1; then
+            which ffmpeg || (sudo apt-get update && sudo apt-get install -y ffmpeg)
+            ffmpeg -y -loglevel error -framerate 60 -start_number 0 -i f%04d.jpg -c:v libx264 -crf 12 -preset slow -pix_fmt yuv420p flight.mp4
+            node -e 'const fs=require("fs");const f=fs.readdirSync(".").filter(n=>/^part-\d+\.json$/.test(n)).sort().flatMap(n=>JSON.parse(fs.readFileSync(n)));fs.writeFileSync("flight.json",JSON.stringify({fps:60,start:10,frames:f}));console.log("frames",f.length)'
+            mkdir -p ../out && mv flight.mp4 flight.json run-*.log ../out/ 2>/dev/null; cd ../out
+          else
+            mkdir -p ../out && mv still-* stills.json run-*.log ../out/ 2>/dev/null; cd ../out
+          fi
           git init -q -b bot/film-out
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
