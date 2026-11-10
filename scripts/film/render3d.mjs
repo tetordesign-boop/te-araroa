@@ -1,18 +1,20 @@
 // Renders the film's 3D flight (web/film3d.html) frame by frame, with the real tiles (run in GitHub Actions: the
-// development sandbox can't reach them). scripts/film/mode.txt: "stills 10.2 13 …" for a few checks, or "full".
+// development sandbox can't reach them). scripts/film/mode.txt: "stills 10.2 13 …" for a few checks, or "full"; with
+// "wide" among the words, the 16:9 frame for YouTube (1920 × 1080) instead of the vertical one.
 // A frame takes half a minute on a runner without a GPU: the full flight is split across jobs (SHARD of SHARDS),
 // each writing its JPEG frames and where the point and towns land; the last job joins them.
 import { chromium } from "playwright";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 const OUT = process.argv[2] || "/tmp/film"; mkdirSync(OUT, { recursive: true });
-const [mode, ...args] = readFileSync(new URL("./mode.txt", import.meta.url), "utf8").trim().split(/\s+/);
+const [mode, ...words] = readFileSync(new URL("./mode.txt", import.meta.url), "utf8").trim().split(/\s+/);
+const WIDE = words.includes("wide"), args = words.filter((w) => w !== "wide");
 const SHARD = +(process.env.SHARD ?? 0), SHARDS = +(process.env.SHARDS ?? 1);
 const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--enable-webgl"] });
-const page = await browser.newPage({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
+const page = await browser.newPage({ viewport: WIDE ? { width: 1920, height: 1080 } : { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
 page.setDefaultTimeout(240000);
 page.on("pageerror", (e) => console.log("pageerror", e.message));
 page.on("console", (m) => m.type() === "error" && console.log("console", m.text().slice(0, 200)));
-await page.goto("http://localhost:5173/film3d.html", { waitUntil: "load" });
+await page.goto(`http://localhost:5173/film3d.html${WIDE ? "?wide" : ""}`, { waitUntil: "load" });
 await page.waitForFunction(() => typeof window.frame === "function", null, { timeout: 120000 });
 const t0 = Date.now();
 const grab = async (path) => { const url = await page.evaluate(() => window.capture()); writeFileSync(path, Buffer.from(url.split(",")[1], "base64")); };

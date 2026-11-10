@@ -67,12 +67,16 @@ const angDiff = (a: number, b: number) => ((b - a + 540) % 360) - 180;
 // the camera: the 2D film's views, in map zooms (px per degree of longitude = 512·2^z / 360)
 const zFor = (pxPerDegLon: number) => Math.log2((pxPerDegLon * 360) / 512);
 const K = Math.cos((42.5 * Math.PI) / 180);
-// (the 2D views put their centre lower than the middle of the frame: a top padding of 2·cy − 1920)
-const VIEW_NZ: Cam = { center: [172.55, -40.95], zoom: zFor(K * 97), pitch: 0, bearing: 0, top: 2 * 1150 - 1920 };
-const VIEW_SI: Cam = { center: [171.0, -43.75], zoom: zFor(K * 150), pitch: 0, bearing: 0, top: 2 * 1160 - 1920 };
-type Cam = { center: [number, number]; zoom: number; pitch: number; bearing: number; top: number };
-// (the point rides in the lower part of the frame, the land ahead above it)
-const RUN = { zoom: 8.05, zoomEnd: 7.75, pitch: 60, ahead: 0.45, top: 620 };
+// two frames: the vertical one (stories, 1080 × 1920) and, with ?wide, the YouTube one (1920 × 1080), the words on the left
+const WIDE = new URLSearchParams(location.search).has("wide");
+const W = WIDE ? 1920 : 1080, H = WIDE ? 1080 : 1920;
+type Cam = { center: [number, number]; zoom: number; pitch: number; bearing: number; top: number; left: number };
+/** a 2D view of the film (its centre drawn at cx, cy, s px per degree of latitude) as a map camera: the padding moves the centre */
+const view2d = (lon: number, lat: number, s: number, cx: number, cy: number): Cam => ({ center: [lon, lat], zoom: zFor(K * s), pitch: 0, bearing: 0, top: 2 * cy - H, left: 2 * cx - W });
+const VIEW_NZ = WIDE ? view2d(172.55, -40.95, 73, 1330, 566) : view2d(172.55, -40.95, 97, 540, 1150);
+const VIEW_SI = WIDE ? view2d(171.0, -43.75, 135, 1300, 560) : view2d(171.0, -43.75, 150, 540, 1160);
+// (the point rides in the lower part of the frame, the land ahead above it; in the wide frame, right of the words)
+const RUN = WIDE ? { zoom: 8.05, zoomEnd: 7.75, pitch: 60, ahead: 0.45, top: 260, left: 480 } : { zoom: 8.05, zoomEnd: 7.75, pitch: 60, ahead: 0.45, top: 620, left: 0 };
 // the run's camera on a critically damped spring (centre and heading), precomputed so any frame can be drawn alone
 const TRACK = (() => {
   const dt = 1 / 480, out: Cam[] = [];
@@ -84,14 +88,14 @@ const TRACK = (() => {
     for (let k = 0; k < 2; k++) { const a = w * w * (target[k] - c[k]) - 2 * w * v[k]; v[k] += a * dt; c[k] += v[k] * dt; }
     const head = bearingTo(kmPoint(km), kmPoint(Math.min(TOTAL, km + 70)));
     const wb = 3.2, ab = wb * wb * angDiff(brg, head) - 2 * wb * vb; vb += ab * dt; brg = (brg + vb * dt + 360) % 360;
-    out.push({ center: [c[0], c[1]], zoom: lerp(RUN.zoom, RUN.zoomEnd, ramp(t, T.run[0], T.run[1])), pitch: RUN.pitch, bearing: brg, top: RUN.top });
+    out.push({ center: [c[0], c[1]], zoom: lerp(RUN.zoom, RUN.zoomEnd, ramp(t, T.run[0], T.run[1])), pitch: RUN.pitch, bearing: brg, top: RUN.top, left: RUN.left });
   }
   return { dt, out };
 })();
 const trackAt = (t: number): Cam => TRACK.out[Math.round(clamp((t - T.run[0]) / TRACK.dt, 0, TRACK.out.length - 1))];
 const mixCam = (a: Cam, b: Cam, p: number): Cam => ({
   center: [lerp(a.center[0], b.center[0], p), lerp(a.center[1], b.center[1], p)], zoom: lerp(a.zoom, b.zoom, p),
-  pitch: lerp(a.pitch, b.pitch, p), bearing: (a.bearing + angDiff(a.bearing, b.bearing) * p + 360) % 360, top: lerp(a.top, b.top, p),
+  pitch: lerp(a.pitch, b.pitch, p), bearing: (a.bearing + angDiff(a.bearing, b.bearing) * p + 360) % 360, top: lerp(a.top, b.top, p), left: lerp(a.left, b.left, p),
 });
 function camAt(t: number): Cam {
   if (t <= T.dive[0]) return VIEW_NZ;
@@ -140,7 +144,7 @@ let lastKm = -1;
   const km = runKm(t);
   if (Math.abs(km - lastKm) > 1e-6) { (map.getSource("walked") as maplibregl.GeoJSONSource).setData(walked(t < T.run[0] ? 0 : km)); lastKm = km; }
   const c = camAt(t);
-  map.jumpTo({ center: c.center, zoom: c.zoom, pitch: c.pitch, bearing: c.bearing, padding: { top: c.top, bottom: 0, left: 0, right: 0 } });
+  map.jumpTo({ center: c.center, zoom: c.zoom, pitch: c.pitch, bearing: c.bearing, padding: { top: Math.max(0, c.top), bottom: Math.max(0, -c.top), left: Math.max(0, c.left), right: Math.max(0, -c.left) } });
   await idle();
   const at = (c: [number, number]) => { const p = map.project(c as maplibregl.LngLatLike); return [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]; };
   return { t, km, dot: at(kmPoint(km)), towns: TOWNS.map((p) => at(p.c)), cam: map.getZoom() };
