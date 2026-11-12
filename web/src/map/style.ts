@@ -270,7 +270,7 @@ export function buildStyle(base: BaseStyle, opts: StyleOptions): StyleSpecificat
       ...(base === "satellite" ? { imagery: { type: "raster", tileSize: 256, ...imagery } } : {}),
     },
     layers: base === "satellite" ? satelliteLayers(opts) : exploreLayers(p, opts),
-    terrain: { source: "dem", exaggeration: 1.3 },
+    // (no 3D relief from the start: the map switches it on when it is tilted and close enough, see map.ts)
     sky: sky(opts.sky ?? (opts.dark ? SKY_NIGHT : SKY_DAY)),
   } as unknown as StyleSpecification;
 }

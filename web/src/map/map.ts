@@ -48,6 +48,17 @@ type Padding = { top: number; right: number; bottom: number; left: number };
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+/** the most tilt a zoom-out by hand keeps: none taken away closer than zoom 10.5, 60° at 9, 30° at 7.5, flat from 6 */
+const tiltCap = (z: number) => (z >= 10.5 ? 85 : z >= 9 ? 60 + ((z - 9) / 1.5) * 25 : z > 6 ? (z - 6) * 20 : 0);
+/** the tilt allowed at zoom z in a zoom-out by hand that began at `from`: the curve above, or, when the gesture began
+ * more tilted than it (a flight or the 3D button left the map so), the extra fading out on the way down to it, so
+ * nothing jumps at the first move */
+const tiltLimit = (z: number, from: { zoom: number; pitch: number }) => {
+  const c0 = tiltCap(from.zoom);
+  if (from.pitch <= c0) return tiltCap(z);
+  const floor = Math.min(6, from.zoom - 2);
+  return tiltCap(z) + (from.pitch - c0) * Math.max(0, Math.min(1, (z - floor) / (from.zoom - floor)));
+};
 const empty: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 const multi = (lines: LngLat[][]): GeoJSON.Feature => ({ type: "Feature", properties: {}, geometry: { type: "MultiLineString", coordinates: lines } });
 const zi = (stops: [number, number][]) => ["interpolate", ["linear"], ["zoom"], ...stops.flat()] as unknown as number;
@@ -144,6 +155,7 @@ export class TrailMap {
     for (const ev of ["dragstart", "zoomstart", "rotatestart", "pitchstart"] as const) {
       this.map.on(ev, (e: { originalEvent?: Event }) => {
         if (!e.originalEvent) return;
+        if (ev === "zoomstart" && !this.zoomFrom) this.zoomFrom = { zoom: this.map.getZoom(), pitch: this.map.getPitch() };
         this.gesturing = true;
         this.stopShow(); // a camera show never fights the person's hand
         if (ev === "dragstart") this.cb.onInteract?.();
@@ -161,6 +173,7 @@ export class TrailMap {
       const ml = this.map as unknown as { _elevationFreeze?: boolean };
       if (!this.gesturing && ml._elevationFreeze && !this.map.isEasing()) ml._elevationFreeze = false;
       if (this.gesturing) this.gesturing = false;
+      this.zoomFrom = null;
       if (this.pendingPadding) {
         // not from inside the event: a camera call there can tangle with the move that just ended
         requestAnimationFrame(() => {
@@ -173,17 +186,33 @@ export class TrailMap {
       this.updatePhotoMarkers();
     });
     this.map.on("click", (e) => this.handleClick(e.point));
-    // The 3D relief only where it shows. From afar (the whole island) it can't be seen, and it is what made zooming
-    // out slow: the ground's mesh rebuilt for dozens of tiles on every frame. It goes below zoom 7.6 and comes back
-    // from 8.2 (apart, so a zoom hovering at one value doesn't switch it on and off), during the move itself.
+    // Zooming out by hand flattens the view, as Apple Plans does: the further out, the less tilt (tiltCap). A view
+    // still tilted from afar looks out to the horizon and asks for every tile up to it, more than twice the relief
+    // tiles of a flat zoom-out to the whole island: it was most of what still slowed zooming out after a place or a
+    // day had tilted the map. The limit starts from the tilt the gesture began with, so nothing jumps at its first
+    // move; only by hand (flights keep their tilt) and only while zooming out from where the hand took the map.
+    this.map.transformCameraUpdate = ({ zoom, pitch }) => {
+      const from = this.zoomFrom;
+      if (!from || zoom >= from.zoom) return {};
+      const limit = tiltLimit(zoom, from);
+      return pitch > limit + 0.1 ? { pitch: limit < 3 ? 0 : limit } : {}; // (the last degrees straight to flat)
+    };
+    // The 3D relief only where it shows. From afar (the whole island) it can't be seen, nor looking straight down,
+    // and it costs more than anything else on the map: the ground's mesh, and every layer drawn twice (into the
+    // ground's picture, then the ground). So it is on only when the map is tilted (from 8°, off again under 3°) and
+    // closer than zoom 8.2 (off again under 7.6), each pair apart so a camera hovering at one value doesn't switch it
+    // on and off; switched during the move itself. (Looking down, the relief changes nothing on the screen: the
+    // place in the middle stays where it is when it comes or goes.)
     const relief = () => {
       const m = this.map;
       if (!m.getSource("dem")) return;
-      const z = m.getZoom(), on = !!m.getTerrain();
-      if (on && z < 7.6) m.setTerrain(null);
-      else if (!on && z >= 8.2) m.setTerrain({ source: "dem", exaggeration: 1.3 });
+      const z = m.getZoom(), tilt = m.getPitch(), on = !!m.getTerrain();
+      if (on && (z < 7.6 || tilt < 3)) m.setTerrain(null);
+      else if (!on && z >= 8.2 && tilt >= 8) m.setTerrain({ source: "dem", exaggeration: 1.3 });
     };
     this.map.on("zoom", relief);
+    this.map.on("pitch", relief);
+    this.map.on("moveend", relief);
     this.map.on("style.load", relief);
     // with a mouse, the place under the pointer gets a ring before it is clicked
     let hoverRaf = 0;
@@ -205,6 +234,8 @@ export class TrailMap {
     this.map.getCanvasContainer().addEventListener("mouseleave", () => { this.hoverKey = ""; this.src("hover")?.setData(empty); });
   }
   private hoverKey = "";
+  /** where a zoom by hand began (the view flattens as it goes out from there) */
+  private zoomFrom: { zoom: number; pitch: number } | null = null;
   /** someone (or something they asked for) has moved the camera: the arrival flight must not take it back */
   private cameraClaimed = false;
   claimCamera() { this.cameraClaimed = true; this.flightToken++; }

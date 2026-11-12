@@ -1,5 +1,9 @@
 m-home-half
-m-day-half
+m-place-hut
+m-alps-3d
+m-eye
+m-island
+m-orbit
+d-place-peak
+d-aoraki
 d-home
-d-day
-p-m-carnet
