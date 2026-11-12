@@ -1,7 +1,7 @@
 import { computed, effect, signal } from "@preact/signals";
 import { useEffect, useRef } from "preact/hooks";
 import { OFFLINE_MAP } from "../config";
-import { hikerName, lang, t } from "../i18n";
+import { lang, t } from "../i18n";
 import {
   dayByNumber, days, latestDay, latestPosition, liveState, media, mediaPositions, phase, positions,
   progressKm, route, settings, status, walked, offline,
@@ -20,6 +20,7 @@ import { Close, Compass, Expand, Eye, Locate, MapIcon, Orbit, Replay, Search, Sh
 import { MapFallback } from "./MapFallback";
 import { MapModes, mapPrefs, modesClosedAt, modesOpen } from "./MapModes";
 import { About, Journal, Stats } from "./Pages";
+import { Pack } from "./Pack";
 import { PlaceView, placeName } from "./Place";
 import { startReplay } from "./replayControl";
 import { Sheet } from "./Sheet";
@@ -64,9 +65,9 @@ const liveData = computed<LiveData | null>(() => {
   const lp = latestPosition.value;
   if (!lp) return null;
   return {
-    c: [lp.lng, lp.lat], stale: liveState.value === "stale", name: hikerName.value || "Ewan",
+    c: [lp.lng, lp.lat], stale: liveState.value === "stale", name: t("me"),
     // (what VoiceOver says for his point on the map: the name written on it first, then the news)
-    label: `${hikerName.value || "Ewan"}, ${lc1(t(liveState.value === "live" ? "live" : "lastKnown"))}, ${relTime(lp.recorded_at, lang.value)}`,
+    label: `${t("me")}, ${lc1(t(liveState.value === "live" ? "live" : "lastKnown"))}, ${relTime(lp.recorded_at, lang.value)}`,
   };
 });
 
@@ -435,6 +436,7 @@ export function App() {
               : v.name === "journal" ? <Journal />
               : v.name === "stats" ? <Stats />
               : v.name === "about" ? <About />
+              : v.name === "pack" ? <Pack />
               : <Home />}
           </div>
         )}

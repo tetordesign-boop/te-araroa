@@ -33,6 +33,7 @@ export const Camera = (p: P) => <svg {...base} data-icon="camera" {...p}><path d
 export const ArrowRight = (p: P) => <svg {...base} data-icon="arrow-right" {...p} stroke-width={2.3}><path d="M4.5 12h14.5M13.5 6l6 6-6 6" /></svg>;
 export const Check = (p: P) => <svg {...base} data-icon="check" {...p} stroke-width={2.6}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
 export const Star = (p: P) => <svg {...base} data-icon="star" {...p} fill="currentColor" stroke="none"><path d="M12 3.6l2.5 5.3 5.8.7-4.3 4 1.1 5.7L12 16.5l-5.1 2.8 1.1-5.7-4.3-4 5.8-.7z" /></svg>;
+export const Backpack = (p: P) => <svg {...base} data-icon="backpack" {...p}><path d="M9.6 7V5.6a2.4 2.4 0 014.8 0V7" /><rect x="5.6" y="7" width="12.8" height="14" rx="4.2" /><path d="M8.8 14.2h6.4v3.3a1.4 1.4 0 01-1.4 1.4h-3.6a1.4 1.4 0 01-1.4-1.4z" /><path d="M10.2 10.6h3.6" /></svg>;
 export const Trail = (p: P) => <svg {...base} data-icon="trail" {...p} fill="currentColor" stroke="none"><path d="M12 4.2c.5 0 .9.2 1.1.6l7.3 12.6c.5.9-.1 2-1.1 2H4.7c-1 0-1.6-1.1-1.1-2l7.3-12.6c.2-.4.6-.6 1.1-.6z" /></svg>;
 
 /**

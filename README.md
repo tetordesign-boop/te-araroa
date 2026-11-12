@@ -1,13 +1,13 @@
-# Te Araroa avec Ewan
+# Te Araroa avec moi
 
-Le carnet de route en ligne d'Ewan sur le Te Araroa, île du Sud (Ship Cove → Bluff, 1 334 km).
-Les proches suivent sa position, ses étapes, ses photos et lui écrivent des mots que lui seul lit ; Ewan publie depuis son iPhone, même sans réseau.
+Mon carnet de route en ligne sur le Te Araroa, île du Sud (Ship Cove → Bluff, 1 334 km).
+Mes proches suivent ma position, mes étapes et mes photos, et m'écrivent des mots que je suis seul à lire ; je publie depuis mon iPhone, même sans réseau.
 
 ## Ce que contient le dépôt
 
 | Dossier | Rôle |
 | --- | --- |
-| `web/` | Le site (Vite + Preact + MapLibre). `index.html` = site public, `admin/` = le « Carnet » d'Ewan |
+| `web/` | Le site (Vite + Preact + MapLibre). `index.html` = site public, `admin/` = mon « Carnet » |
 | `supabase/migrations/` | Schéma de la base, sécurité (RLS), fonctions SQL |
 | `supabase/functions/` | Fonctions serveur : import du tracé officiel, suivi OwnTracks, création du compte admin |
 | `scripts/data/` | Fabrique les lieux du sentier (OpenStreetMap) et le profil d'altitude, dans GitHub Actions |
@@ -17,12 +17,14 @@ Les proches suivent sa position, ses étapes, ses photos et lui écrivent des mo
 
 ## Architecture
 
-- **Site** : application statique (GitHub Pages). Direction artistique « nuit du Mackenzie » (voir `web/DESIGN.md`) : carte 3D MapLibre GL de nuit (OpenFreeMap) avec relief éclairé comme par la lune, ombrage, courbes de niveau calculées dans un worker, lacs glaciaires turquoise, ou satellite (Esri ou LINZ) ; tracé parcouru en orange lumineux ; panneau à ressort type Apple Plans ; typo Archivo (large pour les chiffres) et Literata pour les mots d'Ewan.
-- **Lieux** : 486 refuges, campings, cols, sommets, cascades et points de vue le long du sentier (`web/public/data/pois.json`), plus les transferts (Rakaia, Rangitata, lac Wakatipu). Fiche par lieu (Ewan y est passé quel jour, dans combien de km il y sera, ses photos près d'ici), recherche, filtres.
-- **Effets** : à la première visite, une présentation (l'île de nuit qui ondule, une lumière qui parcourt le sentier en boucle, où en est Ewan aujourd'hui) avant d'entrer ; à l'arrivée, le tracé se dessine de Ship Cove jusqu'à Ewan pendant que ses km défilent ; survol 3D de tout le sentier piloté par son profil d'altitude (`web/public/data/profile.json`), « Ce qu'il voit » (la caméra juste derrière Ewan, face au sentier), tour en 3D d'un lieu, relief éclairé par le soleil du moment ; réponses aux gestes (lieux qui rebondissent avec une onde, réactions en gerbe, boutons à ressort).
-- **Navigation et pièces maîtresses** : une barre de verre en bas de l'écran (Ewan, Journal, Explorer, Stats) avec une goutte d'eau de lac dessinée en WebGL qui court vers l'onglet touché ; dans l'explorateur, le sentier en huit tronçons sous forme de dossiers de verre qui se remplissent des jours d'Ewan ; en tête du journal, ses photos qui défilent sur une courbe, et « Le voyage en photos », où l'on avance dans ses photos jour après jour. D'après quatre composants que l'auteur aime, réécrits pour le site (voir `web/DESIGN.md`).
-- **Écrans** : téléphone tenu droit (panneau en bas, trois hauteurs), téléphone en paysage et ordinateur (panneau à gauche, carte à côté), iPad tenu droit (carte flottante à gauche) ; jusqu'aux téléphones de 320 px. Si l'appareil ne peut pas afficher la carte 3D (vieil iPad sans WebGL 2), le tracé est dessiné simplement, avec ce qu'Ewan a parcouru et où il est.
-- **Données** : Supabase (projet `te-araroa`, Sydney). Tables `days`, `media`, `positions`, `messages`, `reactions`, `settings`. Lecture publique limitée par RLS, écriture réservée à l'admin ; les mots des proches (`messages`) ne sont lisibles que par Ewan.
+- **Site** : application statique (GitHub Pages). Direction artistique « nuit du Mackenzie » (voir `web/DESIGN.md`) : carte 3D MapLibre GL de nuit (OpenFreeMap) avec relief éclairé comme par la lune, ombrage, courbes de niveau calculées dans un worker, lacs glaciaires turquoise, ou satellite (Esri ou LINZ) ; tracé parcouru en orange lumineux ; panneau à ressort type Apple Plans ; typo Archivo (large pour les chiffres) et Literata pour mes propres mots.
+- **Lieux** : 486 refuges, campings, cols, sommets, cascades et points de vue le long du sentier (`web/public/data/pois.json`), plus les transferts (Rakaia, Rangitata, lac Wakatipu). Fiche par lieu (quel jour j'y suis passé, dans combien de km j'y serai, mes photos près d'ici), recherche, filtres.
+- **Effets** : à la première visite, une présentation (l'île de nuit qui ondule, une lumière qui parcourt le sentier en boucle, où j'en suis aujourd'hui) avant d'entrer ; à l'arrivée, le tracé se dessine de Ship Cove jusqu'à moi pendant que mes km défilent ; survol 3D de tout le sentier piloté par son profil d'altitude (`web/public/data/profile.json`), « Ce que je vois » (la caméra juste derrière moi, face au sentier), tour en 3D d'un lieu, relief éclairé par le soleil du moment ; réponses aux gestes (lieux qui rebondissent avec une onde, réactions en gerbe, boutons à ressort).
+- **Navigation et pièces maîtresses** : une barre de verre en bas de l'écran (Moi, Journal, Explorer, Stats) avec une goutte d'eau de lac dessinée en WebGL qui court vers l'onglet touché ; dans l'explorateur, le sentier en huit tronçons sous forme de dossiers de verre qui se remplissent de mes jours ; en tête du journal, mes photos qui défilent sur une courbe, et « Le voyage en photos », où l'on avance dans mes photos jour après jour. D'après quatre composants que j'aime, réécrits pour le site (voir `web/DESIGN.md`).
+- **Mon sac** : la page de mon matériel (`#/sac`) : le poids du sac à vide, la photo de tout mon matériel étalé, où partent les grammes, et la liste en grammes. Je l'écris dans le Carnet, objet par objet ou en collant une liste depuis Notes.
+- **La vidéo de 30 secondes** : « Le Te Araroa en 30 secondes », sur la page « À propos » et sur l'accueil jusqu'au départ (`web/src/ui/Film.tsx`). Un téléphone (ou une tablette tenue droite) voit la version verticale en plein écran ; un ordinateur (ou une tablette en paysage) la version 16:9, en grand au-dessus de la carte assombrie ; chacun dans sa langue. Les quatre fichiers (H.264, 10 Mo environ) sont dans `web/public/film/`, hors des copies du service worker : rien n'est téléchargé avant qu'on touche la vignette.
+- **Écrans** : téléphone tenu droit (panneau en bas, trois hauteurs), téléphone en paysage et ordinateur (panneau à gauche, carte à côté), iPad tenu droit (carte flottante à gauche) ; jusqu'aux téléphones de 320 px. Si l'appareil ne peut pas afficher la carte 3D (vieil iPad sans WebGL 2), le tracé est dessiné simplement, avec ce que j'ai parcouru et où je suis.
+- **Données** : Supabase (projet `te-araroa`, Sydney). Tables `days`, `media`, `positions`, `messages`, `reactions`, `settings`. Lecture publique limitée par RLS, écriture réservée à l'admin ; les mots des proches (`messages`) ne sont lisibles que par moi.
 - **Photos/vidéos** : redimensionnées sur le téléphone (1600 px + vignette 640 px) pour tenir dans l'offre gratuite (1 Go de stockage, 5 + 5 Go de bande passante par mois) ; vidéos HEVC ré-encodées en H.264 720p (lisibles partout), son copié tel quel ; envoi reprenable (TUS) pour les gros fichiers.
 - **Hors ligne** : le Carnet enregistre tout dans IndexedDB et envoie dès que le réseau revient (quand l'appli est ouverte : iOS ne fait pas d'envoi en arrière-plan pour une appli web). Le service worker sert les pages depuis le téléphone si le réseau traîne plus de 3,5 s.
 - **Position** : OwnTracks (automatique) + « Partager ma position » (manuel) + géolocalisation des photos. Rien n'est public avant la date de départ ; délai de confidentialité réglable.

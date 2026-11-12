@@ -52,6 +52,10 @@ At the top of the journal, from three photos on (`ui/PhotoBand.tsx`, after "Tilt
 
 Its button opens the voyage (`ui/PhotoTunnel.tsx`, after "Perspective Tunnel Hero"), with its own address `#/voyage` (the back gesture closes it): every photo and video in order, coming out of the night toward you. A swipe up, the wheel or the arrow keys move forward, with the speed of the flick; the day you are in is written over the photos (a caption at the foot on a phone, the title in the middle on a computer); the trail runs to the vanishing point; a bar shows where you are in the trip and can be touched. A photo touched opens in its day.
 
+## My pack ("Mon sac")
+
+`ui/Pack.tsx`, at `#/sac`: the gear Ewan carries, as he writes it in the Carnet (`admin/Gear.tsx`, one JSON value `settings.gear`, `lib/gear.ts`). It opens on the base weight, the figure thru-hikers compare (in the pack, without what he wears, food or water), set like the stats' big line; then his photo of everything laid out, with his words under it; the other figures (worn, food and water, the pack leaving a town, items); a ladder of orange bars, "Où partent les grammes", each bar the way into its section (it scrolls there and lights its title); then the list, section by section, in grams, worn things tagged "porté", his remarks in his voice. A section's figure is the same as its bar (what it puts in the pack). The page and its ways in (a row on the home panel before departure and on "À propos", a link in the home footer) appear only once the list has an item. In the Carnet the list is edited item by item or pasted from Notes (one line per item with its weight; a "Dormir :" line files the next ones; LighterPack CSV too), kept on the phone until OK.
+
 ## The brand: "TA" and the point
 
 Type only. "TA", the trail's initials, very heavy and very wide (Archivo 900 at its widest), and an orange point: Ewan, the same point that shows him on the map. In November 2026 Ewan dropped the illustrated logo (Ewan from behind under the stars) and its explanation as "IA slop", and picked this one from three type-only directions in the spirit of the hover-links component.
@@ -63,7 +67,7 @@ Type only. "TA", the trail's initials, very heavy and very wide (Archivo 900 at 
 
 ## Notes to Ewan
 
-"Un mot pour Ewan" (`ui/NoteToEwan.tsx`), at the foot of the home page and of every day: family and friends write to him, and only he reads the notes, in the Carnet ("Mots de tes proches", the new ones marked since his last look, and counted on the Carnet's home). Nothing is listed or counted on the site, and the database lets no visitor read them back (`supabase/migrations/20261027000100_notes_private.sql`). The section says so in its first line, in words a grandmother understands; after sending, the sender sees their own words once, as a receipt, and can write another. The name and the note have visible labels (a placeholder only gives an example), a missing one is said next to the button and gets the focus, ⌘/Ctrl + Enter sends.
+"Écrivez-moi un mot" (`ui/NoteToEwan.tsx`), at the foot of the home page and of every day: family and friends write to him, and only he reads the notes, in the Carnet ("Mots de tes proches", the new ones marked since his last look, and counted on the Carnet's home). Nothing is listed or counted on the site, and the database lets no visitor read them back (`supabase/migrations/20261027000100_notes_private.sql`). The section says so in its first line, in words a grandmother understands; after sending, the sender sees their own words once, as a receipt, and can write another. The name and the note have visible labels (a placeholder only gives an example), a missing one is said next to the button and gets the focus, ⌘/Ctrl + Enter sends.
 
 ## Sounds
 
@@ -88,7 +92,7 @@ Type only. "TA", the trail's initials, very heavy and very wide (Archivo 900 at 
 - A press in the sheet may wander 10 px (a finger) or 5 px (a mouse) and still be a tap: buttons are never swallowed by a would-be drag. A gesture the browser takes over (a sideways swipe on a shelf) is not a tap either.
 - The page itself never zooms on a phone (no double-tap zoom, Safari's pinch is cancelled): the map and the photos zoom. Holding a control doesn't select its words or open a link preview.
 - Every control takes a tap over at least 44 × 44 px (Apple's minimum), even where it is drawn smaller (the arrows between days, the round buttons, the photos on the map, Ewan's point): an invisible margin of the button itself (`::before`), the drawing doesn't change.
-- VoiceOver and voice control read the words written on a control first, then what it does ("Ewan, en direct, il y a 20 minutes"; "Te Araroa L'île du Sud à pied avec Ewan, À propos"): someone saying "touche Te Araroa" must reach it.
+- VoiceOver and voice control read the words written on a control first, then what it does ("Moi, en direct, il y a 20 minutes"; "Te Araroa L'île du Sud à pied, À propos"): someone saying "touche Te Araroa" must reach it.
 
 ## Keeping it smooth on a phone
 
@@ -144,6 +148,7 @@ Type scale: 12.5 / 14 / 15 / 16 (body, weight 450) / 18.5 (stories, Literata, li
 
 ## Content rules
 
+- The site speaks as Ewan, in the first person ("je", "I"), to its visitors ("vous", "you"): "Je suis ici", "Je suis passé ici le jour 12", "Écrivez-moi un mot"; his point on the map and his tab in the bar are "Moi" / "Me". Never his name or "il" / "he" in the site's words, in French or English, nor in the page title, the link preview or the app's name. One exception: the share text stays neutral ("{title} Le Te Araroa, jour après jour."), since it goes out under the name of whoever shares.
 - French typography is applied to typed text by `typo()` in `src/lib/format.ts` (narrow no-break spaces before `? ! : ;`, inside « », between a number and its unit, before →); `t()` in `src/i18n.ts` does the punctuation and the units for the site's own words.
 - Archivo and Literata have no narrow no-break space (the "1 334" of French numbers), so each device used to borrow its own, some almost invisible. `scripts/fonts/fine-space.py` makes a one-character font for it (0.15 em), first in `--font-ui` and `--font-voice` and limited to that character by `unicode-range`.
 - No ALL-CAPS labels, no middle-dot meta strings: details are joined with commas, and a km figure comes last ("Refuge, 1 310 m, km 280") so decimal commas never sit next to a separator. Ranges use an en dash ("Havelock – St Arnaud").

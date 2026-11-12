@@ -1,3 +1,5 @@
+import type { Gear } from "./lib/gear";
+
 export type Lang = "fr" | "en";
 
 export interface Settings {
@@ -14,6 +16,8 @@ export interface Settings {
   linz_api_key: string | null;
   trail_version: string | null;
   trail_total_km: number | null;
+  /** "Mon sac" (null until the column exists and he writes his list) */
+  gear?: Gear | null;
 }
 
 export type DayKind = "hike" | "rest" | "transport";

@@ -93,7 +93,7 @@ export function Positions() {
     <div class="adm">
       <div class="adm-bar">
         <span class="adm-bar__left"><button class="textbtn" type="button" onClick={home}><ChevronLeft />Carnet</button></span>
-        <span class="adm-bar__title">Ma position</span>
+        <h1 class="adm-bar__title">Ma position</h1>
         <span class="adm-bar__right"><button class="textbtn" type="button" onClick={() => { load(); say("À jour."); }}>Actualiser</button></span>
       </div>
 
@@ -119,7 +119,7 @@ export function Positions() {
           <div class="group">
             <ol class="steps">
               <li>Ouvre OwnTracks et touche le bouton qui envoie ta position (la flèche en haut de la carte).</li>
-              <li>Reviens ici : le point arrive en moins d'une minute, marqué « OwnTracks ».</li>
+              <li>Reviens ici : le point arrive en moins d'une minute, marqué « OwnTracks ».</li>
               <li>Rien au bout de deux minutes ? Vérifie le réglage dans <button class="textbtn" type="button" onClick={() => open({ name: "tracking" })}>Suivi automatique</button>.</li>
             </ol>
           </div>
@@ -141,7 +141,7 @@ export function Positions() {
               return (
                 <div class="cell cell--stack">
                   <span class="cell__title">{new Date(p.recorded_at).toLocaleString("fr-FR", { timeZone: "Pacific/Auckland", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}, {SOURCE[p.source] ?? p.source}</span>
-                  <span class="cell__meta">{where(p)}{p.acc ? `, précision ${Math.round(p.acc)} m` : ""}{p.note ? `, « ${p.note} »` : ""}</span>
+                  <span class="cell__meta">{where(p)}{p.acc ? `, précision ${Math.round(p.acc)} m` : ""}{p.note ? `, « ${p.note} »` : ""}</span>
                   <div class="pickrow">
                     <span class={`vis${v.open ? " is-open" : ""}`}>{v.text}</span>
                     <button class="btn danger" type="button" disabled={busy === p.id} onClick={() => remove(p)}>Supprimer</button>

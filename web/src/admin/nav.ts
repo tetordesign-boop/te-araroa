@@ -7,6 +7,7 @@ export type Page =
   | { name: "positions" }
   | { name: "messages" }
   | { name: "settings" }
+  | { name: "gear" }
   | { name: "tracking" }
   | { name: "help" }
   | { name: "preview"; id: string };

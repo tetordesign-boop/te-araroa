@@ -5,6 +5,7 @@ import { Editor } from "./Editor";
 import { Preview } from "./Preview";
 import { flash, page } from "./nav";
 import { Checkin, Dashboard, Help, Notes, SettingsPage, Tracking } from "./Pages";
+import { GearPage } from "./Gear";
 import { Positions } from "./Positions";
 import { checkAdmin, isAdmin, session, signingIn, signOut } from "./sb";
 import { adminDays, adminMedia, adminRoute, adminSettings, loadRoute, loadServer, readAdminCache } from "./server";
@@ -73,6 +74,7 @@ export function AdminApp() {
         : p.name === "positions" ? <Positions />
         : p.name === "messages" ? <Notes />
         : p.name === "settings" ? <SettingsPage />
+        : p.name === "gear" ? <GearPage />
         : p.name === "tracking" ? <Tracking />
         : p.name === "help" ? <Help />
         : p.name === "preview" ? <Preview id={p.id} />

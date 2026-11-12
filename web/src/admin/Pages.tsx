@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { FUNCTIONS_URL } from "../config";
 import { fmtDate, fmtKm, nzToday, relTime } from "../lib/format";
+import { fmtWeight, gearTotals } from "../lib/gear";
 import type { Settings } from "../types";
 import { ChevronLeft, ChevronRight, Locate } from "../ui/icons";
 import { draftForToday, draftFromDay, openDraft } from "./Editor";
@@ -13,11 +14,11 @@ import { deletionError, deletions, drafts, liveDays, online, outbox, queuePositi
 
 const siteUrl = () => new URL("../", location.href).toString();
 
-function Bar({ title, back = true, right }: { title: string; back?: boolean; right?: preact.ComponentChildren }) {
+export function Bar({ title, back = true, right }: { title: string; back?: boolean; right?: preact.ComponentChildren }) {
   return (
     <div class="adm-bar">
       <span class="adm-bar__left">{back && <button class="textbtn" type="button" onClick={home}><ChevronLeft />Carnet</button>}</span>
-      <span class="adm-bar__title">{title}</span>
+      {title ? <h1 class="adm-bar__title">{title}</h1> : <span class="adm-bar__title" />}
       <span class="adm-bar__right">{right}</span>
     </div>
   );
@@ -60,6 +61,9 @@ function BeforeDeparture({ s, lastOwn }: { s: Settings; lastOwn: Pos | null | un
   if (s.start_date && s.start_date <= nzToday()) return null;
   const recentOwn = !!lastOwn && Date.now() - Date.parse(lastOwn.recorded_at) < 14 * 86400e3;
   const oldIntro = /livre de refuge|hut book/i.test(`${s.intro_fr ?? ""} ${s.intro_en ?? ""}`);
+  // the site speaks as him ("je"): a subtitle with his name in it reads in the third person
+  const who = (s.hiker_name || "Ewan").trim();
+  const oldTagline = !!who && new RegExp(`\\b${who.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(`${s.site_tagline_fr ?? ""} ${s.site_tagline_en ?? ""}`);
   const items = [
     {
       done: !!s.start_date, title: "Ta date de départ", page: "settings" as const,
@@ -71,7 +75,11 @@ function BeforeDeparture({ s, lastOwn }: { s: Settings; lastOwn: Pos | null | un
     },
     {
       done: !oldIntro, title: "Ta présentation", page: "settings" as const,
-      meta: oldIntro ? "Elle parle encore du « livre de refuge » : les mots de tes proches sont maintenant privés, sous « Un mot pour Ewan »." : "À jour",
+      meta: oldIntro ? "Elle parle encore du « livre de refuge » : les mots de tes proches sont maintenant privés, sous « Écrivez-moi un mot »." : "À jour",
+    },
+    {
+      done: !oldTagline, title: "Ton sous-titre", page: "settings" as const,
+      meta: oldTagline ? `Il contient encore ton prénom (« ${who} »), alors que le site parle en « je ». Réglages › Sous-titre, par exemple « L'île du Sud à pied » (et « The South Island on foot » en anglais).` : "À jour",
     },
   ];
   const left = items.filter((i) => !i.done).length;
@@ -164,8 +172,9 @@ export function Dashboard() {
         <button class="cell" type="button" onClick={() => open({ name: "positions" })}><span class="cell__main"><span class="cell__title">Ma position</span><span class="cell__meta">{lastLine(lastPoint)}</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "messages" })}><span class="cell__main"><span class="cell__title">Mots de tes proches</span><span class="cell__meta">{newNotes === null ? "Toi seul les lis" : newNotes === 0 ? "Aucun nouveau mot" : newNotes === 1 ? "1 nouveau mot" : `${newNotes} nouveaux mots`}</span></span>{!!newNotes && <span class="badge-count" aria-hidden="true">{newNotes}</span>}<ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "tracking" })}><span class="cell__main"><span class="cell__title">Suivi automatique</span><span class="cell__meta">OwnTracks sur ton iPhone</span></span><ChevronRight class="cell__chev" /></button>
+        <button class="cell" type="button" onClick={() => open({ name: "gear" })}><span class="cell__main"><span class="cell__title">Mon sac</span><span class="cell__meta">{gearLine()}</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "settings" })}><span class="cell__main"><span class="cell__title">Réglages</span></span><ChevronRight class="cell__chev" /></button>
-        <button class="cell" type="button" onClick={() => open({ name: "help" })}><span class="cell__main"><span class="cell__title">Mode d'emploi</span><span class="cell__meta">Sans réseau, photos, position, en cas de souci</span></span><ChevronRight class="cell__chev" /></button>
+        <button class="cell" type="button" onClick={() => open({ name: "help" })}><span class="cell__main"><span class="cell__title">Mode d'emploi</span><span class="cell__meta">Publier, sans réseau, mots, position, en cas de souci</span></span><ChevronRight class="cell__chev" /></button>
       </div>
       <PasswordChange />
       <div class="group">
@@ -173,6 +182,14 @@ export function Dashboard() {
       </div>
     </div>
   );
+}
+
+/** the home cell's line for "Mon sac" */
+function gearLine() {
+  const items = adminSettings.value?.gear?.items ?? [];
+  if (!items.length) return "Ta liste de matériel, pour le site";
+  const tot = gearTotals(items);
+  return `${fmtWeight(tot.base, "fr")} dans le sac, ${tot.n} ${tot.n > 1 ? "objets" : "objet"}`;
 }
 
 // ------------------------------------------------------------------ check-in
@@ -349,7 +366,7 @@ function PasswordChange() {
 }
 
 /** Copies a setting to paste in another app (OwnTracks), and says so. */
-function CopyBtn({ text, what }: { text: string; what: string }) {
+export function CopyBtn({ text, what }: { text: string; what: string }) {
   return (
     <button class="textbtn" type="button" onClick={async () => {
       try { await navigator.clipboard.writeText(text); say(`${what} copié`); } catch { say("Copie impossible : sélectionne le texte et copie-le."); }
@@ -411,7 +428,7 @@ export function Tracking() {
         </button>
       </div>
       <div class="group__title">Le mettre en pause</div>
-      <p class="group__foot" style={{ marginTop: 0 }}>Dans OwnTracks, touche le bouton de mode en haut de la carte et choisis « Quiet » : plus rien ne part. Choisis à nouveau « Significant » pour reprendre. Un point envoyé par erreur se supprime dans <button class="textbtn" type="button" onClick={() => open({ name: "positions" })}>Ma position</button>.</p>
+      <p class="group__foot" style={{ marginTop: 0 }}>Dans OwnTracks, touche le bouton de mode en haut de la carte et choisis « Quiet » : plus rien ne part. Choisis à nouveau « Significant » pour reprendre. Un point envoyé par erreur se supprime dans <button class="textbtn" type="button" onClick={() => open({ name: "positions" })}>Ma position</button>.</p>
       {/* (OwnTracks for iPhone refuses a configuration link unless it's allowed in its own settings, since 2026) */}
       {inline && (
         <p class="group__foot">Si tu as autorisé la configuration par lien dans les réglages d'OwnTracks, <a class="textbtn" href={inline}>ce lien</a> remplit tout d'un coup.</p>
@@ -512,15 +529,22 @@ export function Help() {
     <div class="adm help">
       <Bar title="Mode d'emploi" />
 
+      <h2>Avant le départ</h2>
+      <p>L'accueil du carnet liste ce qu'il reste à faire. Fais aussi une répétition en mode avion : publie une étape d'essai avec deux photos et éteins « Visible sur le site » pour qu'elle reste privée. Regarde l'aperçu, puis rallume le réseau, ouvre le carnet et attends <span class="key">« Tout est en ligne »</span>. Supprime-la ensuite, tout en bas de l'étape.</p>
+
       <h2>Publier une étape</h2>
       <div class="group">
         <ol class="steps">
           <li>Touche <strong>Publier l'étape du jour</strong>.</li>
           <li>Arrivée : <strong>Ma position</strong> si tu es au bout de l'étape, sinon <strong>Sur la carte</strong> ou <strong>Lieu de ma dernière photo</strong>. Distance, montée et descente se calculent seules.</li>
           <li>Écris ou dicte ton récit (le micro du clavier), choisis météo et humeur, ajoute photos et vidéos. ★ choisit la couverture.</li>
+          <li><strong>Aperçu sur le site</strong> te la montre comme tes proches la verront, photos pas encore envoyées comprises.</li>
           <li>Touche <strong>Publier</strong>. Tu peux revenir corriger une étape plus tard : touche-la dans la liste, modifie, puis Publier à nouveau.</li>
         </ol>
       </div>
+
+      <h2>Ton site parle en « je »</h2>
+      <p>Partout sur le site, c'est toi qui parles : <span class="key">« Je suis ici »</span>, <span class="key">« Je suis passé ici le jour 12 »</span>, <span class="key">« Écrivez-moi un mot »</span>. Ton point sur la carte s'appelle « Moi ». Écris tes récits de la même façon. Le sous-titre et ta présentation se changent dans Réglages.</p>
 
       <h2>Sans réseau</h2>
       <p>Tout s'enregistre sur le téléphone, même en mode avion. Dès que tu captes, l'envoi part tout seul.</p>
@@ -530,11 +554,24 @@ export function Help() {
       <p>Dans le sélecteur de photos, touche <strong>Options</strong> en haut et vérifie que <strong>Position</strong> est activée : tes photos apparaîtront à l'endroit exact sur la carte. Sinon elles sont rangées le long de l'étape.</p>
       <p>Les photos sont allégées avant l'envoi (moins de réseau, et le stockage gratuit de 1 Go tient toute la saison). Garde les vidéos courtes, moins d'une minute ; pour plus long, mets la vidéo sur YouTube et colle le lien.</p>
 
+      <h2>Mon sac</h2>
+      <p>La page « Mon sac » du site montre ton matériel et son poids. Écris ta liste dans <strong>Mon sac</strong>, sur l'accueil du carnet : touche un objet pour le modifier, ou colle d'un coup une liste depuis Notes (une ligne par objet, avec son poids). Ce que tu portes sur toi et la nourriture ne comptent pas dans le poids du sac. La page apparaît sur le site dès qu'il y a un objet.</p>
+
+      <h2>Ta vidéo de 30 secondes</h2>
+      <p>La vidéo <span class="key">« Le Te Araroa en 30 secondes »</span> est sur la page « À propos » du site, et sur l'accueil jusqu'au départ. Chacun la voit dans sa langue, en vertical sur un téléphone et en grand sur un ordinateur. Rien à faire de ton côté.</p>
+
+      <h2>Les mots de tes proches</h2>
+      <p>Sur le site, tes proches t'écrivent sous <span class="key">« Écrivez-moi un mot »</span>, sans compte. Toi seul les lis : <strong>Mots de tes proches</strong> sur l'accueil du carnet, avec une pastille pour les nouveaux. Tu peux en supprimer un.</p>
+
       <h2>Ta position</h2>
       <p><strong>Suivi automatique</strong> (OwnTracks) : ta position part en arrière-plan quand tu as du réseau, sans ouvrir le carnet. Les points enregistrés sans réseau partent ensuite.</p>
       <p><strong>Partager ma position</strong> : un point à la main, avec un petit mot si tu veux.</p>
       <p>Dans Réglages, tu peux afficher ta position avec du retard (1 h à 24 h).</p>
       <p><strong>Ma position</strong> montre chaque point reçu, sur une carte, avec qui peut le voir. Avant ta date de départ, tout reste privé : teste autant que tu veux.</p>
+
+      <h2>Ton carnet</h2>
+      <p>Mets-le sur l'écran d'accueil : Partager, puis « Sur l'écran d'accueil ». Il s'ouvre alors comme une appli, même sans réseau.</p>
+      <p>Pour changer ton mot de passe : <strong>Changer mon mot de passe</strong>, en bas de l'accueil (il faut du réseau).</p>
 
       <h2>En cas de souci</h2>
       <div class="group">
@@ -545,8 +582,8 @@ export function Help() {
         <div class="cell cell--stack"><span class="cell__title">Une erreur dans une étape publiée</span><span class="cell__meta">Ouvre-la, corrige, puis Publier : la nouvelle version remplace l'ancienne. Pour la retirer du site sans rien perdre, éteins « Visible sur le site ». Pour la supprimer, tout en bas : Supprimer l'étape. Sans réseau, la suppression part dès qu'il revient, et les numéros des jours se remettent d'eux-mêmes.</span></div>
         <div class="cell cell--stack"><span class="cell__title">Un point faux sur la carte</span><span class="cell__meta">Le GPS a sauté (point en mer, dans la vallée d'à côté) : Ma position, puis Supprimer sur ce point.</span></div>
         <div class="cell cell--stack"><span class="cell__title">Ta position n'arrive plus</span><span class="cell__meta">Ma position dit quand le dernier point est arrivé. Pas de réseau : rien à faire, OwnTracks garde les points et les envoie plus tard. Sinon, ouvre OwnTracks et touche la flèche d'envoi, puis vérifie Suivi automatique.</span></div>
-        <div class="cell cell--stack"><span class="cell__title">Couper le suivi un moment</span><span class="cell__meta">Dans OwnTracks, mode « Quiet ». Mode « Significant » pour reprendre.</span></div>
-        <div class="cell cell--stack"><span class="cell__title">E-mail de GitHub « Veille du site »</span><span class="cell__meta">Chaque jour, une vérification automatique regarde que le site, la base et le suivi répondent. Si elle échoue, GitHub t'écrit : la cause la plus courante est la base en pause (voir plus haut).</span></div>
+        <div class="cell cell--stack"><span class="cell__title">Couper le suivi un moment</span><span class="cell__meta">Dans OwnTracks, mode « Quiet ». Mode « Significant » pour reprendre.</span></div>
+        <div class="cell cell--stack"><span class="cell__title">E-mail de GitHub « Veille du site »</span><span class="cell__meta">Chaque jour, une vérification automatique regarde que le site, la base et le suivi répondent. Si elle échoue, GitHub t'écrit : la cause la plus courante est la base en pause (voir plus haut).</span></div>
       </div>
     </div>
   );

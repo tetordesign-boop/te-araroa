@@ -1,7 +1,7 @@
 {
-  "name": "Te Araroa avec Ewan",
+  "name": "Te Araroa avec moi",
   "short_name": "Te Araroa",
-  "description": "Suivez Ewan sur l'île du Sud, jour après jour.",
+  "description": "Suivez-moi sur l'île du Sud, jour après jour.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
