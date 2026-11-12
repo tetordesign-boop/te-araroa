@@ -1,0 +1,70 @@
+# What makes zooming out of the map slow: the site as it is against one change at a time (scripts/bench/zoomout.mjs),
+# each in its own job, alternately on the same machine. Push a commit to bot/bench to run; the numbers land on the
+# bot/bench-out branch.
+name: Map benchmark
+on:
+  push:
+    branches: [bot/bench]
+permissions:
+  contents: write
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [mercator, noColorRelief, noHillshade, noLandcover, noPois, noTerrain, noBaseLabels, noContours, fade0]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install the site
+        working-directory: web
+        run: npm ci
+      - name: Install the browser
+        working-directory: scripts/bench
+        run: npm init -y >/dev/null && npm i --no-save playwright@1.63.0 && npx playwright install --with-deps chromium
+      - name: Start the dev server
+        working-directory: web
+        run: |
+          nohup npx vite --port 5173 --strictPort > /tmp/vite.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:5173/ >/dev/null && break; sleep 1; done
+      - name: Measure
+        timeout-minutes: 32
+        env:
+          CONFIG: ${{ matrix.config }}
+          ROUNDS: 3
+        run: |
+          mkdir -p /tmp/bench
+          set -o pipefail
+          node scripts/bench/zoomout.mjs /tmp/bench 2>&1 | tee /tmp/bench/run-${{ matrix.config }}.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bench-${{ matrix.config }}
+          path: /tmp/bench
+          retention-days: 3
+  publish:
+    needs: bench
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: bench-*
+          merge-multiple: true
+          path: /tmp/bench
+      - name: Publish
+        working-directory: /tmp/bench
+        run: |
+          ls
+          git init -q -b bot/bench-out
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Bench ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" bot/bench-out
