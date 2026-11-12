@@ -59,9 +59,43 @@ function precacheList(): Plugin {
   };
 }
 
+/**
+ * What Ewan pastes into Supabase from his phone to switch on the questions, the voice notes and the notifications
+ * (the Carnet shows it with a Copy button, admin/Activate.tsx): the database script, and the "push" server function
+ * as one file (its shared helpers put in front of it), read from supabase/ when the Carnet is built.
+ */
+function activationFiles(): Plugin {
+  const id = "virtual:activation", rid = `\0${id}`;
+  const base = resolve(__dirname, "../supabase");
+  const files = {
+    sql: resolve(base, "migrations/20261113000100_questions_voice_push.sql"),
+    util: resolve(base, "functions/_shared/util.ts"),
+    webpush: resolve(base, "functions/_shared/webpush.ts"),
+    push: resolve(base, "functions/push/index.ts"),
+  };
+  return {
+    name: "activation-files",
+    resolveId: (x) => (x === id ? rid : null),
+    load(x) {
+      if (x !== rid) return null;
+      for (const f of Object.values(files)) this.addWatchFile(f);
+      const read = (f: string) => readFileSync(f, "utf8");
+      const fn = [
+        "// The \"push\" server function in one file, for the Supabase dashboard (Edge Functions, Deploy a new function, Via Editor).",
+        "// Made from supabase/functions/push/index.ts and supabase/functions/_shared/ (util.ts, webpush.ts).",
+        "",
+        read(files.util),
+        read(files.webpush),
+        read(files.push).replace(/^import .* from "\.\.\/_shared\/[^"]+";\n/gm, ""),
+      ].join("\n");
+      return `export const FEATURES_SQL = ${JSON.stringify(read(files.sql))};\nexport const PUSH_FUNCTION = ${JSON.stringify(fn)};\n`;
+    },
+  };
+}
+
 export default defineConfig({
   base: "./",
-  plugins: [preact(), absoluteShareLinks(), preloadFonts(), precacheList()],
+  plugins: [preact(), absoluteShareLinks(), preloadFonts(), precacheList(), activationFiles()],
   build: {
     target: "es2020",
     sourcemap: false,

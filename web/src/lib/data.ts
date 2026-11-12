@@ -43,8 +43,9 @@ export const offline = signal(typeof navigator !== "undefined" ? !navigator.onLi
 export const lastUpdate = signal<number>(0);
 export const clock = signal(Date.now());
 
-const DAY_COLS =
-  "id,date,day_number,kind,title,title_en,story,story_en,start_km,end_km,start_lng,start_lat,end_lng,end_lat,start_name,end_name,distance_km,ascent_m,descent_m,moving_time_min,weather,mood,cover_media_id,track,published,created_at,updated_at";
+/** every column of a published day (all of them public), so a column added later (the voice note) comes without the
+ * site breaking on a database that doesn't have it yet */
+const DAY_COLS = "*";
 const MEDIA_COLS = "id,day_id,kind,path,thumb_path,embed_url,width,height,duration_s,taken_at,lng,lat,caption,caption_en,sort";
 const POS_COLS = "id,recorded_at,lng,lat,alt,acc,source,note";
 

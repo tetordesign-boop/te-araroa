@@ -6,7 +6,7 @@ import { clock, coverOf, dayOnTrail, days, media, mediaByDay, progressKm, route,
 import { addDays, fmtDate, fmtInt, fmtKm, nzToday, typo } from "../lib/format";
 import type { Day } from "../types";
 import { dayKm, excerpt, LangSwitch, titleOf } from "./Home";
-import { AddSquare, ArrowRight, Close, Pencil, Play, Trail } from "./icons";
+import { AddSquare, ArrowRight, Ask, Close, Pencil, Play, Trail } from "./icons";
 import { replayIntro } from "./Intro";
 import { setSound, soundOn } from "../lib/sound";
 import { bandSupported, PhotoBand } from "./PhotoBand";
@@ -14,6 +14,8 @@ import { go, goBack, hrefFor, openTunnel, tunnelOpen } from "./state";
 import { TrailStrip } from "./TrailStrip";
 import { PackRow } from "./Pack";
 import { FilmCard } from "./Film";
+import { NotifyCard } from "./Notify";
+import { QuestionsRow } from "./Questions";
 import { lazy, whenIdle } from "./lazy";
 
 /** (the albums come with their own code, fetched once the page has settled) */
@@ -409,13 +411,16 @@ export function About() {
       {intro && <div class="prose voice" style={{ marginTop: "16px" }}>{intro.split(/\n{2,}/).map((p) => <p>{typo(p)}</p>)}</div>}
       <FilmCard />
       <PackRow block />
+      <QuestionsRow block />
 
       <section class="block">
         <h2 class="h-section" style={{ marginBottom: "14px" }}>{t("followTitle")}</h2>
-        <ul class="tips">
+        <NotifyCard />
+        <ul class="tips" style={{ marginTop: "18px" }}>
           <li><span class="tips__icon" aria-hidden="true"><span class="tips__dot" /></span><span>{t("tipLive")}</span></li>
           <li><span class="tips__icon" aria-hidden="true"><Trail /></span><span>{t("tipDay")}</span></li>
           <li><span class="tips__icon" aria-hidden="true"><Pencil /></span><span>{t("tipNote")}</span></li>
+          <li><span class="tips__icon" aria-hidden="true"><Ask /></span><span>{t("tipQuestions")}</span></li>
           <li><span class="tips__icon" aria-hidden="true"><AddSquare /></span><span>{t("tipHome")}</span></li>
         </ul>
       </section>

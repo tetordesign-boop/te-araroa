@@ -2,6 +2,8 @@ import { useEffect, useState } from "preact/hooks";
 import { FUNCTIONS_URL } from "../config";
 import { fmtDate, fmtKm, nzToday, relTime } from "../lib/format";
 import { fmtWeight, gearTotals } from "../lib/gear";
+import { features } from "./features";
+import { waitingQuestions } from "./QuestionsAdmin";
 import type { Settings } from "../types";
 import { ChevronLeft, ChevronRight, Locate } from "../ui/icons";
 import { draftForToday, draftFromDay, openDraft } from "./Editor";
@@ -78,6 +80,10 @@ function BeforeDeparture({ s, lastOwn }: { s: Settings; lastOwn: Pos | null | un
       meta: oldIntro ? "Elle parle encore du « livre de refuge » : les mots de tes proches sont maintenant privés, sous « Écrivez-moi un mot »." : "À jour",
     },
     {
+      done: features.value.db === true && features.value.push === true, title: "Questions, vocal et notifications", page: "activate" as const,
+      meta: features.value.db === true && features.value.push === true ? "Actifs" : "Deux copier-coller dans Supabase, pour les questions de tes proches, ton message vocal du jour et les notifications à chaque étape.",
+    },
+    {
       done: !oldTagline, title: "Ton sous-titre", page: "settings" as const,
       meta: oldTagline ? `Il contient encore ton prénom (« ${who} »), alors que le site parle en « je ». Réglages › Sous-titre, par exemple « L'île du Sud à pied » (et « The South Island on foot » en anglais).` : "À jour",
     },
@@ -111,6 +117,8 @@ export function Dashboard() {
   const lastPoint = useLastPoint();
   const lastOwn = useLastPoint("owntracks");
   const newNotes = useNewNotes();
+  const waiting = waitingQuestions();
+  const activeAll = features.value.db === true && features.value.push === true;
 
   const edit = (id: string) => open({ name: "editor", id });
   const startToday = () => openDraft(draftForToday(), edit);
@@ -128,6 +136,14 @@ export function Dashboard() {
       <SyncPill />
       <InstallHint />
       {s && <BeforeDeparture s={s} lastOwn={lastOwn} />}
+      {s?.start_date && s.start_date <= today && (features.value.db === false || (features.value.push !== true && features.value.push !== null)) && (
+        <div class="group" style={{ marginTop: "18px" }}>
+          <button class="cell" type="button" onClick={() => open({ name: "activate" })}>
+            <span class="cell__main"><span class="cell__title">Nouveautés à activer</span><span class="cell__meta">Questions, message vocal et notifications : deux copier-coller dans Supabase.</span></span>
+            <ChevronRight class="cell__chev" />
+          </button>
+        </div>
+      )}
 
       <button class="bigbtn bigbtn--primary" type="button" onClick={startToday}>
         {local.some((d) => d.date === today) || liveDays.value.some((d) => d.date === today) ? "Reprendre l'étape du jour" : "Publier l'étape du jour"}
@@ -171,6 +187,8 @@ export function Dashboard() {
       <div class="group">
         <button class="cell" type="button" onClick={() => open({ name: "positions" })}><span class="cell__main"><span class="cell__title">Ma position</span><span class="cell__meta">{lastLine(lastPoint)}</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "messages" })}><span class="cell__main"><span class="cell__title">Mots de tes proches</span><span class="cell__meta">{newNotes === null ? "Toi seul les lis" : newNotes === 0 ? "Aucun nouveau mot" : newNotes === 1 ? "1 nouveau mot" : `${newNotes} nouveaux mots`}</span></span>{!!newNotes && <span class="badge-count" aria-hidden="true">{newNotes}</span>}<ChevronRight class="cell__chev" /></button>
+        <button class="cell" type="button" onClick={() => open({ name: features.value.db === false ? "activate" : "questions" })}><span class="cell__main"><span class="cell__title">Questions de tes proches</span><span class="cell__meta">{features.value.db === false ? "À activer" : waiting === 0 ? "Aucune question en attente" : waiting === 1 ? "1 question à répondre" : `${waiting} questions à répondre`}</span></span>{!!waiting && <span class="badge-count" aria-hidden="true">{waiting}</span>}<ChevronRight class="cell__chev" /></button>
+        <button class="cell" type="button" onClick={() => open({ name: "activate" })}><span class="cell__main"><span class="cell__title">Notifications</span><span class="cell__meta">{activeAll ? "Tes proches prévenus à chaque étape" : "À activer"}</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "tracking" })}><span class="cell__main"><span class="cell__title">Suivi automatique</span><span class="cell__meta">OwnTracks sur ton iPhone</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "gear" })}><span class="cell__main"><span class="cell__title">Mon sac</span><span class="cell__meta">{gearLine()}</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "settings" })}><span class="cell__main"><span class="cell__title">Réglages</span></span><ChevronRight class="cell__chev" /></button>
@@ -563,6 +581,15 @@ export function Help() {
       <h2>Les mots de tes proches</h2>
       <p>Sur le site, tes proches t'écrivent sous <span class="key">« Écrivez-moi un mot »</span>, sans compte. Toi seul les lis : <strong>Mots de tes proches</strong> sur l'accueil du carnet, avec une pastille pour les nouveaux. Tu peux en supprimer un.</p>
 
+      <h2>Les questions de tes proches</h2>
+      <p>Sur la page <span class="key">« Vos questions »</span> du site, tes proches te posent une question avec leur prénom. Personne d'autre ne la voit. Tu la retrouves dans <strong>Questions de tes proches</strong>, avec une pastille pour celles qui attendent. Touche <strong>Répondre</strong>, écris ou dicte ta réponse, puis <strong>Publier</strong> : la question, le prénom et ta réponse apparaissent sur le site. Éteins « Afficher sur le site » pour répondre sans rien montrer. Une réponse commencée reste sur le téléphone ; l'envoyer demande du réseau.</p>
+
+      <h2>Ton message vocal</h2>
+      <p>Dans une étape, <strong>Enregistrer un message</strong> : quelques mots à ta voix, 3 minutes au plus. Le point rouge arrête. Tu peux l'écouter, le refaire ou le supprimer. Il part avec l'étape, même enregistré sans réseau, et tes proches l'écoutent sous les chiffres du jour. La première fois, l'iPhone demande l'accès au micro : touche Autoriser.</p>
+
+      <h2>Les notifications</h2>
+      <p>Tes proches qui le veulent reçoivent une notification à chaque étape publiée : <span class="key">« Être prévenu de chaque étape »</span>, sur l'accueil du site avant ton départ et dans « À propos ». Sur iPhone, il faut d'abord mettre le site sur l'écran d'accueil (le site l'explique). Tu n'as rien à faire : publier suffit. Seules les étapes à partir de ta date de départ préviennent, une seule fois chacune. <strong>Notifications</strong>, sur l'accueil du carnet, dit combien de téléphones sont inscrits.</p>
+
       <h2>Ta position</h2>
       <p><strong>Suivi automatique</strong> (OwnTracks) : ta position part en arrière-plan quand tu as du réseau, sans ouvrir le carnet. Les points enregistrés sans réseau partent ensuite.</p>
       <p><strong>Partager ma position</strong> : un point à la main, avec un petit mot si tu veux.</p>
@@ -582,6 +609,8 @@ export function Help() {
         <div class="cell cell--stack"><span class="cell__title">Une erreur dans une étape publiée</span><span class="cell__meta">Ouvre-la, corrige, puis Publier : la nouvelle version remplace l'ancienne. Pour la retirer du site sans rien perdre, éteins « Visible sur le site ». Pour la supprimer, tout en bas : Supprimer l'étape. Sans réseau, la suppression part dès qu'il revient, et les numéros des jours se remettent d'eux-mêmes.</span></div>
         <div class="cell cell--stack"><span class="cell__title">Un point faux sur la carte</span><span class="cell__meta">Le GPS a sauté (point en mer, dans la vallée d'à côté) : Ma position, puis Supprimer sur ce point.</span></div>
         <div class="cell cell--stack"><span class="cell__title">Ta position n'arrive plus</span><span class="cell__meta">Ma position dit quand le dernier point est arrivé. Pas de réseau : rien à faire, OwnTracks garde les points et les envoie plus tard. Sinon, ouvre OwnTracks et touche la flèche d'envoi, puis vérifie Suivi automatique.</span></div>
+        <div class="cell cell--stack"><span class="cell__title">Le micro n'enregistre pas</span><span class="cell__meta">Réglages de l'iPhone › Safari › Micro : Autoriser (ou Demander). Ferme puis rouvre le carnet.</span></div>
+        <div class="cell cell--stack"><span class="cell__title">Pas de notification après une étape</span><span class="cell__meta">Vérifie la date de départ dans Réglages : avant elle, rien ne part. Une étape déjà annoncée ne l'est pas deux fois, et une étape envoyée plus de 4 jours après sa date non plus.</span></div>
         <div class="cell cell--stack"><span class="cell__title">Couper le suivi un moment</span><span class="cell__meta">Dans OwnTracks, mode « Quiet ». Mode « Significant » pour reprendre.</span></div>
         <div class="cell cell--stack"><span class="cell__title">E-mail de GitHub « Veille du site »</span><span class="cell__meta">Chaque jour, une vérification automatique regarde que le site, la base et le suivi répondent. Si elle échoue, GitHub t'écrit : la cause la plus courante est la base en pause (voir plus haut).</span></div>
       </div>

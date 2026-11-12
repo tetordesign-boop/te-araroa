@@ -12,7 +12,8 @@ import { drafts, getBlob, type Draft } from "./store";
 /** Local pictures of the draft (keys in the phone's store) as addresses the page can show; freed on leaving. */
 function useBlobUrls(d: Draft | undefined) {
   const [urls, setUrls] = useState<Record<string, string>>({});
-  const keys = (d?.media ?? []).flatMap((m) => (m.uploaded ? [] : [m.mainKey, m.thumbKey])).filter((k): k is string => !!k);
+  const keys = [...(d?.media ?? []).flatMap((m) => (m.uploaded ? [] : [m.mainKey, m.thumbKey])), d && !d.voiceUploaded ? d.voiceKey : null]
+    .filter((k): k is string => !!k);
   const sig = keys.join("|");
   useEffect(() => {
     let alive = true;
@@ -80,7 +81,7 @@ export function Preview({ id }: { id: string }) {
       </p>
       <div class="preview__frame">
         <article class="day">
-          <DayBody d={view.day} media={view.media} cover={view.cover} leg={view.leg} />
+          <DayBody d={view.day} media={view.media} cover={view.cover} leg={view.leg} voiceSrc={d.voiceKey && !d.voiceUploaded ? urls[d.voiceKey] ?? null : null} />
         </article>
       </div>
     </div>

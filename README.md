@@ -1,7 +1,7 @@
 # Te Araroa avec moi
 
 Mon carnet de route en ligne sur le Te Araroa, île du Sud (Ship Cove → Bluff, 1 334 km).
-Mes proches suivent ma position, mes étapes et mes photos, et m'écrivent des mots que je suis seul à lire ; je publie depuis mon iPhone, même sans réseau.
+Mes proches suivent ma position, mes étapes, mes photos et mes messages vocaux, sont prévenus de chaque nouvelle étape, me posent des questions et m'écrivent des mots que je suis seul à lire ; je publie depuis mon iPhone, même sans réseau.
 
 ## Ce que contient le dépôt
 
@@ -9,8 +9,9 @@ Mes proches suivent ma position, mes étapes et mes photos, et m'écrivent des m
 | --- | --- |
 | `web/` | Le site (Vite + Preact + MapLibre). `index.html` = site public, `admin/` = mon « Carnet » |
 | `supabase/migrations/` | Schéma de la base, sécurité (RLS), fonctions SQL |
-| `supabase/functions/` | Fonctions serveur : import du tracé officiel, suivi OwnTracks, création du compte admin |
+| `supabase/functions/` | Fonctions serveur : import du tracé officiel, suivi OwnTracks, création du compte admin, notifications (`push`) |
 | `scripts/data/` | Fabrique les lieux du sentier (OpenStreetMap) et le profil d'altitude, dans GitHub Actions |
+| `scripts/push/` | Tests des notifications : chiffrement Web Push contre le vecteur de la RFC 8291, et la fonction `push` de bout en bout sur une fausse base |
 | `scripts/qa/` | Captures d'écran du site sur la vraie carte, dans GitHub Actions |
 | `scripts/brand/` | La marque « TA » et le point orange, en texte seul (`mark.mjs`) : les icônes du site et du Carnet et les favicons (`icons.mjs`), l'aperçu des liens (`og.mjs`) |
 | `scripts/fonts/` | L'espace fine insécable de « 1 334 km », qui manque à Archivo et Literata : une police d'un seul caractère (`fine-space.py`) |
@@ -23,9 +24,13 @@ Mes proches suivent ma position, mes étapes et mes photos, et m'écrivent des m
 - **Navigation et pièces maîtresses** : une barre de verre en bas de l'écran (Moi, Journal, Explorer, Stats) avec une goutte d'eau de lac dessinée en WebGL qui court vers l'onglet touché ; dans l'explorateur, le sentier en huit tronçons sous forme de dossiers de verre qui se remplissent de mes jours ; en tête du journal, mes photos qui défilent sur une courbe, et « Le voyage en photos », où l'on avance dans mes photos jour après jour. D'après quatre composants que j'aime, réécrits pour le site (voir `web/DESIGN.md`).
 - **Mon sac** : la page de mon matériel (`#/sac`) : le poids du sac à vide, la photo de tout mon matériel étalé, où partent les grammes, et la liste en grammes. Je l'écris dans le Carnet, objet par objet ou en collant une liste depuis Notes.
 - **La vidéo de 30 secondes** : « Le Te Araroa en 30 secondes », sur la page « À propos » et sur l'accueil jusqu'au départ (`web/src/ui/Film.tsx`). Un téléphone (ou une tablette tenue droite) voit la version verticale en plein écran ; un ordinateur (ou une tablette en paysage) la version 16:9, en grand au-dessus de la carte assombrie ; chacun dans sa langue. Les quatre fichiers (H.264, 10 Mo environ) sont dans `web/public/film/`, hors des copies du service worker : rien n'est téléchargé avant qu'on touche la vignette.
+- **Questions** : page « Vos questions » (`#/questions`). Mes proches me posent une question avec leur prénom (`ask_question`, limitée en nombre, un lien au plus) ; personne ne la voit avant ma réponse. Je réponds dans le Carnet, en français et si je veux en anglais, et choisis de l'afficher ou non (`web/src/ui/Questions.tsx`, `web/src/admin/QuestionsAdmin.tsx`).
+- **Message vocal** : dans une étape du Carnet, jusqu'à 3 minutes enregistrées au micro (MediaRecorder, AAC sur iPhone), avec la forme d'onde mesurée pendant l'enregistrement (48 barres, colonne `days.voice`). Il attend sur le téléphone avec l'étape et part avec elle ; le site le lit sous les chiffres du jour, avec une forme d'onde qu'on peut toucher pour avancer (`web/src/ui/Voice.tsx`, `web/src/admin/VoiceRec.tsx`).
+- **Notifications** : « Être prévenu de chaque étape » (accueil avant le départ, et « À propos »). Web Push standard, sans service tiers : la fonction `push` chiffre elle-même chaque message (RFC 8291) et signe ses envois (VAPID, RFC 8292) ; ses clés sont créées au premier appel et gardées dans la base. Le Carnet annonce une étape quand elle devient publique ; seules celles datées du départ ou après, et des 4 derniers jours, sont annoncées, une fois chacune, plusieurs jours d'un coup en une seule notification. Sur iPhone, il faut le site sur l'écran d'accueil (iOS 16.4 ou plus).
+- **Mise en route de ces trois-là** : une fois, depuis le téléphone, Carnet › « Nouveautés à activer » copie le script SQL (`supabase/migrations/20261113000100_questions_voice_push.sql`) et la fonction `push` en un seul fichier, à coller dans Supabase. Tant que ce n'est pas fait, le site les cache.
 - **Fluidité de la carte** : le relief 3D n'est calculé que quand la carte est inclinée et assez proche (regardée d'en haut ou de loin, il ne change rien à l'écran) ; et en dézoomant à la main, la vue s'aplatit peu à peu, comme dans Plans (plus d'inclinaison retirée avant le zoom 10,5, 60° au zoom 9, à plat à l'échelle de l'île), pour ne pas charger toutes les tuiles jusqu'à l'horizon (`web/src/map/map.ts`).
 - **Écrans** : téléphone tenu droit (panneau en bas, trois hauteurs), téléphone en paysage et ordinateur (panneau à gauche, carte à côté), iPad tenu droit (carte flottante à gauche) ; jusqu'aux téléphones de 320 px. Si l'appareil ne peut pas afficher la carte 3D (vieil iPad sans WebGL 2), le tracé est dessiné simplement, avec ce que j'ai parcouru et où je suis.
-- **Données** : Supabase (projet `te-araroa`, Sydney). Tables `days`, `media`, `positions`, `messages`, `reactions`, `settings`. Lecture publique limitée par RLS, écriture réservée à l'admin ; les mots des proches (`messages`) ne sont lisibles que par moi.
+- **Données** : Supabase (projet `te-araroa`, Sydney). Tables `days`, `media`, `positions`, `messages`, `reactions`, `settings`, `questions`, `push_subs`, `push_sent`. Lecture publique limitée par RLS, écriture réservée à l'admin ; les mots des proches (`messages`) et les questions sans réponse ne sont lisibles que par moi ; les abonnements aux notifications ne sont lisibles par personne d'autre que la fonction `push`.
 - **Photos/vidéos** : redimensionnées sur le téléphone (1600 px + vignette 640 px) pour tenir dans l'offre gratuite (1 Go de stockage, 5 + 5 Go de bande passante par mois) ; vidéos HEVC ré-encodées en H.264 720p (lisibles partout), son copié tel quel ; envoi reprenable (TUS) pour les gros fichiers.
 - **Hors ligne** : le Carnet enregistre tout dans IndexedDB et envoie dès que le réseau revient (quand l'appli est ouverte : iOS ne fait pas d'envoi en arrière-plan pour une appli web). Le service worker sert les pages depuis le téléphone si le réseau traîne plus de 3,5 s.
 - **Position** : OwnTracks (automatique) + « Partager ma position » (manuel) + géolocalisation des photos. Rien n'est public avant la date de départ ; délai de confidentialité réglable.
@@ -43,6 +48,8 @@ npm run build          # génère web/dist
 `?mock` charge des données fictives ; ajouter `&offline-map` pour une carte simplifiée quand les serveurs de tuiles sont inaccessibles. Sans `?mock` le site lit la vraie base.
 
 Données du sentier : pousser sur la branche `bot/data` lance `.github/workflows/data.yml` (Overpass + altitudes) ; les fichiers arrivent sur `bot/data-out`, à copier dans `web/public/data/`. Captures : pousser sur `bot/qa`, résultats sur `bot/qa-out`.
+
+Tests des notifications : `node --experimental-strip-types --no-warnings scripts/push/webpush.test.mjs` et `scripts/push/function.test.mjs` (Node 22 ou plus).
 
 ## Mise en ligne
 

@@ -53,8 +53,29 @@ export interface Day {
   cover_media_id: string | null;
   track: ElevationProfile | null;
   published: boolean;
+  /** my voice note of the day (null until the column exists, or when there is none) */
+  voice?: DayVoice | null;
   created_at: string;
   updated_at: string;
+}
+
+/** A voice note recorded in the Carnet: the sound in the media bucket, its length, and the waveform's shape (0 to 1) */
+export interface DayVoice {
+  path: string;
+  s: number;
+  peaks?: number[];
+}
+
+/** A question from family or friends, as the site shows it once I've answered it */
+export interface Question {
+  id: string;
+  author: string;
+  body: string;
+  answer: string | null;
+  answer_en: string | null;
+  published: boolean;
+  answered_at: string | null;
+  created_at: string;
 }
 
 export type MediaKind = "photo" | "video" | "embed";

@@ -168,11 +168,45 @@ self.addEventListener("fetch", (event) => {
     else event.respondWith(staleWhileRevalidate(event, DATA));
     return;
   }
-  if (url.pathname.includes("/storage/v1/object/public/media/") && !/\.(mp4|mov|webm)$/i.test(url.pathname)) {
+  // (films and voice notes are read in pieces as they play: left to the network)
+  if (url.pathname.includes("/storage/v1/object/public/media/") && !/\.(mp4|mov|webm|m4a|aac|ogg|mp3)$/i.test(url.pathname)) {
     event.respondWith(cacheFirst(req, MEDIA, 600));
     return;
   }
   if (url.pathname.endsWith("/storage/v1/object/public/site/trail.json")) {
     event.respondWith(staleWhileRevalidate(event, DATA));
   }
+});
+
+// ---------------------------------------------------------------- notifications
+// A day published: the "push" server function sends {title, body, url, tag, icon} (src/lib/push.ts signs the phone
+// up). A tap opens the day: in the site if it is already open, else in a new window.
+self.addEventListener("push", (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (_) { d = { body: event.data ? event.data.text() : "" }; }
+  const scope = self.registration.scope;
+  event.waitUntil(self.registration.showNotification(d.title || "Te Araroa", {
+    body: d.body || "",
+    icon: d.icon || new URL("icons/icon-192.png", scope).href,
+    badge: new URL("icons/icon-192.png", scope).href,
+    tag: d.tag || "te-araroa",
+    data: { url: d.url || scope },
+  }));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const scope = self.registration.scope;
+  const url = new URL((event.notification.data && event.notification.data.url) || scope, scope).href;
+  event.waitUntil((async () => {
+    const open = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    // the site itself (not the Carnet, which lives under admin/)
+    const site = open.find((c) => c.url.startsWith(scope) && !c.url.includes("/admin/"));
+    if (site) {
+      await site.focus();
+      site.postMessage({ type: "open", url });
+      return;
+    }
+    await self.clients.openWindow(url);
+  })());
 });

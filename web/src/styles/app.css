@@ -842,6 +842,51 @@ html.is-intro .lnav-fade, html.is-trail-mode .lnav-fade { opacity: 0; }
 .tips__icon svg { width: 16px; height: 16px; }
 .tips__dot { width: 11px; height: 11px; border-radius: 50%; background: var(--marker); box-shadow: 0 0 0 2.5px #fff, 0 0 10px var(--marker-glow); }
 
+/* ------------------------------------------------------------------ my voice note in a day (ui/Voice.tsx): an orange
+   play button and the waveform the note was recorded with, which fills orange as it plays */
+.vnote { position: relative; display: flex; align-items: center; gap: 12px; margin-top: 18px; padding: 9px 14px 9px 9px; border-radius: 999px; background: var(--raise); }
+.vnote__play {
+  flex: none; width: 46px; height: 46px; border: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  background: var(--marker); color: var(--on-marker, #fff); box-shadow: 0 8px 20px -8px var(--marker-glow);
+  transition: transform 0.45s var(--spring), background-color 0.2s ease;
+}
+.vnote__play svg { width: 19px; height: 19px; }
+.vnote__play [data-icon="play"] { translate: 1.5px 0; }
+.vnote__play:active { transform: scale(0.9); }
+.vnote__wave { flex: 1; min-width: 0; height: 36px; display: flex; align-items: center; gap: 2px; cursor: pointer; touch-action: none; border-radius: 8px; }
+.vnote__bar { flex: 1 1 0; min-width: 2px; height: calc(var(--h) * 100%); border-radius: 2px; background: var(--ink-4, var(--fill-2)); transition: background-color 0.12s linear; }
+.vnote__bar.is-played { background: var(--marker); }
+.vnote.is-playing .vnote__bar.is-played:last-of-type { background: var(--marker-hot); }
+.vnote__time { flex: none; min-width: 2.7em; text-align: right; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.vnote__err { position: absolute; left: 66px; bottom: -22px; margin: 0; font-size: 13px; color: var(--ink-2); }
+@media (hover: hover) and (pointer: fine) { .vnote__play:hover { background: var(--marker-press, var(--marker)); } }
+
+/* ------------------------------------------------------------------ "Vos questions" (ui/Questions.tsx): the question in
+   the interface's face, who asked, and my answer in my own (the story's serif), set off by the orange line */
+.qpage__intro { font-size: 16px; line-height: 1.5; color: var(--ink-2); margin: 10px 0 0; text-wrap: pretty; }
+.qpage .ask { margin-top: 16px; }
+.ask__privacy { margin: 2px 2px 0; }
+.qa { list-style: none; margin: 14px 0 0; padding: 0; }
+.qa__item { padding: 18px 0 20px; }
+.qa__item + .qa__item { box-shadow: inset 0 1px 0 var(--line); }
+.qa__q { margin: 0; font-size: 19px; line-height: 1.32; font-weight: 650; letter-spacing: -0.005em; text-wrap: pretty; }
+.qa__who { margin: 6px 0 0; font-size: 13.5px; color: var(--ink-2); }
+.qa__a { margin-top: 12px; padding-left: 14px; box-shadow: inset 2px 0 0 var(--marker); }
+.qa__a p { margin: 0; font-size: 17px; line-height: 1.55; }
+.qa__a p + p { margin-top: 0.7em; }
+
+/* ------------------------------------------------------------------ notifications (ui/Notify.tsx): a switch row with
+   its bell, which rings once when it has just been switched on */
+.notify__row { justify-content: flex-start; }
+.notify__row .switchrow__text { flex: 1; }
+.notify__icon { flex: none; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--marker-tint); color: var(--marker-hot); }
+.notify__icon svg { width: 18px; height: 18px; transform-origin: 50% 14%; }
+.notify__icon.is-on { background: var(--marker); color: #fff; }
+.notify__icon.is-ringing svg { animation: bell-ring 0.9s var(--ease-out) 1; }
+.notify__row.is-busy { opacity: 0.7; cursor: progress; }
+@keyframes bell-ring { 15% { rotate: 16deg; } 30% { rotate: -13deg; } 45% { rotate: 9deg; } 60% { rotate: -5deg; } 75% { rotate: 2deg; } }
+@media (prefers-reduced-motion: reduce) { .notify__icon.is-ringing svg { animation: none; } }
+
 /* ------------------------------------------------------------------ a note for Ewan (private: only he reads them) */
 .note__intro { font-size: 15px; color: var(--ink-2); margin: 4px 0 0; line-height: 1.45; text-wrap: pretty; }
 .note__write { margin-top: 14px; }

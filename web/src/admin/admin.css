@@ -199,3 +199,40 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 .cell textarea.short { min-height: 84px; }
 .gearedit .cell > .cell__value { margin-left: auto; }
 .cell textarea.plain { min-height: 140px; font-family: inherit; font-size: 16px; }
+
+/* ------------------------------------------------------------------ the day's voice note (admin/VoiceRec.tsx) */
+.group--pad { padding: 12px; }
+.group--pad .vnote { margin-top: 0; background: var(--fill); }
+.vrec__start { min-height: 48px; }
+.vrec--on { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 0 4px; }
+.vrec__stop {
+  flex: none; width: 56px; height: 56px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
+  background: #ff3b30; box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.55); animation: rec-pulse 1.6s ease-out infinite;
+}
+.vrec__square { width: 18px; height: 18px; border-radius: 4px; background: #fff; }
+.vrec__meter { display: flex; align-items: center; gap: 4px; height: 34px; }
+.vrec__meter span {
+  width: 5px; border-radius: 3px; background: var(--marker);
+  height: calc(18% + var(--lv) * var(--k) * 82%);
+  transition: height 0.09s linear;
+}
+.vrec__time { font-size: 22px; font-weight: 700; letter-spacing: 0.01em; min-width: 3.2ch; }
+.vrec__max { margin-left: auto; font-size: 13px; color: var(--ink-2); }
+@keyframes rec-pulse { 70% { box-shadow: 0 0 0 14px rgba(255, 59, 48, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); } }
+@media (prefers-reduced-motion: reduce) { .vrec__stop { animation: none; } .vrec__meter span { transition: none; } }
+
+/* ------------------------------------------------------------------ switching on the questions, voice notes and
+   notifications (admin/Activate.tsx), and the questions themselves (admin/QuestionsAdmin.tsx) */
+.act__head { display: flex; align-items: center; gap: 8px; }
+.act__ok, .act__todo { padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.act__ok { background: rgba(48, 209, 88, 0.16); color: #30d158; }
+.act__todo { background: var(--marker-tint); color: var(--marker-hot); }
+.act .steps .textbtn { padding: 0 4px; }
+.adm-list { margin: 0 8px 22px; padding: 0 0 0 18px; color: var(--ink-2); font-size: 14.5px; line-height: 1.45; }
+.adm-list li + li { margin-top: 6px; }
+.qcell__q { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 17px; }
+.qcell__a { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink-2); font-size: 15px; line-height: 1.45; padding-left: 12px; box-shadow: inset 2px 0 0 var(--marker); }
+.qcell__form { display: grid; gap: 10px; margin-top: 4px; }
+.qcell__form .cell { padding: 0; background: var(--fill); border-radius: 12px; }
+.qcell__form .cell textarea { padding: 12px; }
+.qcell__form .switchrow { padding: 6px 2px; }
