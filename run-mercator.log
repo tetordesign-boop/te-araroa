@@ -1,0 +1,8 @@
+config mercator: priming the caches
+{"name":"base","round":0,"workers":478,"main":4494,"gpu":8904,"frames":4,"moveMs":4712,"gapP50":1483,"gapP90":1950,"gapMax":1950,"longTasks":4,"longMs":4216,"idleAfterMs":4373,"startIdle":true,"errors":0}
+{"name":"mercator","round":0,"workers":556,"main":4882,"gpu":6943,"frames":3,"moveMs":3883,"gapP50":2317,"gapP90":2317,"gapMax":2317,"longTasks":4,"longMs":4558,"idleAfterMs":3655,"startIdle":true,"errors":0}
+{"name":"mercator","round":1,"workers":1253,"main":3825,"gpu":6090,"frames":7,"moveMs":3633,"gapP50":750,"gapP90":983,"gapMax":983,"longTasks":5,"longMs":2121,"idleAfterMs":3262,"startIdle":true,"errors":0}
+{"name":"base","round":1,"workers":655,"main":2917,"gpu":5938,"frames":5,"moveMs":3548,"gapP50":783,"gapP90":1533,"gapMax":1533,"longTasks":5,"longMs":2584,"idleAfterMs":2448,"startIdle":true,"errors":0}
+{"name":"base","round":2,"main":4386,"workers":831,"gpu":8836,"frames":5,"moveMs":4401,"gapP50":1100,"gapP90":1183,"gapMax":1183,"longTasks":5,"longMs":4007,"idleAfterMs":4467,"startIdle":true,"errors":0}
+{"name":"mercator","round":2,"workers":1330,"main":3133,"gpu":5643,"frames":8,"moveMs":4364,"gapP50":633,"gapP90":1650,"gapMax":1650,"longTasks":3,"longMs":1901,"idleAfterMs":1350,"startIdle":true,"errors":0}
+SUMMARY mercator {"main":{"base":3932,"mercator":3947},"workers":{"base":655,"mercator":1046},"gpu":{"base":7893,"mercator":6225},"frames":{"base":5,"mercator":6},"gapP50":{"base":1122,"mercator":1233},"gapP90":{"base":1555,"mercator":1650},"gapMax":{"base":1555,"mercator":1650},"longTasks":{"base":5,"mercator":4},"longMs":{"base":3602,"mercator":2860},"idleAfterMs":{"base":3763,"mercator":2756}}

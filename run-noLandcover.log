@@ -1,0 +1,8 @@
+config noLandcover: priming the caches
+{"name":"base","round":0,"workers":516,"main":2328,"gpu":4827,"frames":8,"moveMs":3506,"gapP50":533,"gapP90":1033,"gapMax":1033,"longTasks":3,"longMs":1970,"idleAfterMs":1324,"startIdle":true,"errors":0}
+{"name":"noLandcover","round":0,"main":3271,"workers":701,"gpu":8770,"frames":9,"moveMs":3699,"gapP50":383,"gapP90":1367,"gapMax":1367,"longTasks":5,"longMs":2802,"idleAfterMs":5452,"startIdle":true,"errors":0}
+{"name":"noLandcover","round":1,"workers":540,"main":3351,"gpu":8280,"frames":8,"moveMs":4044,"gapP50":333,"gapP90":1133,"gapMax":1133,"longTasks":3,"longMs":2968,"idleAfterMs":4460,"startIdle":true,"errors":0}
+{"name":"base","round":1,"main":3586,"workers":447,"gpu":12689,"frames":7,"moveMs":4149,"gapP50":733,"gapP90":900,"gapMax":900,"longTasks":5,"longMs":3252,"idleAfterMs":8564,"startIdle":true,"errors":0}
+{"name":"base","round":2,"main":1874,"workers":545,"gpu":11851,"frames":7,"moveMs":3641,"gapP50":683,"gapP90":900,"gapMax":900,"longTasks":2,"longMs":1531,"idleAfterMs":8202,"startIdle":true,"errors":0}
+{"name":"noLandcover","round":2,"main":2273,"workers":504,"gpu":5079,"frames":6,"moveMs":3784,"gapP50":650,"gapP90":1300,"gapMax":1300,"longTasks":4,"longMs":1995,"idleAfterMs":1811,"startIdle":true,"errors":0}
+SUMMARY noLandcover {"main":{"base":2596,"noLandcover":2965},"workers":{"base":503,"noLandcover":582},"gpu":{"base":9789,"noLandcover":7376},"frames":{"base":7,"noLandcover":8},"gapP50":{"base":650,"noLandcover":455},"gapP90":{"base":944,"noLandcover":1267},"gapMax":{"base":944,"noLandcover":1267},"longTasks":{"base":3,"noLandcover":4},"longMs":{"base":2251,"noLandcover":2588},"idleAfterMs":{"base":6030,"noLandcover":3908}}

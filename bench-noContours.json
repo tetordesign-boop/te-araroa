@@ -1,0 +1,149 @@
+{
+ "config": "noContours",
+ "rows": [
+  {
+   "name": "base",
+   "round": 0,
+   "workers": 691,
+   "main": 3917,
+   "gpu": 21784,
+   "frames": 5,
+   "moveMs": 4672,
+   "gapP50": 1400,
+   "gapP90": 1450,
+   "gapMax": 1450,
+   "longTasks": 2,
+   "longMs": 2604,
+   "idleAfterMs": 17141,
+   "startIdle": true,
+   "errors": 0
+  },
+  {
+   "name": "noContours",
+   "round": 0,
+   "workers": 700,
+   "main": 2685,
+   "gpu": 11398,
+   "frames": 4,
+   "moveMs": 3806,
+   "gapP50": 950,
+   "gapP90": 1200,
+   "gapMax": 1200,
+   "longTasks": 4,
+   "longMs": 2198,
+   "idleAfterMs": 7638,
+   "startIdle": true,
+   "errors": 0
+  },
+  {
+   "name": "noContours",
+   "round": 1,
+   "workers": 494,
+   "main": 2517,
+   "gpu": 10548,
+   "frames": 3,
+   "moveMs": 3582,
+   "gapP50": 1417,
+   "gapP90": 1417,
+   "gapMax": 1417,
+   "longTasks": 2,
+   "longMs": 2158,
+   "idleAfterMs": 7727,
+   "startIdle": true,
+   "errors": 0
+  },
+  {
+   "name": "base",
+   "round": 1,
+   "workers": 638,
+   "main": 3654,
+   "gpu": 6411,
+   "frames": 3,
+   "moveMs": 4175,
+   "gapP50": 2100,
+   "gapP90": 2100,
+   "gapMax": 2100,
+   "longTasks": 2,
+   "longMs": 3277,
+   "idleAfterMs": 2300,
+   "startIdle": true,
+   "errors": 0
+  },
+  {
+   "name": "base",
+   "round": 2,
+   "workers": 601,
+   "main": 4057,
+   "gpu": 9624,
+   "frames": 5,
+   "moveMs": 3711,
+   "gapP50": 850,
+   "gapP90": 1533,
+   "gapMax": 1533,
+   "longTasks": 4,
+   "longMs": 3678,
+   "idleAfterMs": 6010,
+   "startIdle": true,
+   "errors": 0
+  },
+  {
+   "name": "noContours",
+   "round": 2,
+   "workers": 424,
+   "main": 2191,
+   "gpu": 11630,
+   "frames": 4,
+   "moveMs": 3547,
+   "gapP50": 1033,
+   "gapP90": 1650,
+   "gapMax": 1650,
+   "longTasks": 3,
+   "longMs": 1777,
+   "idleAfterMs": 8087,
+   "startIdle": true,
+   "errors": 0
+  }
+ ],
+ "summary": {
+  "main": {
+   "base": 3876,
+   "noContours": 2464
+  },
+  "workers": {
+   "base": 643,
+   "noContours": 539
+  },
+  "gpu": {
+   "base": 12606,
+   "noContours": 11192
+  },
+  "frames": {
+   "base": 4,
+   "noContours": 4
+  },
+  "gapP50": {
+   "base": 1450,
+   "noContours": 1133
+  },
+  "gapP90": {
+   "base": 1694,
+   "noContours": 1422
+  },
+  "gapMax": {
+   "base": 1694,
+   "noContours": 1422
+  },
+  "longTasks": {
+   "base": 3,
+   "noContours": 3
+  },
+  "longMs": {
+   "base": 3186,
+   "noContours": 2044
+  },
+  "idleAfterMs": {
+   "base": 8484,
+   "noContours": 7817
+  }
+ }
+}

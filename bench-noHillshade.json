@@ -1,0 +1,149 @@
+{
+ "config": "noHillshade",
+ "rows": [
+  {
+   "name": "base",
+   "round": 0,
+   "main": 3591,
+   "workers": 459,
+   "gpu": 12050,
+   "frames": 6,
+   "moveMs": 3513,
+   "gapP50": 583,
+   "gapP90": 1167,
+   "gapMax": 1167,
+   "longTasks": 4,
+   "longMs": 2868,
+   "idleAfterMs": 8538,
+   "startIdle": true,
+   "errors": 0
+  },
+  {
+   "name": "noHillshade",
+   "round": 0,
+   "workers": 702,
+   "main": 2344,
+   "gpu": 9898,
+   "frames": 13,
+   "moveMs": 3818,
+   "gapP50": 100,
+   "gapP90": 667,
+   "gapMax": 1200,
+   "longTasks": 5,
+   "longMs": 1654,
+   "idleAfterMs": 6431,
+   "startIdle": true,
+   "errors": 0
+  },
+  {
+   "name": "noHillshade",
+   "round": 1,
+   "gpu": 9744,
+   "workers": 867,
+   "main": 2550,
+   "frames": 10,
+   "moveMs": 3548,
+   "gapP50": 383,
+   "gapP90": 933,
+   "gapMax": 933,
+   "longTasks": 4,
+   "longMs": 1743,
+   "idleAfterMs": 6196,
+   "startIdle": true,
+   "errors": 0
+  },
+  {
+   "name": "base",
+   "round": 1,
+   "workers": 522,
+   "main": 2697,
+   "gpu": 6397,
+   "frames": 6,
+   "moveMs": 3965,
+   "gapP50": 583,
+   "gapP90": 800,
+   "gapMax": 800,
+   "longTasks": 5,
+   "longMs": 2220,
+   "idleAfterMs": 2860,
+   "startIdle": true,
+   "errors": 0
+  },
+  {
+   "name": "base",
+   "round": 2,
+   "gpu": 12025,
+   "workers": 725,
+   "main": 2588,
+   "frames": 12,
+   "moveMs": 3507,
+   "gapP50": 383,
+   "gapP90": 550,
+   "gapMax": 817,
+   "longTasks": 4,
+   "longMs": 1920,
+   "idleAfterMs": 8623,
+   "startIdle": true,
+   "errors": 0
+  },
+  {
+   "name": "noHillshade",
+   "round": 2,
+   "gpu": 10512,
+   "workers": 509,
+   "main": 1784,
+   "frames": 6,
+   "moveMs": 3655,
+   "gapP50": 883,
+   "gapP90": 1150,
+   "gapMax": 1150,
+   "longTasks": 2,
+   "longMs": 1214,
+   "idleAfterMs": 6882,
+   "startIdle": true,
+   "errors": 0
+  }
+ ],
+ "summary": {
+  "main": {
+   "base": 2959,
+   "noHillshade": 2226
+  },
+  "workers": {
+   "base": 569,
+   "noHillshade": 693
+  },
+  "gpu": {
+   "base": 10157,
+   "noHillshade": 10051
+  },
+  "frames": {
+   "base": 8,
+   "noHillshade": 10
+  },
+  "gapP50": {
+   "base": 516,
+   "noHillshade": 455
+  },
+  "gapP90": {
+   "base": 839,
+   "noHillshade": 917
+  },
+  "gapMax": {
+   "base": 928,
+   "noHillshade": 1094
+  },
+  "longTasks": {
+   "base": 4,
+   "noHillshade": 4
+  },
+  "longMs": {
+   "base": 2336,
+   "noHillshade": 1537
+  },
+  "idleAfterMs": {
+   "base": 6674,
+   "noHillshade": 6503
+  }
+ }
+}

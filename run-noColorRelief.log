@@ -1,0 +1,8 @@
+config noColorRelief: priming the caches
+{"name":"base","round":0,"main":4132,"workers":569,"gpu":7534,"frames":6,"moveMs":4107,"gapP50":567,"gapP90":1917,"gapMax":1917,"longTasks":5,"longMs":3859,"idleAfterMs":3480,"startIdle":true,"errors":0}
+{"name":"noColorRelief","round":0,"main":5002,"workers":603,"gpu":7441,"frames":5,"moveMs":4164,"gapP50":1250,"gapP90":1500,"gapMax":1500,"longTasks":6,"longMs":4725,"idleAfterMs":3978,"startIdle":true,"errors":0}
+{"name":"noColorRelief","round":1,"workers":639,"main":4389,"gpu":6867,"frames":4,"moveMs":4953,"gapP50":1167,"gapP90":1900,"gapMax":1900,"longTasks":3,"longMs":3946,"idleAfterMs":1990,"startIdle":true,"errors":0}
+{"name":"base","round":1,"workers":461,"main":4716,"gpu":8889,"frames":4,"moveMs":4608,"gapP50":1417,"gapP90":2217,"gapMax":2217,"longTasks":3,"longMs":4379,"idleAfterMs":4891,"startIdle":true,"errors":0}
+{"name":"base","round":2,"workers":706,"main":3794,"gpu":11059,"frames":4,"moveMs":4312,"gapP50":1150,"gapP90":1683,"gapMax":1683,"longTasks":5,"longMs":3362,"idleAfterMs":6893,"startIdle":true,"errors":0}
+{"name":"noColorRelief","round":2,"main":4213,"workers":469,"gpu":7351,"frames":4,"moveMs":4536,"gapP50":1333,"gapP90":1433,"gapMax":1433,"longTasks":4,"longMs":3984,"idleAfterMs":3298,"startIdle":true,"errors":0}
+SUMMARY noColorRelief {"main":{"base":4214,"noColorRelief":4535},"workers":{"base":579,"noColorRelief":570},"gpu":{"base":9161,"noColorRelief":7220},"frames":{"base":5,"noColorRelief":4},"gapP50":{"base":1045,"noColorRelief":1250},"gapP90":{"base":1939,"noColorRelief":1611},"gapMax":{"base":1939,"noColorRelief":1611},"longTasks":{"base":4,"noColorRelief":4},"longMs":{"base":3867,"noColorRelief":4218},"idleAfterMs":{"base":5088,"noColorRelief":3089}}
