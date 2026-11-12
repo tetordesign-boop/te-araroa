@@ -557,6 +557,9 @@ export function Help() {
       <h2>Mon sac</h2>
       <p>La page « Mon sac » du site montre ton matériel et son poids. Écris ta liste dans <strong>Mon sac</strong>, sur l'accueil du carnet : touche un objet pour le modifier, ou colle d'un coup une liste depuis Notes (une ligne par objet, avec son poids). Ce que tu portes sur toi et la nourriture ne comptent pas dans le poids du sac. La page apparaît sur le site dès qu'il y a un objet.</p>
 
+      <h2>Ta vidéo de 30 secondes</h2>
+      <p>La vidéo <span class="key">« Le Te Araroa en 30 secondes »</span> est sur la page « À propos » du site, et sur l'accueil jusqu'au départ. Chacun la voit dans sa langue, en vertical sur un téléphone et en grand sur un ordinateur. Rien à faire de ton côté.</p>
+
       <h2>Les mots de tes proches</h2>
       <p>Sur le site, tes proches t'écrivent sous <span class="key">« Écrivez-moi un mot »</span>, sans compte. Toi seul les lis : <strong>Mots de tes proches</strong> sur l'accueil du carnet, avec une pastille pour les nouveaux. Tu peux en supprimer un.</p>
 

@@ -302,6 +302,10 @@ const fr = {
   gear_misc: "Divers",
   gear_food: "Nourriture et gaz",
   replayIntro: "Revoir la présentation",
+  film: "Le Te Araroa en 30\u00a0secondes",
+  filmSub: "Une petite vidéo pour voir où je vais",
+  filmClose: "Fermer la vidéo",
+  filmText: "Te Araroa, «\u202fle long chemin\u202f» en maori\u202f: 3\u202f000\u00a0km à pied, du cap Reinga à Bluff. Je marche l'île du Sud, de Ship Cove à Bluff\u202f: 1\u202f334\u00a0km. 30\u202f000\u00a0m de montée au total, plus de trois fois l'Everest. 50 à 80\u00a0jours de marche, environ 20\u00a0km par jour. Suivez-moi jour par jour.",
   sounds: "Sons de l'interface",
   soundsSub: "Discrets, et muets quand l'iPhone est en mode silencieux",
 };
@@ -606,6 +610,10 @@ const en: Dict = {
   gear_misc: "Other",
   gear_food: "Food and fuel",
   replayIntro: "Watch the intro again",
+  film: "The Te Araroa in 30\u00a0seconds",
+  filmSub: "A short film to see where I'm going",
+  filmClose: "Close the film",
+  filmText: "Te Araroa, “the long pathway” in Māori: 3,000\u00a0km on foot, from Cape Reinga to Bluff. I'm walking the South Island, from Ship Cove to Bluff: 1,334\u00a0km. 30,000\u00a0m of climbing in all, more than three times Everest. 50 to 80\u00a0days on foot, about 20\u00a0km a day. Follow me day by day.",
   sounds: "Interface sounds",
   soundsSub: "Quiet, and silent when your phone is on silent",
 };

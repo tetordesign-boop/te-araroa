@@ -13,6 +13,7 @@ import { bandSupported, PhotoBand } from "./PhotoBand";
 import { go, goBack, hrefFor, openTunnel, tunnelOpen } from "./state";
 import { TrailStrip } from "./TrailStrip";
 import { PackRow } from "./Pack";
+import { FilmCard } from "./Film";
 import { lazy, whenIdle } from "./lazy";
 
 /** (the albums come with their own code, fetched once the page has settled) */
@@ -406,6 +407,7 @@ export function About() {
     <div class="page">
       <PageHead title={t("about")} />
       {intro && <div class="prose voice" style={{ marginTop: "16px" }}>{intro.split(/\n{2,}/).map((p) => <p>{typo(p)}</p>)}</div>}
+      <FilmCard />
       <PackRow block />
 
       <section class="block">

@@ -15,6 +15,7 @@ import { NoteToEwan } from "./NoteToEwan";
 import { Seg } from "./Seg";
 import { ArrowRight, ChevronRight, Eye, Play, Search, Trail } from "./icons";
 import { PackRow } from "./Pack";
+import { FilmCard } from "./Film";
 import { altText, openPlace, PlaceBadge, placeName } from "./Place";
 import { arrival, go, hrefFor, isDesktop } from "./state";
 import { startTrailMode } from "./TrailMode";
@@ -289,6 +290,8 @@ export function Home() {
       {ph === "before" && intro && (
         <div class="prose voice block">{intro.split(/\n{2,}/).map((p) => <p>{typo(p)}</p>)}</div>
       )}
+      {/* before I leave: what the trail is, in 30 seconds (then it stays on the "About" page) */}
+      {ph === "before" && <FilmCard />}
       {ph === "before" && <PackRow block />}
 
       {latest && <Feature d={latest} />}
