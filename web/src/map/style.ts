@@ -262,6 +262,9 @@ export function buildStyle(base: BaseStyle, opts: StyleOptions): StyleSpecificat
     version: 8,
     projection: { type: "globe" },
     glyphs: GLYPHS,
+    // every source carries its credits written here, never the ones a tile server sends: MapLibre 5 puts credits in
+    // the page as HTML through a sanitizer that can be fooled (CVE-2026-85061, fixed in MapLibre 6.4.1), so only
+    // these fixed words may reach it
     sources: {
       ofm: { type: "vector", url: OFM, attribution: `${OSM_ATTR} · ${TA_ATTR}` },
       dem: { ...demSource, attribution: dem.attribution },

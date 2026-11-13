@@ -9,6 +9,7 @@ import { SUPABASE_KEY, SUPABASE_URL } from "../config";
 import { daysBetween } from "../lib/format";
 import type { Day, Media } from "../types";
 import { profileFor } from "./elevation";
+import { features, voiceReady } from "./features";
 import { sba } from "./sb";
 import { adminDays, adminRoute, adminSettings, loadServer } from "./server";
 
@@ -54,6 +55,13 @@ export interface Draft extends DayFields {
   isNew: boolean;
   attempts?: number;
   nextTryAt?: number;
+  /** a voice note recorded on the phone and not sent yet: its sound in the blobs store (`voice` holds its length and
+   * waveform, and its path once sent) */
+  voiceKey?: string | null;
+  voiceMime?: string | null;
+  voiceUploaded?: boolean;
+  /** the notes it replaced (or that were removed), to delete from the server once the day is sent */
+  removedVoices?: string[];
 }
 
 export const drafts = signal<Draft[]>([]);
@@ -114,12 +122,14 @@ export const dropMediaBlobs = deleteBlobs;
 export async function dropDraft(id: string) {
   const d = await get<Draft>(id, draftsDb) ?? drafts.value.find((x) => x.id === id);
   if (d) for (const m of d.media) await deleteBlobs(m);
+  if (d?.voiceKey) await del(d.voiceKey, blobsDb);
   await del(id, draftsDb);
   publishLocal(null, id);
 }
 
 export const putBlob = (key: string, b: Blob) => set(key, b, blobsDb);
 export const getBlob = (key: string) => get<Blob>(key, blobsDb);
+export const dropBlob = (key: string) => del(key, blobsDb);
 
 // ------------------------------------------------------------------ positions outbox
 export async function queuePosition(p: { recorded_at: string; lat: number; lng: number; acc: number | null; note: string | null }) {
@@ -232,6 +242,32 @@ export async function renumberDays(): Promise<number> {
   return changed;
 }
 
+// ------------------------------------------------------------------ telling the phones
+// A day that appears on the site is announced to the phones that asked (the "push" server function: one notification
+// for all the days sent together, each day only once, and never before the start date). Kept on the phone until it
+// goes through, for a day or so: by then it isn't news any more.
+const ANNOUNCE_KEY = "ta-admin-announce-v1";
+type Pending = { id: string; at: number };
+const readAnnounce = (): Pending[] => { try { return JSON.parse(localStorage.getItem(ANNOUNCE_KEY) ?? "[]"); } catch (_) { return []; } };
+const writeAnnounce = (l: Pending[]) => { try { localStorage.setItem(ANNOUNCE_KEY, JSON.stringify(l)); } catch (_) { /* ignore */ } };
+function announce(id: string) {
+  const l = readAnnounce().filter((x) => x.id !== id);
+  writeAnnounce([...l, { id, at: Date.now() }]);
+}
+async function flushAnnouncements() {
+  const l = readAnnounce().filter((x) => Date.now() - x.at < 30 * 3600_000);
+  if (!l.length) { writeAnnounce([]); return; }
+  if (features.value.push !== true) { writeAnnounce(l); return; }
+  try {
+    const { error } = await sba.functions.invoke("push", { body: { action: "notify", days: l.map((x) => x.id) } });
+    if (error) throw error;
+    writeAnnounce([]);
+  } catch (e) {
+    writeAnnounce(l);
+    console.warn("announce", e);
+  }
+}
+
 // ------------------------------------------------------------------ errors
 class PermanentError extends Error {}
 
@@ -301,9 +337,11 @@ async function uploadResumable(path: string, blob: Blob, type: string, onProgres
 
 function dayRow(d: Draft) {
   const {
-    media: _m, removedMedia: _r, status: _s, error: _e, updatedAt: _u, isNew: _n, attempts: _a, nextTryAt: _t, ...row
+    media: _m, removedMedia: _r, status: _s, error: _e, updatedAt: _u, isNew: _n, attempts: _a, nextTryAt: _t,
+    voiceKey: _vk, voiceMime: _vm, voiceUploaded: _vu, removedVoices: _rv, voice, ...row
   } = d;
-  return { ...row, cover_media_id: null as string | null };
+  // (the voice note only goes to a database that has its column: before the script is run, a day without it)
+  return { ...row, ...(voiceReady() ? { voice: voice ?? null } : {}), cover_media_id: null as string | null };
 }
 
 const usable = (m: DraftMedia) => !m.error && !m.preparing;
@@ -346,10 +384,28 @@ async function syncDraft(id: string) {
     });
   }
 
+  // 1b. the voice note (a minute or two of sound: one plain upload)
+  const v = await readStored(id);
+  if (v?.voice && v.voiceKey && !v.voiceUploaded && voiceReady()) {
+    const blob = await getBlob(v.voiceKey);
+    if (!blob) {
+      await patchStored(id, (x) => { if (x.voiceKey === v.voiceKey) { x.voice = null; x.voiceKey = null; } });
+    } else {
+      syncing.value = { id, label, progress: 0.95 };
+      const type = (v.voiceMime || blob.type || "audio/mp4").split(";")[0].replace("audio/x-m4a", "audio/mp4");
+      const ext = type.includes("webm") ? "webm" : type.includes("ogg") ? "ogg" : type.includes("mpeg") ? "mp3" : "m4a";
+      const path = `d/${id}/voice-${Date.now().toString(36)}.${ext}`;
+      await uploadSmall(path, blob, type);
+      await patchStored(id, (x) => { if (x.voice && x.voiceKey === v.voiceKey) { x.voice = { ...x.voice, path }; x.voiceUploaded = true; } });
+    }
+  }
+
   // 2. work from a fresh copy for the server writes
   d = await readStored(id);
   if (!d) return;
   if (d.status !== "syncing") return; // edited again (or re-queued) meanwhile: wait for the next "Publier"
+  // was it on the site before? (a day that appears now is news: announced to the phones that asked, below)
+  const before = adminDays.value.find((x) => x.id === id);
 
   // elevation (best effort, needs network)
   if (d.kind === "hike" && d.start_km !== null && d.end_km !== null && (!d.track || d.ascent_m === null)) {
@@ -371,6 +427,13 @@ async function syncDraft(id: string) {
     throw e1;
   }
   d = (await patchStored(id, (x) => { x.isNew = false; })) ?? d;
+  if (d.published && (!before || !before.published)) announce(id);
+  if (d.removedVoices?.length) {
+    const gone = d.removedVoices;
+    const { error: ev } = await sba.storage.from("media").remove(gone);
+    if (ev) throw ev;
+    d = (await patchStored(id, (x) => { x.removedVoices = (x.removedVoices ?? []).filter((p) => !gone.includes(p)); })) ?? d;
+  }
 
   const ready = d.media.filter((m) => usable(m) && (m.kind === "embed" || m.uploaded));
   if (ready.length) {
@@ -410,7 +473,7 @@ async function syncDraft(id: string) {
     if (wasNew) await sba.from("days").delete().eq("id", id);
     return;
   }
-  const stillToSend = final.media.some((m) => m.kind !== "embed" && usable(m) && !m.uploaded);
+  const stillToSend = final.media.some((m) => m.kind !== "embed" && usable(m) && !m.uploaded) || (!!final.voiceKey && !final.voiceUploaded && voiceReady());
   if (stillToSend) {
     await patchStored(id, (x) => { if (x.status === "syncing") { x.status = "queued"; } });
     return;
@@ -447,6 +510,7 @@ export async function syncAll(force = false): Promise<void> {
     }
     // a day gone, or sent with a new date: the numbers after it follow
     if (changed) { try { await renumberDays(); } catch (e) { console.warn("renumber", e); } }
+    await flushAnnouncements();
   } finally {
     running = false;
     syncing.value = null;

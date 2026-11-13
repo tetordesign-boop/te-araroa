@@ -10,8 +10,10 @@ import { profileFor } from "./elevation";
 import type { Pick } from "./MapPicker";
 import { home, open as openPage, say } from "./nav";
 import { prepareVideo, preparePhoto } from "./media";
-import { adminMedia, adminRoute, adminSettings } from "./server";
-import { dropDraft, dropMediaBlobs, drafts, getBlob, kick, liveDays, online, putBlob, queueDeletion, saveDraft, type Draft, type DraftMedia } from "./store";
+import { adminDays, adminMedia, adminRoute, adminSettings } from "./server";
+import { dropBlob, dropDraft, dropMediaBlobs, drafts, getBlob, kick, liveDays, online, putBlob, queueDeletion, saveDraft, type Draft, type DraftMedia } from "./store";
+import { voiceReady } from "./features";
+import { VoiceRec, type Recorded } from "./VoiceRec";
 import { sba } from "./sb";
 
 const WEATHER = ["☀️", "🌤️", "⛅", "☁️", "🌧️", "⛈️", "🌨️", "🌬️", "🌫️"];
@@ -149,6 +151,7 @@ export function Editor({ id }: { id: string }) {
   const [showEn, setShowEn] = useState(false);
   const [link, setLink] = useState("");
   const [progress, setProgress] = useState<Record<string, number>>({});
+  const [recording, setRecording] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // flush a pending save when leaving the screen
@@ -321,9 +324,28 @@ export function Editor({ id }: { id: string }) {
     dropMediaBlobs(m).catch(() => {});
   };
 
+  // the voice note: a new recording replaces the one before (on the server too, once the day is sent)
+  const setVoice = async (r: Recorded) => {
+    const key = `voice:${id}:${Date.now()}`;
+    await putBlob(key, r.blob);
+    const cur = dRef.current;
+    if (!cur) return;
+    if (cur.voiceKey) dropBlob(cur.voiceKey).catch(() => {});
+    const removedVoices = cur.voice?.path ? [...(cur.removedVoices ?? []), cur.voice.path] : cur.removedVoices ?? [];
+    update({ voice: r.voice, voiceKey: key, voiceMime: r.mime, voiceUploaded: false, removedVoices }, true);
+  };
+  const removeVoice = () => {
+    const cur = dRef.current;
+    if (!cur) return;
+    if (cur.voiceKey) dropBlob(cur.voiceKey).catch(() => {});
+    const removedVoices = cur.voice?.path ? [...(cur.removedVoices ?? []), cur.voice.path] : cur.removedVoices ?? [];
+    update({ voice: null, voiceKey: null, voiceMime: null, voiceUploaded: false, removedVoices }, true);
+  };
+
   const publish = async () => {
     const cur = dRef.current;
     if (!cur) return;
+    if (recording) { say("Arrête d'abord l'enregistrement."); return; }
     if (cur.kind !== "rest" && cur.end_km === null) { say("Indique d'abord ton point d'arrivée."); return; }
     if (cur.media.some((m) => m.preparing)) { say("Attends la fin de la préparation des photos."); return; }
     if (cur.media.some((m) => m.error)) { say("Retire d'abord les fichiers en erreur (en rouge)."); return; }
@@ -364,7 +386,8 @@ export function Editor({ id }: { id: string }) {
     if (!cur.isNew) {
       // done at once with a signal, else as soon as there is one (store.ts): its photos on the server go with it
       const paths = [...adminMedia.value.filter((m) => m.day_id === cur.id), ...cur.media.filter((m) => m.uploaded), ...cur.removedMedia]
-        .flatMap((m) => [m.path, m.thumb_path]).filter(Boolean) as string[];
+        .flatMap((m) => [m.path, m.thumb_path]).concat(cur.voice?.path ?? null, ...(cur.removedVoices ?? []), adminDays.value.find((x) => x.id === cur.id)?.voice?.path ?? null)
+        .filter(Boolean) as string[];
       await queueDeletion({ id: cur.id, day_number: cur.day_number, date: cur.date, paths });
     }
     clearTimeout(saveTimer.current);
@@ -533,6 +556,18 @@ export function Editor({ id }: { id: string }) {
           </>
         )}
       </div>
+
+      <div class="group__title">Message vocal</div>
+      {voiceReady() ? (
+        <>
+          <div class="group group--pad">
+            <VoiceRec voice={d.voice} localKey={d.voiceKey} onRecorded={setVoice} onRemove={removeVoice} onBusy={setRecording} />
+          </div>
+          <p class="group__foot">Quelques mots de ta journée, à ta voix (3 minutes au plus). Il part avec l'étape, même enregistré sans réseau.</p>
+        </>
+      ) : (
+        <p class="group__foot">À activer d'abord : Carnet › Nouveautés à activer.</p>
+      )}
 
       <div class="group__title">Photos et vidéos</div>
       <div class="group">

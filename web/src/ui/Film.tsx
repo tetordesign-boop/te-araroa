@@ -24,7 +24,7 @@ export function FilmCard() {
     <>
       <button ref={btn} class="feature film" type="button" aria-haspopup="dialog" onClick={() => setOpen(true)}>
         <span class="feature__img film__img">
-          <img src={`${DIR}card.jpg`} width={960} height={540} alt="" loading="lazy" decoding="async" />
+          <picture><source srcset={`${DIR}card.webp`} type="image/webp" /><img src={`${DIR}card.jpg`} width={960} height={540} alt="" loading="lazy" decoding="async" /></picture>
           <span class="film__play glass" aria-hidden="true"><Play /></span>
           <span class="feature__count num" aria-hidden="true">0:30</span>
         </span>

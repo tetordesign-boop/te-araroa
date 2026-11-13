@@ -3,7 +3,7 @@
 // Sizes are given in screen pixels; the drawing fits them whatever their shape.
 import { useRef } from "preact/hooks";
 import type { LngLat, Route } from "../lib/geo";
-import { stationName, TIER1 } from "../map/map";
+import { stationName, TIER1 } from "../map/stations";
 
 interface Sketch {
   W: number; H: number;

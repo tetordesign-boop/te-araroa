@@ -1,7 +1,7 @@
 // Development-only sample data (loaded with ?mock). Never bundled in production.
 // Close to the real thing: real huts and towns of the South Island route, elevation profiles,
 // stories of different lengths, photos with and without GPS.
-import type { Day, DayReactions, Media, Position, Settings } from "../types";
+import type { Question, Day, DayReactions, Media, Position, Settings } from "../types";
 import type { Route } from "../lib/geo";
 
 let seed = 7;
@@ -183,8 +183,54 @@ export async function mockData(route: Route) {
     const p = route.pointAt(Math.min(route.total, km + i * 0.8));
     positions.push({ id: i + 1, recorded_at: new Date(now - (12 - i) * 20 * 60000).toISOString(), lng: p[0], lat: p[1], alt: 600, acc: 10, source: "owntracks", note: null });
   }
+  // a voice note on a few days (a hum made here: no sound file to ship); ?novoice for none
+  if (!new URLSearchParams(location.search).has("novoice")) {
+    const tone = mockVoiceUrl();
+    for (const d of days) if (d.day_number % 4 === 2 || d.day_number === days.length) d.voice = { path: tone, s: 9.6, peaks: mockPeaks(d.day_number) };
+  }
   const reactions: Record<string, DayReactions> = {};
   for (const d of days) reactions[d.id] = { heart: { total: Math.floor(rnd() * 14), mine: rnd() > 0.7 }, clap: { total: Math.floor(rnd() * 6), mine: false } };
   return { settings, days, media, positions, reactions };
 }
 
+
+/** a few seconds of something like speech (a voice-band hum with syllables), as a WAV data URL */
+let voiceUrl: string | null = null;
+function mockVoiceUrl(): string {
+  if (voiceUrl) return voiceUrl;
+  const rate = 8000, n = Math.round(rate * 9.6), data = new Int16Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = i / rate;
+    const syll = Math.max(0, Math.sin(t * Math.PI * 3.1)) ** 0.6 * (0.55 + 0.45 * Math.sin(t * 0.9));
+    const f0 = 140 + 30 * Math.sin(t * 1.7);
+    const v = (Math.sin(2 * Math.PI * f0 * t) + 0.5 * Math.sin(4 * Math.PI * f0 * t) + 0.25 * Math.sin(6 * Math.PI * f0 * t)) * syll;
+    data[i] = Math.max(-1, Math.min(1, v * 0.35)) * 32767;
+  }
+  const buf = new ArrayBuffer(44 + n * 2), dv = new DataView(buf);
+  const str = (o: number, x: string) => { for (let k = 0; k < x.length; k++) dv.setUint8(o + k, x.charCodeAt(k)); };
+  str(0, "RIFF"); dv.setUint32(4, 36 + n * 2, true); str(8, "WAVEfmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true);
+  dv.setUint16(22, 1, true); dv.setUint32(24, rate, true); dv.setUint32(28, rate * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+  str(36, "data"); dv.setUint32(40, n * 2, true);
+  new Int16Array(buf, 44).set(data);
+  let bin = "";
+  const bytes = new Uint8Array(buf);
+  for (let k = 0; k < bytes.length; k += 0x8000) bin += String.fromCharCode(...bytes.subarray(k, k + 0x8000));
+  return (voiceUrl = `data:audio/wav;base64,${btoa(bin)}`);
+}
+function mockPeaks(seed: number): number[] {
+  return Array.from({ length: 48 }, (_, i) => {
+    const t = (i / 48) * 9.6;
+    return Math.round((0.12 + 0.88 * Math.max(0, Math.sin(t * Math.PI * 3.1 + seed)) ** 0.6 * (0.55 + 0.45 * Math.sin(t * 0.9))) * 100) / 100;
+  });
+}
+
+/** answered questions for the "Vos questions" page */
+export function mockQuestions(): Question[] {
+  const q = (id: string, author: string, body: string, answer: string, at: string): Question =>
+    ({ id, author, body, answer, answer_en: null, published: true, answered_at: at, created_at: at });
+  return [
+    q("q3", "Mamie", "Est-ce que tu manges assez ?", "Oui, promis ! Beaucoup de nouilles, de beurre de cacahuète et de chocolat. Je mange deux fois plus qu'à la maison et je maigris quand même.\n\nAu prochain village, je rattrape tout en burger.", "2026-12-14T08:00:00Z"),
+    q("q2", "Léo", "C'est quoi le plus dur pour l'instant ?", "Les rivières. On les traverse à pied, de l'eau jusqu'aux genoux, parfois aux cuisses. Il faut lire le courant et ne jamais y aller après la pluie.", "2026-12-09T08:00:00Z"),
+    q("q1", "Claire", "Tu dors où, le soir ?", "Dans les refuges du DOC quand il y en a un, sinon sous la tente. Les refuges, c'est un toit, une table, et souvent d'autres marcheurs avec qui partager le repas.", "2026-12-03T08:00:00Z"),
+  ];
+}

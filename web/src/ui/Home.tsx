@@ -16,6 +16,8 @@ import { Seg } from "./Seg";
 import { ArrowRight, ChevronRight, Eye, Play, Search, Trail } from "./icons";
 import { PackRow } from "./Pack";
 import { FilmCard } from "./Film";
+import { NotifyCard } from "./Notify";
+import { QuestionsRow } from "./Questions";
 import { altText, openPlace, PlaceBadge, placeName } from "./Place";
 import { arrival, go, hrefFor, isDesktop } from "./state";
 import { startTrailMode } from "./TrailMode";
@@ -292,6 +294,8 @@ export function Home() {
       )}
       {/* before I leave: what the trail is, in 30 seconds (then it stays on the "About" page) */}
       {ph === "before" && <FilmCard />}
+      {/* (before I leave, the moment to sign up: after that it stays further down, and on the "About" page) */}
+      {ph === "before" && <NotifyCard block />}
       {ph === "before" && <PackRow block />}
 
       {latest && <Feature d={latest} />}
@@ -309,6 +313,8 @@ export function Home() {
       )}
 
       <div class="block"><NoteToEwan dayId={null} /></div>
+      <QuestionsRow block />
+      {ph !== "before" && <NotifyCard block />}
       <Footer />
     </div>
   );

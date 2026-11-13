@@ -13,10 +13,8 @@ export const ORANGE = "#FF6B12";
 const SOUTH_ISLAND: [LngLat, LngLat] = [[166.4, -47.3], [174.5, -40.45]];
 const F = OFFLINE_MAP ? OFFLINE_FONT : FONT;
 
-/** Label tiers for the trail's own stations: 1 = always, 2 = regional zoom, 3 = close-up only. */
-export const TIER1 = new Set(["Ship Cove · Meretoto", "St Arnaud", "Arthur's Pass (Klondyke Corner)", "Lake Tekapo", "Queenstown", "Bluff · Stirling Point"]);
-const TIER2 = new Set(["Havelock", "Boyle Village", "Lake Coleridge · Rakaia", "Twizel", "Wānaka", "Invercargill"]);
-export const stationName = (n: string) => n.replace(" (Klondyke Corner)", "").replace(" · Stirling Point", "").replace(" · Meretoto", "").replace("Lake Coleridge · Rakaia", "Rakaia").replace(" · Aparima", "");
+import { stationName, TIER1, TIER2 } from "./stations";
+export { stationName, TIER1 };
 
 export interface MapData {
   route: Route;
@@ -253,6 +251,11 @@ export class TrailMap {
   };
 
   /** Everything the map set up outside itself, then the map. */
+  /** a pin on this map (for the flyover's camera, which doesn't load the map library itself) */
+  marker(options: maplibregl.MarkerOptions): maplibregl.Marker {
+    return new maplibregl.Marker(options);
+  }
+
   destroy() {
     clearInterval(this.sunTimer);
     clearTimeout(this.arrivalTimer);

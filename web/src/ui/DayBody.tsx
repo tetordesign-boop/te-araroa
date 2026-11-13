@@ -1,6 +1,7 @@
 // What a day's page says: its date, title, figures, photos, Ewan's story and the climb. No state of the site (no
 // router, no live data): the site's day page (ui/DayView.tsx) shows it, and so does the Carnet's preview
 // (admin/Preview.tsx), with photos still on the phone.
+import { VoiceNote } from "./Voice";
 import { useEffect, useState } from "preact/hooks";
 import { lang, t } from "../i18n";
 import { titleOf, dayKm } from "../lib/day";
@@ -97,7 +98,8 @@ function Story({ d }: { d: Day }) {
 }
 
 /** The day, from its date to its climb. `leg`: which stretch of trail it is on (the site's trail knows). */
-export function DayBody({ d, media, cover, leg, openId }: { d: Day; media: Media[]; cover: Media | null; leg?: string | null; openId?: string }) {
+/** (`voiceSrc`: the Carnet's preview plays the note still on the phone) */
+export function DayBody({ d, media, cover, leg, openId, voiceSrc }: { d: Day; media: Media[]; cover: Media | null; leg?: string | null; openId?: string; voiceSrc?: string | null }) {
   const l = lang.value;
   return (
     <>
@@ -110,6 +112,7 @@ export function DayBody({ d, media, cover, leg, openId }: { d: Day; media: Media
       {leg && d.kind !== "rest" && <p class="dsub">{leg}</p>}
 
       <Figures d={d} />
+      {d.voice && (d.voice.path || voiceSrc) && <VoiceNote voice={d.voice} src={voiceSrc} />}
 
       <Gallery list={media} cover={cover} openId={openId} />
       <Story d={d} />

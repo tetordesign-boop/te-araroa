@@ -6,6 +6,9 @@ import { Preview } from "./Preview";
 import { flash, page } from "./nav";
 import { Checkin, Dashboard, Help, Notes, SettingsPage, Tracking } from "./Pages";
 import { GearPage } from "./Gear";
+import { Activate } from "./Activate";
+import { checkFeatures } from "./features";
+import { loadAdminQuestions, QuestionsAdmin } from "./QuestionsAdmin";
 import { Positions } from "./Positions";
 import { checkAdmin, isAdmin, session, signingIn, signOut } from "./sb";
 import { adminDays, adminMedia, adminRoute, adminSettings, loadRoute, loadServer, readAdminCache } from "./server";
@@ -32,12 +35,14 @@ export function AdminApp() {
     loadDrafts().then(() => startSyncLoop());
     loadServer();
     loadRoute();
+    // what is switched on yet (questions, voice notes, notifications), then the questions waiting for an answer
+    checkFeatures().then(() => loadAdminQuestions());
     afterSync(() => loadServer());
     // Fetch now, while there is signal, the parts needed later on the trail with none
     // (reading photo GPS, compressing videos, resumable uploads): the service worker keeps them.
     const warm = () => { import("exifr").catch(() => {}); import("mediabunny").catch(() => {}); import("tus-js-client").catch(() => {}); };
     if (navigator.onLine) window.setTimeout(warm, 2500);
-    window.addEventListener("online", () => { loadServer(); loadRoute(); window.setTimeout(warm, 2500); });
+    window.addEventListener("online", () => { loadServer(); loadRoute(); checkFeatures().then(() => loadAdminQuestions()); window.setTimeout(warm, 2500); });
   }, [admin]);
 
   if (!session.value || (signingIn.value && admin !== true)) return <AuthPage />;
@@ -77,6 +82,8 @@ export function AdminApp() {
         : p.name === "gear" ? <GearPage />
         : p.name === "tracking" ? <Tracking />
         : p.name === "help" ? <Help />
+        : p.name === "questions" ? <QuestionsAdmin />
+        : p.name === "activate" ? <Activate />
         : p.name === "preview" ? <Preview id={p.id} />
         : <Dashboard />}
       </main>

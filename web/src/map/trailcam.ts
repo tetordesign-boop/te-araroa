@@ -2,7 +2,7 @@
 // or moves on by itself when playing. Position and heading are smoothed, so river crossings (where the route
 // jumps) and hairpins become a calm drone flight instead of a jump cut. A bright point marks where it is,
 // and the way from Ship Cove to that point is drawn in turquoise, so one sees at a glance how far along it is.
-import maplibregl from "maplibre-gl";
+import type { Marker } from "maplibre-gl";
 import type { LngLat, Route } from "../lib/geo";
 import type { TrailMap } from "./map";
 
@@ -34,7 +34,7 @@ export class TrailCam {
   private last = 0;
   private dead = false;
   private off: (() => void)[] = [];
-  private pin: maplibregl.Marker;
+  private pin: Marker;
   private flightAt = -1;
   private flightTime = 0;
 
@@ -54,7 +54,7 @@ export class TrailCam {
     el.className = "fly-pin";
     el.setAttribute("aria-hidden", "true");
     el.innerHTML = '<span class="fly-pin__ring"></span><span class="fly-pin__dot"></span>';
-    this.pin = new maplibregl.Marker({ element: el, anchor: "center", opacity: "1", opacityWhenCovered: "1" }).setLngLat(this.center).addTo(m);
+    this.pin = this.tm.marker({ element: el, anchor: "center", opacity: "1", opacityWhenCovered: "1" }).setLngLat(this.center).addTo(m);
     this.drawFlight(true);
 
     // Someone takes the map in hand: stop steering until they scrub or press play again, and keep their zoom

@@ -6,7 +6,9 @@ import "./styles/app.css";
 import { lang } from "./i18n";
 import { startData } from "./lib/data";
 import { loadPlaces } from "./lib/places";
+import { startPush } from "./lib/push";
 import { installTapSounds } from "./lib/sound";
+import { loadMap } from "./map/load";
 import { App } from "./ui/App";
 import { installIconFx } from "./ui/iconfx";
 
@@ -20,6 +22,8 @@ if (document.documentElement.classList.contains("is-intro") && document.fonts?.l
   window.setTimeout(done, 1500);
 }
 startData();
+// the map's code starts downloading now, alongside the data, without holding up the first screen
+loadMap();
 loadPlaces();
 installTapSounds();
 installIconFx();
@@ -41,3 +45,5 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
   });
 }
+// notifications: where this phone stands, its language kept in step, and a tap on one taking the open site to the day
+window.addEventListener("load", () => window.setTimeout(startPush, 1200));

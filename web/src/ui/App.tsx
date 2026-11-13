@@ -10,7 +10,8 @@ import { relTime } from "../lib/format";
 import type { LngLat } from "../lib/geo";
 import { mapPois, placeById, places, poiGroups, searchPlaces } from "../lib/places";
 import { play } from "../lib/sound";
-import { TrailMap, type LiveData, type MapData } from "../map/map";
+import { loadMap } from "../map/load";
+import type { LiveData, MapData, TrailMap } from "../map/map";
 import { DayView } from "./DayView";
 import { ExploreView, openSearch } from "./Explore";
 import { endEyeView, startEyeView } from "./eye";
@@ -21,6 +22,7 @@ import { MapFallback } from "./MapFallback";
 import { MapModes, mapPrefs, modesClosedAt, modesOpen } from "./MapModes";
 import { About, Journal, Stats } from "./Pages";
 import { Pack } from "./Pack";
+import { QuestionsPage } from "./Questions";
 import { PlaceView, placeName } from "./Place";
 import { startReplay } from "./replayControl";
 import { Sheet } from "./Sheet";
@@ -215,10 +217,13 @@ export function App() {
   useEffect(() => {
     let tm: TrailMap | null = null;
     let disposeData: (() => void) | undefined;
+    let gone = false;
     (async () => {
       const land = OFFLINE_MAP ? ((await import("../dev/nz-land.json")).default as unknown as GeoJSON.Feature) : undefined;
       const prefs = mapPrefs.peek();
       try {
+      const { TrailMap } = await loadMap();
+      if (gone) return;
       tm = new TrailMap(mapEl.current!, {
         onDay: (n) => { play("open"); go({ name: "day", n }); },
         onPhoto: (n, id) => go({ name: "day", n, photo: id }),
@@ -264,7 +269,7 @@ export function App() {
       });
       disposeData = () => { d1(); d2(); d3(); d4(); d5(); };
     })();
-    return () => { disposeData?.(); tm?.destroy(); mapApi.value = null; };
+    return () => { gone = true; disposeData?.(); tm?.destroy(); mapApi.value = null; };
   }, []);
 
   // LINZ imagery when a key is configured
@@ -437,6 +442,7 @@ export function App() {
               : v.name === "stats" ? <Stats />
               : v.name === "about" ? <About />
               : v.name === "pack" ? <Pack />
+              : v.name === "questions" ? <QuestionsPage />
               : <Home />}
           </div>
         )}

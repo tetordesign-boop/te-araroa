@@ -10,6 +10,8 @@ export type Page =
   | { name: "gear" }
   | { name: "tracking" }
   | { name: "help" }
+  | { name: "questions" }
+  | { name: "activate" }
   | { name: "preview"; id: string };
 
 export const page = signal<Page>({ name: "home" });
