@@ -1,6 +1,6 @@
 # Every day, a check that everything answers: the site, the Carnet, the database (a query also keeps it
 # awake: a free Supabase project is paused after a week without any) and the address the phone sends its
-# positions to. A failed run makes GitHub send an e-mail. It can also be run by hand from the GitHub app
+# positions to, and the notifications' function. A failed run makes GitHub send an e-mail. It can also be run by hand from the GitHub app
 # (Actions › Veille du site › Run workflow).
 name: Veille du site
 on:
@@ -34,6 +34,18 @@ jobs:
           out=$(curl -sS --retry 4 --retry-delay 15 --retry-all-errors -H "apikey: $KEY" "$SUPABASE/rest/v1/messages?select=id&limit=1")
           echo "$out"
           echo "$out" | grep -q '"id"' && { echo "les mots sont lisibles par tout le monde"; exit 1; } || exit 0
+      - name: Les abonnés aux notifications restent privés
+        run: |
+          # the phones' push addresses are only ever read by the "push" function
+          out=$(curl -sS --retry 4 --retry-delay 15 --retry-all-errors -H "apikey: $KEY" "$SUPABASE/rest/v1/push_subs?select=endpoint&limit=1")
+          echo "$out"
+          echo "$out" | grep -q '"endpoint"' && { echo "les abonnés sont lisibles par tout le monde"; exit 1; } || exit 0
+      - name: Les notifications répondent
+        run: |
+          # the site's public key for Web Push: 65 bytes, base64url (87 characters)
+          out=$(curl -fsS --retry 4 --retry-delay 15 --retry-all-errors "$SUPABASE/functions/v1/push")
+          echo "$out"
+          echo "$out" | grep -Eq '"key":"[A-Za-z0-9_-]{87}"'
       - name: Le suivi de position répond
         run: |
           # without the password the answer must be "401 unauthorized": the endpoint is up and guarded
