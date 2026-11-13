@@ -48,6 +48,8 @@ self.addEventListener("activate", (event) => {
     // a new version of the site may bring new icons under the same names: they come fresh next time they are asked for
     const assets = await caches.open(ASSETS);
     for (const k of await assets.keys()) if (unhashed(new URL(k.url).pathname)) await assets.delete(k);
+    // the page is asked for while this worker is still waking up, not after (see navigate)
+    if (self.registration.navigationPreload) await self.registration.navigationPreload.enable().catch(() => {});
     await self.clients.claim();
   })());
 });
@@ -91,9 +93,10 @@ async function keepPage(cache, req, res) {
  */
 async function navigate(event) {
   const req = event.request;
+  // the browser has already asked for the page while the worker woke up (navigation preload): that answer, else ask now
+  const network = Promise.resolve(event.preloadResponse).then((pre) => pre || fetch(req));
   const cache = await caches.open(SHELL);
-  const network = fetch(req);
-  event.waitUntil(network.then((res) => (res.ok && res.type === "basic" ? keepPage(cache, req, res.clone()) : undefined), () => {}));
+  event.waitUntil(network.then((res) => (res.ok && (res.type === "basic" || res.type === "default") ? keepPage(cache, req, res.clone()) : undefined), () => {}));
   const fallback = async () => {
     const hit = await cache.match(req, { ignoreSearch: true, ignoreVary: true });
     if (hit) return hit;
