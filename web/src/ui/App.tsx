@@ -223,6 +223,9 @@ export function App() {
       const prefs = mapPrefs.peek();
       try {
       const { TrailMap } = await loadMap();
+      // the page is painted before the map is made (its first frame can hold the phone a moment): on a return visit
+      // the map's code is already on the phone and would otherwise come first
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
       if (gone) return;
       tm = new TrailMap(mapEl.current!, {
         onDay: (n) => { play("open"); go({ name: "day", n }); },
