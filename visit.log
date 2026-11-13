@@ -1,0 +1,6 @@
+home-fr: 842 kB in 49 requests, load 537 ms, FCP 5020 ms, map true, 0 errors, 0 failed
+home-fr-again: 6 kB in 41 requests, load 11683 ms, FCP 11780 ms, map true, 0 errors, 0 failed
+home-en: 886 kB in 49 requests, load 340 ms, FCP 692 ms, map true, 0 errors, 0 failed
+about: 842 kB in 49 requests, load 479 ms, FCP 444 ms, map true, 0 errors, 0 failed
+questions: 811 kB in 47 requests, load 116 ms, FCP 124 ms, map true, 0 errors, 0 failed
+carnet: 252 kB in 10 requests, load 83 ms, FCP 100 ms, map false, 0 errors, 0 failed

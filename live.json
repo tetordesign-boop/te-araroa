@@ -1,0 +1,412 @@
+[
+  {
+    "name": "home-fr",
+    "url": "https://tetordesign-boop.github.io/te-araroa/",
+    "warm": false,
+    "loadMs": 537,
+    "fcp": 5020,
+    "dcl": 373,
+    "canvas": true,
+    "title": "Te Araroa avec moi",
+    "requests": 49,
+    "totalKB": 842,
+    "byKind": {
+      "Document": {
+        "n": 1,
+        "kb": 1
+      },
+      "css": {
+        "n": 3,
+        "kb": 33
+      },
+      "js": {
+        "n": 6,
+        "kb": 420
+      },
+      "font": {
+        "n": 2,
+        "kb": 196
+      },
+      "Font": {
+        "n": 1,
+        "kb": 0
+      },
+      "data": {
+        "n": 15,
+        "kb": 132
+      },
+      "json": {
+        "n": 2,
+        "kb": 27
+      },
+      "Image": {
+        "n": 16,
+        "kb": 0
+      },
+      "Fetch": {
+        "n": 1,
+        "kb": 2
+      },
+      "image": {
+        "n": 1,
+        "kb": 30
+      },
+      "tiles": {
+        "n": 1,
+        "kb": 0
+      }
+    },
+    "biggest": [
+      "295 kB /assets/style-Ckc3EL7I.js",
+      "126 kB https://jmedorwtksxxnzwyjvbz.supabase.co/storage/v1/object/public/site/trail.json",
+      "108 kB /assets/literata-latin-opsz-normal-BHZsWIlc.woff2",
+      "88 kB /assets/archivo-latin-wdth-normal-DY7AcnAa.woff2",
+      "65 kB /assets/gear-t8c6dVvY.js",
+      "49 kB /assets/main-D_g7Wm66.js",
+      "30 kB /film/card.webp",
+      "23 kB /assets/gear-DR9WyA5p.css",
+      "19 kB /data/pois.json",
+      "11 kB /assets/map-Cn4bS01R.js",
+      "10 kB /assets/style-DNVN2dqC.css",
+      "8 kB /data/profile.json"
+    ],
+    "failed": [],
+    "errors": []
+  },
+  {
+    "name": "home-fr-again",
+    "url": "https://tetordesign-boop.github.io/te-araroa/",
+    "warm": true,
+    "loadMs": 11683,
+    "fcp": 11780,
+    "dcl": 11640,
+    "canvas": true,
+    "title": "Te Araroa avec moi",
+    "requests": 41,
+    "totalKB": 6,
+    "byKind": {
+      "css": {
+        "n": 3,
+        "kb": 0
+      },
+      "font": {
+        "n": 2,
+        "kb": 0
+      },
+      "Document": {
+        "n": 1,
+        "kb": 0
+      },
+      "js": {
+        "n": 6,
+        "kb": 0
+      },
+      "Font": {
+        "n": 1,
+        "kb": 0
+      },
+      "image": {
+        "n": 1,
+        "kb": 0
+      },
+      "json": {
+        "n": 2,
+        "kb": 0
+      },
+      "data": {
+        "n": 7,
+        "kb": 5
+      },
+      "Image": {
+        "n": 16,
+        "kb": 0
+      },
+      "Fetch": {
+        "n": 1,
+        "kb": 0
+      },
+      "tiles": {
+        "n": 1,
+        "kb": 0
+      }
+    },
+    "biggest": [
+      "1 kB https://jmedorwtksxxnzwyjvbz.supabase.co/rest/v1/settings?select=*&id=eq.1",
+      "1 kB https://jmedorwtksxxnzwyjvbz.supabase.co/rest/v1/media?select=id%2Cday_id%2Ckind%2Cpath%2Cthumb_path%2Cembed_url%2Cwidth",
+      "1 kB https://jmedorwtksxxnzwyjvbz.supabase.co/rest/v1/questions?select=id%2Cauthor%2Cbody%2Canswer%2Canswer_en%2Cpublished%2C",
+      "1 kB https://jmedorwtksxxnzwyjvbz.supabase.co/rest/v1/positions?select=id%2Crecorded_at%2Clng%2Clat%2Calt%2Cacc%2Csource%2Cno",
+      "1 kB https://jmedorwtksxxnzwyjvbz.supabase.co/rest/v1/days?select=*&published=eq.true&order=date.asc",
+      "1 kB https://jmedorwtksxxnzwyjvbz.supabase.co/rest/v1/rpc/get_reactions",
+      "0 kB data:font/woff2;base64,d09GMgABAAAAAAFAAAoAAAAAAowAAAD5AAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmAANAoYNgE2AiQDBgsGAAQgBXUHLhvsA",
+      "0 kB /assets/gear-DR9WyA5p.css",
+      "0 kB /assets/main-BAepgjIk.css",
+      "0 kB /assets/archivo-latin-wdth-normal-DY7AcnAa.woff2",
+      "0 kB /assets/literata-latin-opsz-normal-BHZsWIlc.woff2",
+      "0 kB /"
+    ],
+    "failed": [],
+    "errors": []
+  },
+  {
+    "name": "home-en",
+    "url": "https://tetordesign-boop.github.io/te-araroa/",
+    "warm": false,
+    "loadMs": 340,
+    "fcp": 692,
+    "dcl": 285,
+    "canvas": true,
+    "title": "Te Araroa avec moi",
+    "requests": 49,
+    "totalKB": 886,
+    "byKind": {
+      "Document": {
+        "n": 1,
+        "kb": 1
+      },
+      "css": {
+        "n": 3,
+        "kb": 34
+      },
+      "js": {
+        "n": 6,
+        "kb": 420
+      },
+      "font": {
+        "n": 2,
+        "kb": 196
+      },
+      "data": {
+        "n": 15,
+        "kb": 131
+      },
+      "json": {
+        "n": 2,
+        "kb": 27
+      },
+      "Image": {
+        "n": 16,
+        "kb": 0
+      },
+      "Fetch": {
+        "n": 1,
+        "kb": 2
+      },
+      "tiles": {
+        "n": 1,
+        "kb": 45
+      },
+      "Font": {
+        "n": 1,
+        "kb": 0
+      },
+      "image": {
+        "n": 1,
+        "kb": 30
+      }
+    },
+    "biggest": [
+      "295 kB /assets/style-Ckc3EL7I.js",
+      "125 kB https://jmedorwtksxxnzwyjvbz.supabase.co/storage/v1/object/public/site/trail.json",
+      "108 kB /assets/literata-latin-opsz-normal-BHZsWIlc.woff2",
+      "88 kB /assets/archivo-latin-wdth-normal-DY7AcnAa.woff2",
+      "65 kB /assets/gear-t8c6dVvY.js",
+      "49 kB /assets/main-D_g7Wm66.js",
+      "45 kB https://tiles.openfreemap.org/fonts/Noto%20Sans%20Bold/0-255.pbf",
+      "30 kB /film/card.webp",
+      "23 kB /assets/gear-DR9WyA5p.css",
+      "19 kB /data/pois.json",
+      "11 kB /assets/map-Cn4bS01R.js",
+      "10 kB /assets/style-DNVN2dqC.css"
+    ],
+    "failed": [],
+    "errors": []
+  },
+  {
+    "name": "about",
+    "url": "https://tetordesign-boop.github.io/te-araroa/#/apropos",
+    "warm": false,
+    "loadMs": 479,
+    "fcp": 444,
+    "dcl": 265,
+    "canvas": true,
+    "title": "Te Araroa avec moi",
+    "requests": 49,
+    "totalKB": 842,
+    "byKind": {
+      "Document": {
+        "n": 1,
+        "kb": 1
+      },
+      "font": {
+        "n": 2,
+        "kb": 196
+      },
+      "css": {
+        "n": 3,
+        "kb": 34
+      },
+      "js": {
+        "n": 6,
+        "kb": 420
+      },
+      "data": {
+        "n": 15,
+        "kb": 131
+      },
+      "json": {
+        "n": 2,
+        "kb": 27
+      },
+      "Image": {
+        "n": 16,
+        "kb": 0
+      },
+      "Fetch": {
+        "n": 1,
+        "kb": 2
+      },
+      "Font": {
+        "n": 1,
+        "kb": 0
+      },
+      "image": {
+        "n": 1,
+        "kb": 30
+      },
+      "tiles": {
+        "n": 1,
+        "kb": 0
+      }
+    },
+    "biggest": [
+      "295 kB /assets/style-Ckc3EL7I.js",
+      "125 kB https://jmedorwtksxxnzwyjvbz.supabase.co/storage/v1/object/public/site/trail.json",
+      "108 kB /assets/literata-latin-opsz-normal-BHZsWIlc.woff2",
+      "88 kB /assets/archivo-latin-wdth-normal-DY7AcnAa.woff2",
+      "65 kB /assets/gear-t8c6dVvY.js",
+      "49 kB /assets/main-D_g7Wm66.js",
+      "30 kB /film/card.webp",
+      "23 kB /assets/gear-DR9WyA5p.css",
+      "19 kB /data/pois.json",
+      "11 kB /assets/map-Cn4bS01R.js",
+      "10 kB /assets/style-DNVN2dqC.css",
+      "8 kB /data/profile.json"
+    ],
+    "failed": [],
+    "errors": []
+  },
+  {
+    "name": "questions",
+    "url": "https://tetordesign-boop.github.io/te-araroa/#/questions",
+    "warm": false,
+    "loadMs": 116,
+    "fcp": 124,
+    "dcl": 106,
+    "canvas": true,
+    "title": "Te Araroa avec moi",
+    "requests": 47,
+    "totalKB": 811,
+    "byKind": {
+      "Document": {
+        "n": 1,
+        "kb": 1
+      },
+      "font": {
+        "n": 2,
+        "kb": 196
+      },
+      "css": {
+        "n": 3,
+        "kb": 34
+      },
+      "js": {
+        "n": 6,
+        "kb": 420
+      },
+      "data": {
+        "n": 14,
+        "kb": 130
+      },
+      "json": {
+        "n": 2,
+        "kb": 27
+      },
+      "Image": {
+        "n": 16,
+        "kb": 0
+      },
+      "Fetch": {
+        "n": 1,
+        "kb": 2
+      },
+      "Font": {
+        "n": 1,
+        "kb": 0
+      },
+      "tiles": {
+        "n": 1,
+        "kb": 0
+      }
+    },
+    "biggest": [
+      "295 kB /assets/style-Ckc3EL7I.js",
+      "125 kB https://jmedorwtksxxnzwyjvbz.supabase.co/storage/v1/object/public/site/trail.json",
+      "108 kB /assets/literata-latin-opsz-normal-BHZsWIlc.woff2",
+      "88 kB /assets/archivo-latin-wdth-normal-DY7AcnAa.woff2",
+      "65 kB /assets/gear-t8c6dVvY.js",
+      "49 kB /assets/main-D_g7Wm66.js",
+      "23 kB /assets/gear-DR9WyA5p.css",
+      "19 kB /data/pois.json",
+      "11 kB /assets/map-Cn4bS01R.js",
+      "10 kB /assets/style-DNVN2dqC.css",
+      "8 kB /data/profile.json",
+      "2 kB https://tiles.openfreemap.org/planet"
+    ],
+    "failed": [],
+    "errors": []
+  },
+  {
+    "name": "carnet",
+    "url": "https://tetordesign-boop.github.io/te-araroa/admin/",
+    "warm": false,
+    "loadMs": 83,
+    "fcp": 100,
+    "dcl": 79,
+    "canvas": false,
+    "title": "Carnet de route",
+    "requests": 10,
+    "totalKB": 252,
+    "byKind": {
+      "Document": {
+        "n": 1,
+        "kb": 2
+      },
+      "css": {
+        "n": 3,
+        "kb": 27
+      },
+      "font": {
+        "n": 1,
+        "kb": 88
+      },
+      "js": {
+        "n": 5,
+        "kb": 136
+      }
+    },
+    "biggest": [
+      "88 kB /assets/archivo-latin-wdth-normal-DY7AcnAa.woff2",
+      "72 kB /assets/admin-B6ym8fbf.js",
+      "65 kB /assets/gear-t8c6dVvY.js",
+      "23 kB /assets/gear-DR9WyA5p.css",
+      "4 kB /assets/admin-CUcz0mbr.css",
+      "2 kB /admin/",
+      "0 kB /assets/MapPicker-DsKYYb8t.js",
+      "0 kB /assets/style-DNVN2dqC.css",
+      "0 kB /assets/_commonjsHelpers-Cpj98o6Y.js",
+      "0 kB /assets/style-Ckc3EL7I.js"
+    ],
+    "failed": [],
+    "errors": []
+  }
+]

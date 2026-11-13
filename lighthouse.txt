@@ -1,0 +1,36 @@
+
+== lh-carnet-1.json {"performance":97,"accessibility":100,"best-practices":100,"seo":50}
+FCP 1811 LCP 2287 TBT 1 CLS 0.000 SI 1811 TTI 2289 bytes 257 kB
+LCP element: <h1>
+render-blocking: 23 kB https://tetordesign-boop.github.io/te-araroa/assets/gear-DR9WyA5p.css
+unused JS: 62 kB https://tetordesign-boop.github.io/te-araroa/assets/admin-B6ym8fbf.js | 36 kB https://tetordesign-boop.github.io/te-araroa/assets/gear-t8c6dVvY.js
+main-thread: Other 284ms, Script Evaluation 69ms, Style & Layout 57ms, Parse HTML & CSS 13ms, Rendering 6ms
+bootup: Unattributable 233ms | https://tetordesign-boop.github.io/te-araroa/admin/ 79ms | etordesign-boop.github.io/te-araroa/assets/admin-B6ym8fbf.js 71ms
+below 0.9: first-contentful-paint (0.89): 1.8 s; uses-long-cache-ttl (0.5): 5 resources found; render-blocking-resources (0): Est savings of 250 ms; unused-css-rules (0): Est savings of 22 KiB; unused-javascript (0): Est savings of 98 KiB; meta-description (0); is-crawlable (0); cache-insight (0): Est savings of 230 KiB; network-dependency-tree-insight (0); render-blocking-insight (0)
+
+== lh-carnet-2.json {"performance":97,"accessibility":100,"best-practices":100,"seo":50}
+FCP 1804 LCP 2277 TBT 0 CLS 0.000 SI 1804 TTI 2280 bytes 257 kB
+LCP element: <h1>
+render-blocking: 23 kB https://tetordesign-boop.github.io/te-araroa/assets/gear-DR9WyA5p.css
+unused JS: 62 kB https://tetordesign-boop.github.io/te-araroa/assets/admin-B6ym8fbf.js | 36 kB https://tetordesign-boop.github.io/te-araroa/assets/gear-t8c6dVvY.js
+main-thread: Other 282ms, Script Evaluation 75ms, Style & Layout 37ms, Parse HTML & CSS 10ms, Script Parsing & Compilation 4ms
+bootup: Unattributable 258ms | etordesign-boop.github.io/te-araroa/assets/admin-B6ym8fbf.js 76ms | https://tetordesign-boop.github.io/te-araroa/admin/ 57ms
+below 0.9: first-contentful-paint (0.89): 1.8 s; uses-long-cache-ttl (0.5): 5 resources found; render-blocking-resources (0): Est savings of 240 ms; unused-css-rules (0): Est savings of 22 KiB; unused-javascript (0): Est savings of 98 KiB; meta-description (0); is-crawlable (0); cache-insight (0): Est savings of 230 KiB; network-dependency-tree-insight (0); render-blocking-insight (0)
+
+== lh-home-1.json {"performance":32,"accessibility":100,"best-practices":100,"seo":60}
+FCP 2720 LCP 9631 TBT 11886 CLS 0.035 SI 10002 TTI 16927 bytes 841 kB
+LCP element: <p class="intro__lede voice">
+render-blocking: 23 kB https://tetordesign-boop.github.io/te-araroa/assets/gear-DR9WyA5p.css
+unused JS: 155 kB https://tetordesign-boop.github.io/te-araroa/assets/style-Ckc3EL7I.js | 30 kB https://tetordesign-boop.github.io/te-araroa/assets/main-D_g7Wm66.js | 23 kB https://tetordesign-boop.github.io/te-araroa/assets/gear-t8c6dVvY.js
+main-thread: Script Evaluation 23359ms, Other 2258ms, Style & Layout 449ms, Rendering 73ms, Garbage Collection 59ms
+bootup: tetordesign-boop.github.io/te-araroa/assets/main-D_g7Wm66.js 12355ms | etordesign-boop.github.io/te-araroa/assets/style-Ckc3EL7I.js 9929ms | Unattributable 1922ms | tetordesign-boop.github.io/te-araroa/assets/gear-t8c6dVvY.js 1713ms | https://tetordesign-boop.github.io/te-araroa/ 274ms
+below 0.9: first-contentful-paint (0.59): 2.7 s; largest-contentful-paint (0): 9.6 s; speed-index (0.09): 10.0 s; total-blocking-time (0): 11,890 ms; max-potential-fid (0): 1,850 ms; interactive (0.05): 16.9 s; mainthread-work-breakdown (0): 26.2 s; bootup-time (0): 23.4 s; largest-contentful-paint-element (0): 9,630 ms; valid-source-maps (0); uses-long-cache-ttl (0.5): 12 resources found; render-blocking-resources (0): Est savings of 420 ms; unused-css-rules (0): Est savings of 17 KiB; unused-javascript (0): Est savings of 208 KiB; uses-responsive-images (0.5): Est savings of 17 KiB; is-crawlable (0); cache-insight (0): Est savings of 623 KiB; forced-reflow-insight (0); image-delivery-insight (0.5): Est savings of 26 KiB; network-dependency-tree-insight (0); render-blocking-insight (0)
+
+== lh-home-2.json {"performance":32,"accessibility":100,"best-practices":100,"seo":60}
+FCP 2718 LCP 9064 TBT 28799 CLS 0.035 SI 10933 TTI 34019 bytes 841 kB
+LCP element: <p class="intro__lede voice">
+render-blocking: 23 kB https://tetordesign-boop.github.io/te-araroa/assets/gear-DR9WyA5p.css
+unused JS: 154 kB https://tetordesign-boop.github.io/te-araroa/assets/style-Ckc3EL7I.js | 30 kB https://tetordesign-boop.github.io/te-araroa/assets/main-D_g7Wm66.js | 23 kB https://tetordesign-boop.github.io/te-araroa/assets/gear-t8c6dVvY.js
+main-thread: Script Evaluation 39160ms, Other 1745ms, Style & Layout 347ms, Garbage Collection 119ms, Rendering 75ms
+bootup: etordesign-boop.github.io/te-araroa/assets/style-Ckc3EL7I.js 25778ms | tetordesign-boop.github.io/te-araroa/assets/main-D_g7Wm66.js 11582ms | tetordesign-boop.github.io/te-araroa/assets/gear-t8c6dVvY.js 2275ms | Unattributable 1414ms | https://tetordesign-boop.github.io/te-araroa/ 186ms
+below 0.9: first-contentful-paint (0.59): 2.7 s; largest-contentful-paint (0.01): 9.1 s; speed-index (0.06): 10.9 s; total-blocking-time (0): 28,800 ms; max-potential-fid (0): 4,410 ms; interactive (0): 34.0 s; mainthread-work-breakdown (0): 41.5 s; bootup-time (0): 39.1 s; largest-contentful-paint-element (0): 9,060 ms; valid-source-maps (0); uses-long-cache-ttl (0.5): 12 resources found; render-blocking-resources (0): Est savings of 470 ms; unused-css-rules (0): Est savings of 17 KiB; unused-javascript (0): Est savings of 207 KiB; uses-responsive-images (0.5): Est savings of 17 KiB; is-crawlable (0); cache-insight (0): Est savings of 623 KiB; forced-reflow-insight (0); image-delivery-insight (0): Est savings of 26 KiB; network-dependency-tree-insight (0); render-blocking-insight (0)
