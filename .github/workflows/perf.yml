@@ -1,0 +1,64 @@
+# The site as it is online, measured like a relative's phone would get it: Lighthouse (mobile) and a visit that
+# counts what is downloaded and what goes wrong. Push a commit to bot/perf to run; results land on bot/perf-out.
+name: Mesure du site en ligne
+on:
+  push:
+    branches: [bot/perf]
+permissions:
+  contents: write
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install the tools
+        working-directory: scripts/perf
+        run: npm init -y >/dev/null && npm i --no-save playwright@1.63.0 lighthouse@12.6.0 && npx playwright install --with-deps chromium
+      - name: Visit
+        run: |
+          mkdir -p /tmp/perf
+          node scripts/perf/live.mjs /tmp/perf 2>&1 | tee /tmp/perf/visit.log
+      - name: Lighthouse
+        working-directory: scripts/perf
+        run: |
+          export CHROME_PATH=$(node -e 'console.log(require("playwright").chromium.executablePath())')
+          for pair in "home|https://tetordesign-boop.github.io/te-araroa/" "carnet|https://tetordesign-boop.github.io/te-araroa/admin/"; do
+            name=${pair%%|*}; url=${pair#*|}
+            for run in 1 2; do
+              npx lighthouse "$url" --quiet --output=json --output-path=/tmp/perf/lh-$name-$run.json \
+                --chrome-flags="--headless=new --no-sandbox --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist" \
+                --max-wait-for-load=60000 || echo "lighthouse $name $run failed"
+            done
+          done
+          node -e '
+            const fs = require("fs");
+            for (const f of fs.readdirSync("/tmp/perf").filter((f) => f.startsWith("lh-") && f.endsWith(".json"))) {
+              const r = JSON.parse(fs.readFileSync("/tmp/perf/" + f, "utf8")), a = r.audits;
+              const cat = Object.fromEntries(Object.entries(r.categories).map(([k, v]) => [k, Math.round(v.score * 100)]));
+              const ms = (id) => a[id]?.numericValue != null ? Math.round(a[id].numericValue) : null;
+              const items = (id, n = 6) => (a[id]?.details?.items ?? []).slice(0, n).map((i) => `${Math.round((i.wastedBytes ?? i.totalBytes ?? i.wastedMs ?? 0) / (i.wastedBytes || i.totalBytes ? 1024 : 1))}${i.wastedBytes || i.totalBytes ? " kB" : " ms"} ${String(i.url ?? i.node?.snippet ?? "").slice(0, 110)}`);
+              const failing = Object.values(a).filter((x) => x.score !== null && x.score < 0.9 && x.scoreDisplayMode !== "informative" && x.scoreDisplayMode !== "notApplicable" && x.scoreDisplayMode !== "manual").map((x) => `${x.id} (${x.score})${x.displayValue ? ": " + x.displayValue : ""}`);
+              console.log("\n== " + f, JSON.stringify(cat));
+              console.log("FCP", ms("first-contentful-paint"), "LCP", ms("largest-contentful-paint"), "TBT", ms("total-blocking-time"), "CLS", a["cumulative-layout-shift"]?.numericValue?.toFixed(3), "SI", ms("speed-index"), "TTI", ms("interactive"), "bytes", Math.round(a["total-byte-weight"].numericValue / 1024) + " kB");
+              console.log("LCP element:", (a["largest-contentful-paint-element"]?.details?.items?.[0]?.items?.[0]?.node?.snippet ?? "?").slice(0, 160));
+              console.log("render-blocking:", items("render-blocking-resources").join(" | "));
+              console.log("unused JS:", items("unused-javascript").join(" | "));
+              console.log("main-thread:", (a["mainthread-work-breakdown"]?.details?.items ?? []).slice(0, 5).map((i) => `${i.groupLabel} ${Math.round(i.duration)}ms`).join(", "));
+              console.log("bootup:", (a["bootup-time"]?.details?.items ?? []).slice(0, 5).map((i) => `${String(i.url).slice(-60)} ${Math.round(i.total)}ms`).join(" | "));
+              console.log("below 0.9:", failing.join("; "));
+            }
+          ' 2>&1 | tee /tmp/perf/lighthouse.txt
+      - name: Publish on bot/perf-out
+        if: always()
+        working-directory: /tmp/perf
+        run: |
+          git init -q -b bot/perf-out
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Perf ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" bot/perf-out
