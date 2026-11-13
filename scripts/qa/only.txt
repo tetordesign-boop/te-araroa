@@ -1,9 +1,13 @@
+m-intro
 m-home-half
+m-day-half
 m-place-hut
 m-alps-3d
-m-eye
 m-island
-m-orbit
-d-place-peak
-d-aoraki
+m-eye
+m-trail
 d-home
+d-trail
+d-day
+l-home
+t-home
