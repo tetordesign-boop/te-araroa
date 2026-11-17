@@ -8,7 +8,7 @@ import { addDays, fmtDate, fmtInt, fmtKm, nzToday } from "../lib/format";
 import { haversine, type LngLat } from "../lib/geo";
 import { gapName, notable, placeById, places, type Place, type PlaceKind } from "../lib/places";
 import { BADGE_GLYPHS } from "../map/icons";
-import { kindLabel } from "../map/pois";
+import { kindLabel, poiName, poiText } from "../map/pois";
 import type { Day, Lang, Media } from "../types";
 import { titleOf } from "./Home";
 import { ChevronLeft, ChevronRight, Close, External, Orbit, Share } from "./icons";
@@ -24,7 +24,8 @@ export function PlaceBadge({ kind, size = 30 }: { kind: PlaceKind; size?: number
 }
 
 export function placeName(p: Place, l: Lang) {
-  return p.t === "gap" ? gapName(p.gap?.key ?? null, l) : p.n;
+  if (p.t === "gap") return gapName(p.gap?.key ?? null, l);
+  return p.poi ? poiName(p.poi, l) : p.n;
 }
 
 export function placeKindLabel(p: Place, l: Lang): string {
@@ -126,7 +127,9 @@ function Facts({ p }: { p: Place }) {
   if (o.fee === 0) items.push(t("feeNo"));
   if (o.book) items.push(t("booking"));
   if (o.water) items.push(t("water"));
+  else if (o.t === "hut" && !o.biv) items.push(t("hutWater"));
   if (o.wc) items.push(t("toilets"));
+  if (o.t === "water") items.push(t(o.spr ? "springTreat" : o.pot === 1 ? "drinkable" : o.pot === 0 ? "notDrinkable" : "waterUnknown"));
   if (o.op) items.push(o.op === "DOC" ? t("byDoc") : o.op);
   if (!items.length) return null;
   return <ul class="pfacts" aria-label={l === "fr" ? "Sur place" : "On site"}>{items.map((x) => <li>{x}</li>)}</ul>;
@@ -256,6 +259,7 @@ export function PlaceView({ id }: { id: string }) {
         <Relation p={p} />
 
         {p.t === "gap" && <p class="ptext">{t(GAP_TEXT[p.gap?.key ?? ""] ?? "gapGeneric")}</p>}
+        {p.poi && poiText(p.poi, l) && <p class="ptext">{poiText(p.poi, l)}</p>}
 
         <Facts p={p} />
 
@@ -266,7 +270,10 @@ export function PlaceView({ id }: { id: string }) {
           {p.poi?.url && (
             <a class="action" href={p.poi.url} target="_blank" rel="noopener"><External />{t("docPage")}</a>
           )}
-          {!p.poi?.url && osm && (
+          {p.poi?.src && (
+            <a class="action" href={p.poi.src} target="_blank" rel="noopener"><External />{t("readMore")}</a>
+          )}
+          {!p.poi?.url && !p.poi?.src && osm && (
             <a class="action" href={osm} target="_blank" rel="noopener"><External />OpenStreetMap</a>
           )}
         </div>

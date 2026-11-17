@@ -1,8 +1,8 @@
-// Everything a visitor can tap on the map besides Ewan's own days: the huts, campsites, passes, peaks,
-// waterfalls and viewpoints along the trail (OpenStreetMap, built by scripts/data/pois.mjs), the trail's
-// own towns, and the river and lake crossings that are done by road or boat.
+// Everything a visitor can tap on the map besides my own days: the huts, campsites, water points, passes, peaks,
+// waterfalls and viewpoints along the trail (OpenStreetMap, built by scripts/data/pois.mjs), the iconic spots and
+// film locations chosen by hand, the trail's own towns, and the river and lake crossings done by road or boat.
 import { computed, signal } from "@preact/signals";
-import { fold, type Poi, type PoiGroup, type PoiKind } from "../map/pois";
+import { fold, GROUPS, kindLabel, poiName, type Poi, type PoiGroup, type PoiKind } from "../map/pois";
 import { lang } from "../i18n";
 import type { Lang } from "../types";
 import { route } from "./data";
@@ -108,36 +108,46 @@ export const places = computed<Place[]>(() => {
   }]);
   const fromOsm: Place[] = pois.value.map((p) => {
     const approx = p.e === null && p.d < 400 ? trailElevation(p.km) : null;
+    // searchable by every name it has: "edoras", "bruinen", "eau", "source", "hobbit"…
+    const words = [p.n, p.nfr, p.film?.join(" "), p.t === "water" ? `${kindLabel(p, "fr")} ${kindLabel(p, "en")} eau water` : "",
+      p.t === "film" ? "film seigneur des anneaux lord of the rings terre du milieu middle-earth" : "", p.t === "icon" ? "lieu culte iconic" : ""];
     return {
       id: p.id, t: p.t, n: p.n, c: p.c, e: p.e ?? approx, eApprox: p.e === null && approx !== null,
-      km: p.km, d: p.d, poi: p, q: fold(p.n),
+      km: p.km, d: p.d, poi: p, q: fold(words.filter(Boolean).join(" ")),
     };
   });
   return [...towns, ...fromOsm, ...gapPlaces.value].sort((a, b) => a.km - b.km || rank(a) - rank(b));
 });
 
-const RANK: Record<PlaceKind, number> = { town: 0, gap: 1, hut: 2, pass: 3, camp: 4, peak: 5, fall: 6, view: 7 };
+const RANK: Record<PlaceKind, number> = { town: 0, gap: 1, icon: 2, film: 3, hut: 4, pass: 5, camp: 6, water: 7, peak: 8, fall: 9, view: 10 };
 const rank = (p: Place) => RANK[p.t];
 
 export const placeById = computed(() => new Map(places.value.map((p) => [p.id, p])));
 
 /** The places drawn as points of interest on the map (towns are drawn by the map itself). */
 export const mapPois = computed<Poi[]>(() => [
-  ...pois.value,
+  ...pois.value.map((p) => (p.nfr && lang.value === "fr" ? { ...p, n: poiName(p, "fr") } : p)),
   ...gapPlaces.value.map((g): Poi => ({ id: g.id, t: "gap", n: gapName(g.gap?.key ?? null, lang.value), c: g.c, e: null, km: g.km, d: 0, gap: g.gap?.m })),
 ]);
 
 /** Which groups of places are shown, on the map and in the list (remembered on this device). */
-const GROUPS_KEY = "poi-groups-v1";
+const GROUPS_KEY = "poi-groups-v2";
+/** the groups that came later (water, iconic spots, Middle-earth) start on for those who had chosen before */
+const NEW_IN_V2: PoiGroup[] = ["water", "icons", "films"];
 function initialGroups(): PoiGroup[] {
   try {
     const raw = localStorage.getItem(GROUPS_KEY);
     if (raw) {
       const v = JSON.parse(raw);
-      if (Array.isArray(v)) return v.filter((g) => ["huts", "camps", "summits", "sights"].includes(g));
+      if (Array.isArray(v)) return v.filter((g) => GROUPS.includes(g));
+    }
+    const old = localStorage.getItem("poi-groups-v1");
+    if (old) {
+      const v = JSON.parse(old);
+      if (Array.isArray(v)) return [...v.filter((g) => GROUPS.includes(g)), ...NEW_IN_V2];
     }
   } catch (_) { /* storage unavailable */ }
-  return ["huts", "camps", "summits", "sights"];
+  return [...GROUPS];
 }
 export const poiGroups = signal<PoiGroup[]>(initialGroups());
 export function toggleGroup(g: PoiGroup) {
@@ -150,6 +160,9 @@ export function groupOfPlace(p: Place): PoiGroup | null {
   switch (p.t) {
     case "hut": return "huts";
     case "camp": return "camps";
+    case "water": return "water";
+    case "icon": return "icons";
+    case "film": return "films";
     case "pass": case "peak": return "summits";
     case "fall": case "view": return "sights";
     default: return null;

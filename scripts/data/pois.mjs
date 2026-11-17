@@ -1,9 +1,11 @@
 // Points of interest along the trail, from OpenStreetMap (© OpenStreetMap contributors, ODbL):
-// huts, campsites, passes, peaks, waterfalls, viewpoints. Each one gets its km on the trail and its
-// distance from it, so the site can say "km 412, 1.2 km off the trail".
+// huts, campsites, water points, passes, peaks, waterfalls, viewpoints, and the places chosen by hand in
+// curated.mjs (iconic spots, film locations), located on the map too. Each one gets its km on the trail and
+// its distance from it, so the site can say "km 412, 1.2 km off the trail".
 // Usage: node scripts/data/pois.mjs <out.json> [trail.json path or URL]
 import { writeFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
+import { CURATED } from "./curated.mjs";
 import { bboxOf, loadTrail, makeLocator, sleep, UA } from "./lib.mjs";
 
 const [, , out = "web/public/data/pois.json", trailSrc] = process.argv;
@@ -53,7 +55,26 @@ await sleep(3000);
 const peaks = await overpass(`[out:json][timeout:240][bbox:${bb}];
 node["natural"~"^(peak|volcano)$"]["name"];
 out body;`);
-console.log(`overpass: ${general.length} general, ${peaks.length} peaks`);
+await sleep(3000);
+const water = await overpass(`[out:json][timeout:240][bbox:${bb}];
+(
+  node["amenity"~"^(drinking_water|water_point)$"];
+  node["man_made"="water_tap"];
+  node["natural"="spring"];
+);
+out body;`);
+await sleep(3000);
+// the places chosen by hand, looked up by name a little wider (film locations can be a few km off)
+const [cw, cs, ce, cn] = bboxOf(trail, 0.35);
+// (exact names only: a regular expression over every named thing on the island is too slow for Overpass)
+const names = [...new Set(CURATED.flatMap((c) => c.find?.names ?? []))];
+const finds = names.map((x) => `nwr["name"="${x.replace(/"/g, '\\"')}"];`).join("\n  ");
+const curatedEls = await overpass(`[out:json][timeout:240][bbox:${cs},${cw},${cn},${ce}];
+(
+  ${finds}
+);
+out center tags;`);
+console.log(`overpass: ${general.length} general, ${peaks.length} peaks, ${water.length} water, ${curatedEls.length} curated candidates`);
 
 const num = (v) => {
   if (v === undefined || v === null) return null;
@@ -70,6 +91,7 @@ function kind(t) {
   if (t.tourism === "viewpoint") return "view";
   if (t.natural === "saddle" || t.mountain_pass === "yes") return "pass";
   if (t.waterway === "waterfall" || t.natural === "waterfall") return "fall";
+  if (t.amenity === "drinking_water" || t.amenity === "water_point" || t.man_made === "water_tap" || t.natural === "spring") return "water";
   if (t.natural === "peak" || t.natural === "volcano") return "peak";
   return null;
 }
@@ -82,13 +104,14 @@ function keep(k, d, ele, named) {
     case "pass": return d <= 2000;
     case "view": return named && d <= 1200;
     case "fall": return d <= 2000;
+    case "water": return d <= 300;
     case "peak": return d <= 3000 || (ele !== null && ele >= 1800 && d <= 8000) || (ele !== null && ele >= 2800 && d <= 16000);
     default: return false;
   }
 }
 
 const items = [];
-for (const el of [...general, ...peaks]) {
+for (const el of [...general, ...peaks, ...water]) {
   const t = el.tags ?? {};
   const k = kind(t);
   if (!k) continue;
@@ -98,10 +121,14 @@ for (const el of [...general, ...peaks]) {
   const ele = num(t.ele);
   const { km, d } = locate([lon, lat]);
   if (!keep(k, d, ele, !!name)) continue;
-  if (!name) continue;
+  // a tap or a spring needs no name (the site calls it by its kind)
+  if (!name && k !== "water") continue;
+  if (k === "water" && t.natural === "spring" && d > 250) continue;
+  // a bike wash, a hot pool or a sulphur spring is no water to drink
+  if (k === "water" && (t.drinking_water === "no" || /bike|wash|hot|sulph|sulf/i.test(name ?? ""))) continue;
   const op = clean(t.operator);
   const item = {
-    t: k, n: name, c: [Math.round(lon * 1e5) / 1e5, Math.round(lat * 1e5) / 1e5], e: ele, km, d,
+    t: k, n: name ?? "", c: [Math.round(lon * 1e5) / 1e5, Math.round(lat * 1e5) / 1e5], e: ele, km, d,
     id: `${el.type[0]}${el.id}`,
   };
   const cap = num(t.capacity ?? t.beds);
@@ -112,6 +139,11 @@ for (const el of [...general, ...peaks]) {
   if (t.fee) item.fee = /^(no|non)$/i.test(t.fee) ? 0 : 1;
   if (t.reservation && /required|yes/i.test(t.reservation)) item.book = 1;
   if (t.drinking_water === "yes") item.water = 1;
+  if (k === "water") {
+    if (t.natural === "spring") item.spr = 1;
+    if (t.drinking_water === "yes" || (t.amenity === "drinking_water" && t.drinking_water !== "no")) item.pot = 1;
+    if (t.drinking_water === "no") item.pot = 0;
+  }
   if (t.toilets === "yes") item.wc = 1;
   if (k === "hut" && /biv/i.test(name ?? "")) item.biv = 1;
   items.push(item);
@@ -123,7 +155,63 @@ const kept = [];
 for (const it of items) {
   const dup = kept.find((k) => k.t === it.t && (k.n ?? "") === (it.n ?? "") &&
     Math.abs(k.c[0] - it.c[0]) < 0.004 && Math.abs(k.c[1] - it.c[1]) < 0.003);
-  if (!dup) kept.push(it);
+  // two taps next to each other are one water point
+  const nearWater = it.t === "water" && kept.find((k) => k.t === "water" && Math.abs(k.c[0] - it.c[0]) < 0.0015 && Math.abs(k.c[1] - it.c[1]) < 0.0011);
+  if (!dup && !nearWater) kept.push(it);
+}
+
+// ---------------------------------------------------------------- the places chosen by hand
+const round5 = (x) => Math.round(x * 1e5) / 1e5;
+for (const c of CURATED) {
+  const texts = { fr: c.fr, en: c.en, ...(c.src ? { src: c.src } : {}), ...(c.film ? { film: c.film } : {}) };
+  if (c.upgrade) {
+    const re = new RegExp(c.upgrade.name, "i");
+    const hit = kept.find((k) => k.t === c.upgrade.t && re.test(k.n));
+    if (!hit) { console.warn(`curated ${c.slug}: no ${c.upgrade.t} named ${c.upgrade.name}`); continue; }
+    Object.assign(hit, { t: c.t, was: c.upgrade.t, ...texts });
+    console.log(`curated ${c.slug}: ${hit.n} (${hit.t}, km ${hit.km}, ${hit.d} m)`);
+    continue;
+  }
+  const cands = curatedEls.filter((el) => {
+    const tg = el.tags ?? {};
+    if (!c.find.names.includes(tg.name ?? "")) return false;
+    if (c.find.tag && tg[c.find.tag[0]] !== c.find.tag[1]) return false;
+    return (el.lat ?? el.center?.lat) !== undefined;
+  }).map((el) => {
+    const lon = el.lon ?? el.center.lon, lat = el.lat ?? el.center.lat;
+    return { el, lon, lat, ...locate([lon, lat]) };
+  }).filter((x) => x.d <= c.max);
+  const preferred = c.prefer ? cands.filter((x) => new RegExp(c.prefer, "i").test(x.el.tags.name)) : [];
+  const best = (preferred.length ? preferred : cands).sort((a, b) => a.d - b.d)[0];
+  if (!best && c.wiki) {
+    // not in the map data under that name: the coordinates of its Wikipedia article
+    for (const title of c.wiki) {
+      const w = await (await fetch(`https://en.wikipedia.org/w/api.php?action=query&format=json&prop=coordinates&redirects=1&titles=${encodeURIComponent(title)}`, { headers: { "User-Agent": UA } })).json();
+      const co = Object.values(w.query?.pages ?? {})[0]?.coordinates?.[0];
+      if (!co) continue;
+      const at = locate([co.lon, co.lat]);
+      if (at.d > c.max) { console.warn(`curated ${c.slug}: wikipedia ${title} is ${at.d} m away`); continue; }
+      const pt = c.snap ? at.at : [round5(co.lon), round5(co.lat)];
+      kept.push({ id: `x-${c.slug}`, t: c.t, n: c.n, ...(c.nfr ? { nfr: c.nfr } : {}), c: pt, e: null, km: at.km, d: c.snap ? 0 : at.d, ...texts });
+      console.log(`curated ${c.slug}: wikipedia ${title} (km ${at.km}, ${at.d} m${c.snap ? ", on the trail" : ""})`);
+      break;
+    }
+    if (kept.some((k) => k.id === `x-${c.slug}`)) continue;
+  }
+  if (!best) {
+    const seen = curatedEls.filter((el) => c.find.names.includes(el.tags?.name)).map((el) => `${el.type}/${el.id} ${JSON.stringify(el.tags).slice(0, 120)}`);
+    console.warn(`curated ${c.slug}: not found within ${c.max} m${seen.length ? ` (seen: ${seen.join(" | ")})` : ""}`);
+    continue;
+  }
+  const usedOffset = c.offset && !(preferred.length && preferred.includes(best));
+  const lon = round5(best.lon + (usedOffset ? c.offset[0] : 0)), lat = round5(best.lat + (usedOffset ? c.offset[1] : 0));
+  const at = usedOffset ? locate([lon, lat]) : best;
+  // a lake the route skirts, a bay it walks along: the pin goes on the trail itself
+  const pt = c.snap ? at.at : [lon, lat];
+  kept.push({
+    id: `x-${c.slug}`, t: c.t, n: c.n, ...(c.nfr ? { nfr: c.nfr } : {}), c: pt, e: num(best.el.tags.ele), km: at.km, d: c.snap ? 0 : at.d, ...texts,
+  });
+  console.log(`curated ${c.slug}: ${best.el.tags.name} (${best.el.type}/${best.el.id}${usedOffset ? ", offset" : ""}, km ${at.km}, ${at.d} m)`);
 }
 kept.sort((a, b) => a.km - b.km || a.d - b.d);
 
