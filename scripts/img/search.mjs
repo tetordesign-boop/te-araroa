@@ -5,16 +5,12 @@ const OUT = process.argv[2];
 mkdirSync(OUT, { recursive: true });
 const UA = { "User-Agent": "TeAraroaItineraryDoc/1.0 (https://github.com/tetordesign-boop/te-araroa)" };
 const QUERIES = [
-  ["kawarau", "Kawarau Gorge Suspension Bridge"],
-  ["lindis", "Lindis Pass"],
-  ["pukaki", "Lake Pukaki Aoraki"],
-  ["hooker", "Hooker Valley Track"],
-  ["tekapo", "Church of the Good Shepherd Tekapo"],
-  ["christchurch", "Christchurch Botanic Gardens Avon punting"],
-  ["kaikoura", "Kaikoura peninsula mountains"],
-  ["whale", "Sperm whale Kaikoura"],
-  ["mangawhai", "Mangawhai Heads"],
-  ["marlborough", "Marlborough vineyard Blenheim"],
+  ["moeraki", "Moeraki Boulders"],
+  ["oamaru", "Oamaru Victorian precinct Harbour Street"],
+  ["steampunk", "Steampunk HQ Oamaru"],
+  ["penguin", "Little blue penguin Oamaru"],
+  ["otago", "Maniototo Central Otago landscape"],
+  ["clyde", "Clyde Dam Lake Dunstan Central Otago"],
 ];
 const strip = (h) => String(h ?? "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 const credits = [];
