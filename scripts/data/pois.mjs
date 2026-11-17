@@ -18,7 +18,8 @@ const MIRRORS = [
 
 async function overpass(query) {
   let lastErr;
-  for (let attempt = 0; attempt < 6; attempt++) {
+  // Overpass is often at capacity for a few minutes: keep trying, waiting longer each time (about 9 minutes in all)
+  for (let attempt = 0; attempt < 10; attempt++) {
     const url = MIRRORS[attempt % MIRRORS.length];
     try {
       const res = await fetch(url, {
@@ -31,7 +32,7 @@ async function overpass(query) {
     } catch (e) {
       lastErr = e;
       console.warn("overpass retry:", e.message);
-      await sleep(5000 * (attempt + 1));
+      await sleep(Math.min(90000, 10000 * (attempt + 1)));
     }
   }
   throw lastErr;
@@ -148,7 +149,7 @@ for (const el of [...general, ...peaks, ...water, ...shops]) {
   const ele = num(t.ele);
   const { km, d } = locate([lon, lat]);
   // a hiker hitches to a shop off the trail when there is none on it: kept for now, sorted out below
-  if (!keep(k, d, ele, !!name) && !(k === "shop" && d <= 10000 && t.shop && t.shop !== "outdoor")) continue;
+  if (!keep(k, d, ele, !!name) && !(k === "shop" && d <= 5000 && t.shop && t.shop !== "outdoor")) continue;
   if (k === "shop" && NOT_RESUPPLY.test(name ?? "")) continue;
   // a tap or a spring needs no name (the site calls it by its kind)
   if (!name && k !== "water") continue;
@@ -203,7 +204,8 @@ const food = (x) => x.t === "shop" && x.sub in SHOP_RANK;
 const quality = (x) => (x.chain ? 0 : 1) + (SHOP_RANK[x.sub] ?? 9) * 2;
 const byQuality = kept.filter((x) => x.t === "shop").sort((a, b) => quality(a) - quality(b) || a.d - b.d);
 const shopKeep = [];
-// first what is on the trail (1.5 km), then a food shop up to 10 km off it where the trail has none for 40 km
+// first what is on the trail (1.5 km), then a food shop up to 5 km off it where the trail has none for 40 km:
+// a short hitch (Arthur's Pass village from Klondyke Corner), not a town across a range (Richmond from the Richmond Range)
 for (const s of byQuality.filter((x) => x.d <= 1500)) {
   const taken = shopKeep.some((o) => cluster(o, s) && (food(s) ? food(o) : o.sub === s.sub));
   if (!taken) shopKeep.push(s);
