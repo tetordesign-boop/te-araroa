@@ -1,0 +1,56 @@
+overpass retry: https://overpass-api.de/api/interpreter 502 # 502 Gateway Timeout
+
+This Overpass API server is currently at capacity. All query workers are busy
+and the request queue is full.
+
+## What to do
+
+Retry your request using exponential backoff: wait a
+overpass retry: https://overpass.kumi.systems/api/interpreter 504 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:
+overpass retry: https://maps.mail.ru/osm/tools/overpass/api/interpreter 504 <html>
+<head><title>504 Gateway Time-out</title></head>
+<body>
+<center><h1>504 Gateway Time-out</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+
+overpass: 3679 general, 3791 peaks, 711 water, 879 shops, 29 curated candidates
+curated kerr-bay: Kerr Bay (node/1572998715, km 252.3, 320 m)
+curated blue-lake: Rotomairewhenua / Blue Lake (way/178278159, km 298.3, 178 m)
+curated lake-constance: wikipedia Lake Constance (New Zealand) (km 301.4, 648 m, on the trail)
+curated waiau-pass: Waiau Pass (icon, km 303.7, 4 m)
+curated goat-pass: Goat Pass (icon, km 476.3, 7 m)
+curated devils-punchbowl: Devils Punchbowl Falls (node/1063574301, km 482.1, 4292 m)
+curated stag-saddle: Stag Saddle (icon, km 659.1, 0 m)
+curated good-shepherd: Church of the Good Shepherd (way/88254064, km 702.5, 24 m)
+curated breast-hill: Breast Hill (icon, km 862.1, 7 m)
+curated wanaka-tree: That Wānaka Tree (node/4396809376, km 901.7, 44 m)
+curated chinese-settlement: Chinese Village (node/2255938438, km 965.1, 25 m)
+curated oreti-beach: Oreti Beach (node/5477073921, km 1290.9, 94 m)
+curated pelorus: Pelorus Bridge (way/882592668, km 111.2, 79 m)
+curated edoras: Mount Sunday (node/515811618, km 628.8, 5885 m)
+curated esgaroth: wikipedia Lake Pukaki (km 735.3, 5553 m)
+curated pelennor: Twizel (node/173837843, offset, km 757.6, 1580 m)
+curated bruinen: Arrowtown (node/175753744, offset, km 965.3, 587 m)
+curated skippers: Skippers (node/7748201965, km 951.1, 10357 m)
+curated argonath: Chard Farm (way/482916288, km 974.8, 6771 m)
+curated ithilien: Twelve Mile Delta Campsite (way/274971974, km 993.7, 9357 m)
+curated mavora: Mavora Lakes (node/2296594486, km 1061.1, 1106 m)
+curated passburn: Passburn Hut (way/975155218, offset, km 1009.9, 348 m)
+kept 565 {
+  peak: 279,
+  camp: 60,
+  view: 27,
+  water: 27,
+  pass: 21,
+  shop: 34,
+  fall: 8,
+  film: 10,
+  hut: 87,
+  icon: 12
+}
+written /tmp/out/pois.json
