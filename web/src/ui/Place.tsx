@@ -117,6 +117,8 @@ function Relation({ p }: { p: Place }) {
   );
 }
 
+const hostOf = (u: string) => { try { return new URL(u).hostname; } catch (_) { return ""; } };
+
 function Facts({ p }: { p: Place }) {
   const l = lang.value;
   const o = p.poi;
@@ -270,7 +272,7 @@ export function PlaceView({ id }: { id: string }) {
             <Orbit />{orbiting ? t("stopOrbit") : t("orbit")}
           </button>
           {p.poi?.url && (
-            <a class="action" href={p.poi.url} target="_blank" rel="noopener"><External />{t("docPage")}</a>
+            <a class="action" href={p.poi.url} target="_blank" rel="noopener"><External />{t(/(^|\.)doc\.govt\.nz$/.test(hostOf(p.poi.url)) ? "docPage" : "website")}</a>
           )}
           {p.poi?.src && (
             <a class="action" href={p.poi.src} target="_blank" rel="noopener"><External />{t("readMore")}</a>
