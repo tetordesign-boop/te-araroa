@@ -20,7 +20,7 @@ export const CURATED = [
     src: "https://www.doc.govt.nz/parks-and-recreation/places-to-go/nelson-tasman/places/nelson-lakes-national-park/things-to-do/rotomairewhenua-blue-lake/",
   },
   {
-    slug: "lake-constance", t: "icon", n: "Lake Constance", find: { names: ["Lake Constance"], tag: ["natural", "water"] }, max: 3000,
+    slug: "lake-constance", t: "icon", n: "Lake Constance", find: { names: ["Lake Constance"] }, wiki: ["Lake Constance (New Zealand)"], snap: true, max: 3000,
     fr: "Le lac au pied du Waiau Pass : le sentier le contourne par une vire raide avant la montée au col.",
     en: "The lake below Waiau Pass: the route sidles steeply around it before the climb to the pass.",
   },
@@ -35,7 +35,7 @@ export const CURATED = [
     en: "The pass of the Coast to Coast, the race that crosses the island running, cycling and paddling.",
   },
   {
-    slug: "devils-punchbowl", t: "icon", upgrade: { t: "fall", name: "Devil'?s Punchbowl" },
+    slug: "devils-punchbowl", t: "icon", n: "Devils Punchbowl Falls", find: { names: ["Devils Punchbowl Falls", "Devil's Punchbowl Falls", "Devils Punchbowl", "Devil's Punchbowl"] }, wiki: ["Devils Punchbowl Falls"], max: 3500,
     fr: "Une chute de 131 m à dix minutes du village d'Arthur's Pass, où les kea, perroquets de montagne, rôdent autour des voitures.",
     en: "A 131 m waterfall ten minutes from Arthur's Pass village, where kea, the mountain parrots, prowl around the cars.",
   },
@@ -65,7 +65,7 @@ export const CURATED = [
     en: "The restored huts of the Chinese gold miners, beside the Arrow River.",
   },
   {
-    slug: "te-waewae-bay", t: "icon", n: "Te Waewae Bay", find: { names: ["Te Waewae Bay"] }, max: 6000,
+    slug: "te-waewae-bay", t: "icon", n: "Te Waewae Bay", find: { names: ["Te Waewae Bay"] }, wiki: ["Te Waewae Bay"], snap: true, max: 15000,
     fr: "Une longue plage sauvage face au Sud, où l'on croise parfois les dauphins d'Hector, les plus petits du monde.",
     en: "A long wild beach facing south, where Hector's dolphins, the smallest in the world, sometimes swim by.",
   },
@@ -84,7 +84,7 @@ export const CURATED = [
     en: "Edoras, capital of Rohan, stood on this knoll. The set is gone, but you can walk up from Hakatere Potts Road.",
   },
   {
-    slug: "esgaroth", t: "film", n: "Lake-town · Lake Pukaki", nfr: "Esgaroth · lac Pukaki", find: { names: ["Lake Pukaki"], tag: ["natural", "water"] }, max: 25000, src: HOBBIT,
+    slug: "esgaroth", t: "film", n: "Lake-town · Lake Pukaki", nfr: "Esgaroth · lac Pukaki", find: { names: ["Lake Pukaki"] }, wiki: ["Lake Pukaki"], max: 25000, src: HOBBIT,
     film: ["Le Hobbit", "The Hobbit"],
     fr: "Le lac a servi de décor à Esgaroth, la ville sur le lac (La Désolation de Smaug), et sa rive est à la poursuite des Wargs.",
     en: "The lake stood in for Lake-town (The Desolation of Smaug), and its eastern shore for the Warg chase.",
@@ -108,7 +108,7 @@ export const CURATED = [
     en: "The Gladden Fields, where Isildur loses the Ring at the start of the first film.",
   },
   {
-    slug: "skippers", t: "film", n: "Skippers Canyon", find: { names: ["Skippers Canyon"] }, max: 20000, src: LOTR,
+    slug: "skippers", t: "film", n: "Skippers Canyon", find: { names: ["Skippers Canyon", "Skippers"] }, wiki: ["Skippers Canyon"], max: 20000, src: LOTR,
     film: ["Le Seigneur des anneaux", "The Lord of the Rings"],
     fr: "Les parois du canyon ont servi pour la crue du gué de la Bruinen.",
     en: "Its walls were used for the flood at the Ford of Bruinen.",
@@ -120,7 +120,7 @@ export const CURATED = [
     en: "The Fellowship paddles down the Anduin through this gorge. The giant Argonath statues were added in the studio.",
   },
   {
-    slug: "rohan", t: "film", n: "Rohan · Deer Park Heights", find: { names: ["Deer Park Heights"] }, max: 15000, src: LOTR,
+    slug: "rohan", t: "film", n: "Rohan · Deer Park Heights", find: { names: ["Deer Park Heights"] }, wiki: ["Deer Park Heights"], max: 15000, src: LOTR,
     film: ["Le Seigneur des anneaux", "The Lord of the Rings"],
     fr: "Les réfugiés du Rohan sur la route d'Edoras au Gouffre de Helm.",
     en: "The people of Rohan on the road from Edoras to Helm's Deep.",
@@ -132,7 +132,7 @@ export const CURATED = [
     en: "The Ithilien camp, the Oliphaunts, and Gollum with his rabbit (\"What's taters, precious?\").",
   },
   {
-    slug: "mavora", t: "film", n: "Mavora Lakes", find: { names: ["North Mavora Lake", "Mavora Lakes"], tag: ["natural", "water"] }, max: 6000,
+    slug: "mavora", t: "film", n: "Mavora Lakes", find: { names: ["North Mavora Lake", "Mavora Lakes", "Mavora Lake"] }, wiki: ["Mavora Lakes"], max: 8000,
     src: "https://www.discovernewzealand.com/blog/20-best-lord-of-the-rings-filming-locations",
     film: ["Le Seigneur des anneaux", "The Lord of the Rings"],
     fr: "La fin du voyage sur l'Anduin : Frodon s'y cache des Uruk-hai, Merry et Pippin des orques.",

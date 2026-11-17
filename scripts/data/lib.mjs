@@ -20,13 +20,14 @@ export function haversine(a, b) {
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
 }
 
-/** Nearest point of the trail to p: km along the trail and distance in metres (local equirectangular projection). */
+/** Nearest point of the trail to p: km along the trail, distance in metres, and that point of the trail (local
+ * equirectangular projection). */
 export function makeLocator(trail) {
   const segs = [];
   for (const part of trail.parts) for (let i = 1; i < part.length; i++) segs.push([part[i - 1], part[i]]);
   return (p) => {
     const kx = Math.cos(toRad(p[1])) * 111320, ky = 110540;
-    let best = { d2: Infinity, km: 0 };
+    let best = { d2: Infinity, km: 0, x: 0, y: 0 };
     for (const [a, b] of segs) {
       const ax = (a[0] - p[0]) * kx, ay = (a[1] - p[1]) * ky;
       const bx = (b[0] - p[0]) * kx, by = (b[1] - p[1]) * ky;
@@ -36,9 +37,10 @@ export function makeLocator(trail) {
       t = Math.max(0, Math.min(1, t));
       const x = ax + vx * t, y = ay + vy * t;
       const d2 = x * x + y * y;
-      if (d2 < best.d2) best = { d2, km: a[2] + (b[2] - a[2]) * t };
+      if (d2 < best.d2) best = { d2, km: a[2] + (b[2] - a[2]) * t, x, y };
     }
-    return { km: Math.round(best.km * 10) / 10, d: Math.round(Math.sqrt(best.d2)) };
+    const at = [Math.round((p[0] + best.x / kx) * 1e5) / 1e5, Math.round((p[1] + best.y / ky) * 1e5) / 1e5];
+    return { km: Math.round(best.km * 10) / 10, d: Math.round(Math.sqrt(best.d2)), at };
   };
 }
 

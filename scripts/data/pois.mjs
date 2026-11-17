@@ -124,6 +124,8 @@ for (const el of [...general, ...peaks, ...water]) {
   // a tap or a spring needs no name (the site calls it by its kind)
   if (!name && k !== "water") continue;
   if (k === "water" && t.natural === "spring" && d > 250) continue;
+  // a bike wash, a hot pool or a sulphur spring is no water to drink
+  if (k === "water" && (t.drinking_water === "no" || /bike|wash|hot|sulph|sulf/i.test(name ?? ""))) continue;
   const op = clean(t.operator);
   const item = {
     t: k, n: name ?? "", c: [Math.round(lon * 1e5) / 1e5, Math.round(lat * 1e5) / 1e5], e: ele, km, d,
@@ -181,12 +183,33 @@ for (const c of CURATED) {
   }).filter((x) => x.d <= c.max);
   const preferred = c.prefer ? cands.filter((x) => new RegExp(c.prefer, "i").test(x.el.tags.name)) : [];
   const best = (preferred.length ? preferred : cands).sort((a, b) => a.d - b.d)[0];
-  if (!best) { console.warn(`curated ${c.slug}: nothing named ${c.find.name} within ${c.max} m`); continue; }
+  if (!best && c.wiki) {
+    // not in the map data under that name: the coordinates of its Wikipedia article
+    for (const title of c.wiki) {
+      const w = await (await fetch(`https://en.wikipedia.org/w/api.php?action=query&format=json&prop=coordinates&redirects=1&titles=${encodeURIComponent(title)}`, { headers: { "User-Agent": UA } })).json();
+      const co = Object.values(w.query?.pages ?? {})[0]?.coordinates?.[0];
+      if (!co) continue;
+      const at = locate([co.lon, co.lat]);
+      if (at.d > c.max) { console.warn(`curated ${c.slug}: wikipedia ${title} is ${at.d} m away`); continue; }
+      const pt = c.snap ? at.at : [round5(co.lon), round5(co.lat)];
+      kept.push({ id: `x-${c.slug}`, t: c.t, n: c.n, ...(c.nfr ? { nfr: c.nfr } : {}), c: pt, e: null, km: at.km, d: c.snap ? 0 : at.d, ...texts });
+      console.log(`curated ${c.slug}: wikipedia ${title} (km ${at.km}, ${at.d} m${c.snap ? ", on the trail" : ""})`);
+      break;
+    }
+    if (kept.some((k) => k.id === `x-${c.slug}`)) continue;
+  }
+  if (!best) {
+    const seen = curatedEls.filter((el) => c.find.names.includes(el.tags?.name)).map((el) => `${el.type}/${el.id} ${JSON.stringify(el.tags).slice(0, 120)}`);
+    console.warn(`curated ${c.slug}: not found within ${c.max} m${seen.length ? ` (seen: ${seen.join(" | ")})` : ""}`);
+    continue;
+  }
   const usedOffset = c.offset && !(preferred.length && preferred.includes(best));
   const lon = round5(best.lon + (usedOffset ? c.offset[0] : 0)), lat = round5(best.lat + (usedOffset ? c.offset[1] : 0));
   const at = usedOffset ? locate([lon, lat]) : best;
+  // a lake the route skirts, a bay it walks along: the pin goes on the trail itself
+  const pt = c.snap ? at.at : [lon, lat];
   kept.push({
-    id: `x-${c.slug}`, t: c.t, n: c.n, ...(c.nfr ? { nfr: c.nfr } : {}), c: [lon, lat], e: num(best.el.tags.ele), km: at.km, d: at.d, ...texts,
+    id: `x-${c.slug}`, t: c.t, n: c.n, ...(c.nfr ? { nfr: c.nfr } : {}), c: pt, e: num(best.el.tags.ele), km: at.km, d: c.snap ? 0 : at.d, ...texts,
   });
   console.log(`curated ${c.slug}: ${best.el.tags.name} (${best.el.type}/${best.el.id}${usedOffset ? ", offset" : ""}, km ${at.km}, ${at.d} m)`);
 }
