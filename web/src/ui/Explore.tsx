@@ -12,7 +12,7 @@ import { Check, ChevronRight, Close, Play, Search } from "./icons";
 import { detent, go, searchQuery, view } from "./state";
 import { startTrailMode } from "./TrailMode";
 
-const GROUP_KIND = { huts: "hut", camps: "camp", summits: "pass", sights: "fall" } as const;
+const GROUP_KIND = { huts: "hut", camps: "camp", water: "water", resupply: "shop", icons: "icon", films: "film", summits: "pass", sights: "fall" } as const;
 
 let wantFocus = false;
 let standIn: HTMLInputElement | null = null;
@@ -114,12 +114,12 @@ export function ExploreView() {
   const shown = useMemo(() => all.filter((p) => { const g = groupOfPlace(p); return g === null || groups.includes(g); }), [all, groups]);
   const results = useMemo(() => (q.trim() ? searchPlaces(q, all) : null), [q, all]);
   const counts = useMemo(() => {
-    const c = { huts: 0, camps: 0, summits: 0, sights: 0 } as Record<PoiGroup, number>;
+    const c = Object.fromEntries(GROUPS.map((g) => [g, 0])) as Record<PoiGroup, number>;
     for (const p of all) { const g = groupOfPlace(p); if (g) c[g]++; }
     return c;
   }, [all]);
   const from = phase.value === "before" ? 0 : progressKm.value;
-  const ahead = useMemo(() => shown.filter((p) => p.km > from + 0.3 && p.t !== "peak" && p.t !== "view").slice(0, 6), [shown, from]);
+  const ahead = useMemo(() => shown.filter((p) => p.km > from + 0.3 && p.t !== "peak" && p.t !== "view" && p.t !== "water").slice(0, 6), [shown, from]);
 
   // open with the keyboard up when coming from a search button
   useLayoutEffect(() => {

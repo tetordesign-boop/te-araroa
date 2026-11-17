@@ -1,8 +1,8 @@
-// Everything a visitor can tap on the map besides Ewan's own days: the huts, campsites, passes, peaks,
-// waterfalls and viewpoints along the trail (OpenStreetMap, built by scripts/data/pois.mjs), the trail's
-// own towns, and the river and lake crossings that are done by road or boat.
+// Everything a visitor can tap on the map besides my own days: the huts, campsites, water points, passes, peaks,
+// waterfalls and viewpoints along the trail (OpenStreetMap, built by scripts/data/pois.mjs), the iconic spots and
+// film locations chosen by hand, the trail's own towns, and the river and lake crossings done by road or boat.
 import { computed, signal } from "@preact/signals";
-import { fold, type Poi, type PoiGroup, type PoiKind } from "../map/pois";
+import { fold, GROUPS, kindLabel, poiName, type Poi, type PoiGroup, type PoiKind } from "../map/pois";
 import { lang } from "../i18n";
 import type { Lang } from "../types";
 import { route } from "./data";
@@ -98,6 +98,27 @@ export const duplicateStations = computed(() => {
   return out;
 });
 
+// a shop's name that says nothing of where it is: the chain, the post, the visitor centre
+const GENERIC = /^(four square|new world|pak ?'?n'? ?save|countdown|woolworths|fresh ?choice|super ?value|nz post|post ?shop|pack ?send|kathmandu|macpac|bivouac( outdoor)?|torpedo ?7|night 'n day|i-? ?site( visitor (centre|information centre))?|visitor (centre|information( centre)?)|general store|supermarket|dairy)$/i;
+
+/** The map data with each shop named after its town when its own name doesn't say it ("Four Square · Havelock"). */
+export const namedPois = computed<Poi[]>(() => {
+  const stations = route.value.places();
+  return pois.value.map((p) => {
+    if (p.t !== "shop" || !GENERIC.test(fold(p.n).trim())) return p;
+    let town = p.town ?? null;
+    if (!town) {
+      let best = 4000;
+      for (const s of stations) {
+        const m = haversine(p.c, s.c);
+        if (m < best) { best = m; town = shortStation(s.n); }
+      }
+    }
+    if (!town || fold(p.n).includes(fold(town))) return p;
+    return { ...p, n: `${p.n} · ${town}` };
+  });
+});
+
 /** Every place, ordered along the trail. */
 export const places = computed<Place[]>(() => {
   const r = route.value;
@@ -106,50 +127,71 @@ export const places = computed<Place[]>(() => {
   const towns: Place[] = r.places().flatMap((p, i) => dupes.has(i) ? [] : [{
     id: `s${i}`, t: "town" as const, n: shortStation(p.n), c: p.c, e: trailElevation(p.km), eApprox: true, km: p.km, d: 0, station: i, q: fold(p.n),
   }]);
-  const fromOsm: Place[] = pois.value.map((p) => {
+  const fromOsm: Place[] = namedPois.value.map((p) => {
     const approx = p.e === null && p.d < 400 ? trailElevation(p.km) : null;
+    // searchable by every name it has: "edoras", "bruinen", "eau", "source", "hobbit"…
+    const words = [p.n, p.nfr, p.film?.join(" "), p.t === "water" ? `${kindLabel(p, "fr")} ${kindLabel(p, "en")} eau water` : "",
+      p.t === "film" ? "film seigneur des anneaux lord of the rings terre du milieu middle-earth" : "", p.t === "icon" ? "lieu culte iconic" : "",
+      p.t === "shop" ? `${kindLabel(p, "fr")} ${kindLabel(p, "en")} ravitaillement resupply courses` : ""];
     return {
       id: p.id, t: p.t, n: p.n, c: p.c, e: p.e ?? approx, eApprox: p.e === null && approx !== null,
-      km: p.km, d: p.d, poi: p, q: fold(p.n),
+      km: p.km, d: p.d, poi: p, q: fold(words.filter(Boolean).join(" ")),
     };
   });
   return [...towns, ...fromOsm, ...gapPlaces.value].sort((a, b) => a.km - b.km || rank(a) - rank(b));
 });
 
-const RANK: Record<PlaceKind, number> = { town: 0, gap: 1, hut: 2, pass: 3, camp: 4, peak: 5, fall: 6, view: 7 };
+const RANK: Record<PlaceKind, number> = { town: 0, gap: 1, icon: 2, film: 3, hut: 4, shop: 5, pass: 6, camp: 7, water: 8, peak: 9, fall: 10, view: 11 };
 const rank = (p: Place) => RANK[p.t];
 
 export const placeById = computed(() => new Map(places.value.map((p) => [p.id, p])));
 
 /** The places drawn as points of interest on the map (towns are drawn by the map itself). */
 export const mapPois = computed<Poi[]>(() => [
-  ...pois.value,
+  ...namedPois.value.map((p) => (p.nfr && lang.value === "fr" ? { ...p, n: poiName(p, "fr") } : p)),
   ...gapPlaces.value.map((g): Poi => ({ id: g.id, t: "gap", n: gapName(g.gap?.key ?? null, lang.value), c: g.c, e: null, km: g.km, d: 0, gap: g.gap?.m })),
 ]);
 
 /** Which groups of places are shown, on the map and in the list (remembered on this device). */
-const GROUPS_KEY = "poi-groups-v1";
+// What's on the map is remembered with the groups the site had then, so a group added later starts on for
+// everyone, even those who had already chosen theirs.
+const GROUPS_KEY = "poi-groups-v3";
+const KNOWN_BEFORE: Record<string, PoiGroup[]> = {
+  "poi-groups-v1": ["huts", "camps", "summits", "sights"],
+  "poi-groups-v2": ["huts", "camps", "water", "icons", "films", "summits", "sights"],
+};
+const withNew = (on: unknown[], known: unknown[]) =>
+  [...on.filter((g): g is PoiGroup => GROUPS.includes(g as PoiGroup)), ...GROUPS.filter((g) => !known.includes(g))];
 function initialGroups(): PoiGroup[] {
   try {
     const raw = localStorage.getItem(GROUPS_KEY);
     if (raw) {
       const v = JSON.parse(raw);
-      if (Array.isArray(v)) return v.filter((g) => ["huts", "camps", "summits", "sights"].includes(g));
+      if (Array.isArray(v?.on) && Array.isArray(v?.known)) return withNew(v.on, v.known);
+    }
+    for (const key of ["poi-groups-v2", "poi-groups-v1"]) {
+      const old = localStorage.getItem(key);
+      const v = old ? JSON.parse(old) : null;
+      if (Array.isArray(v)) return withNew(v, KNOWN_BEFORE[key]);
     }
   } catch (_) { /* storage unavailable */ }
-  return ["huts", "camps", "summits", "sights"];
+  return [...GROUPS];
 }
 export const poiGroups = signal<PoiGroup[]>(initialGroups());
 export function toggleGroup(g: PoiGroup) {
   const has = poiGroups.value.includes(g);
   poiGroups.value = has ? poiGroups.value.filter((x) => x !== g) : [...poiGroups.value, g];
-  try { localStorage.setItem(GROUPS_KEY, JSON.stringify(poiGroups.value)); } catch (_) { /* ignore */ }
+  try { localStorage.setItem(GROUPS_KEY, JSON.stringify({ on: poiGroups.value, known: GROUPS })); } catch (_) { /* ignore */ }
 }
 
 export function groupOfPlace(p: Place): PoiGroup | null {
   switch (p.t) {
     case "hut": return "huts";
     case "camp": return "camps";
+    case "water": return "water";
+    case "shop": return "resupply";
+    case "icon": return "icons";
+    case "film": return "films";
     case "pass": case "peak": return "summits";
     case "fall": case "view": return "sights";
     default: return null;

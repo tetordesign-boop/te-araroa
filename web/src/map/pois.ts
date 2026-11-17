@@ -1,7 +1,8 @@
-// Points of interest along the trail (built from OpenStreetMap by scripts/data/pois.mjs).
+// Points of interest along the trail (built from OpenStreetMap by scripts/data/pois.mjs), with the iconic spots
+// and film locations chosen by hand (scripts/data/curated.mjs), which carry a short text.
 import type { Lang } from "../types";
 
-export type PoiKind = "hut" | "camp" | "pass" | "peak" | "fall" | "view" | "gap";
+export type PoiKind = "hut" | "camp" | "water" | "shop" | "pass" | "peak" | "fall" | "view" | "icon" | "film" | "gap";
 
 export interface Poi {
   id: string;
@@ -22,14 +23,29 @@ export interface Poi {
   biv?: 1;
   /** transfers only: the length of the gap in metres */
   gap?: number;
+  /** water points: a spring (to treat), and whether the map says it is drinkable */
+  spr?: 1;
+  pot?: 0 | 1;
+  /** resupply: a supermarket, general store, convenience store, outdoor shop, post office or visitor centre */
+  sub?: "super" | "general" | "conv" | "gear" | "post" | "info";
+  /** resupply: the town in its address */
+  town?: string;
+  /** places chosen by hand: the French name if it differs, a short text in each language, a page to read more,
+   * the film (French, English), and what the map knew it as before (a pass that is also the trail's high point) */
+  nfr?: string;
+  fr?: string;
+  en?: string;
+  src?: string;
+  film?: [string, string];
+  was?: PoiKind;
 }
 
 /** Filter groups shown as chips; each kind belongs to one group. */
-export type PoiGroup = "huts" | "camps" | "summits" | "sights";
+export type PoiGroup = "huts" | "camps" | "water" | "resupply" | "icons" | "films" | "summits" | "sights";
 export const GROUP_OF: Record<PoiKind, PoiGroup | null> = {
-  hut: "huts", camp: "camps", pass: "summits", peak: "summits", fall: "sights", view: "sights", gap: null,
+  hut: "huts", camp: "camps", water: "water", shop: "resupply", pass: "summits", peak: "summits", fall: "sights", view: "sights", icon: "icons", film: "films", gap: null,
 };
-export const GROUPS: PoiGroup[] = ["huts", "camps", "summits", "sights"];
+export const GROUPS: PoiGroup[] = ["huts", "camps", "water", "resupply", "icons", "films", "summits", "sights"];
 
 /**
  * Badge colour per kind. Dark: bright disks with a navy glyph on the night map (each checked against the others
@@ -42,21 +58,42 @@ export const KIND_COLOR: Record<PoiKind, { light: string; dark: string }> = {
   peak: { light: "#3A3A3C", dark: "#EAF2FF" },
   fall: { light: "#0A84C8", dark: "#4CC3FF" },
   view: { light: "#0A84C8", dark: "#4CC3FF" },
+  water: { light: "#1F63D6", dark: "#3E8BFF" },
+  shop: { light: "#4D7C0F", dark: "#B5E853" },
+  icon: { light: "#B88600", dark: "#FFD23F" },
+  film: { light: "#D2433A", dark: "#FF7466" },
   gap: { light: "#8E8E93", dark: "#9AA8BE" },
 };
 
 const LABELS: Record<PoiKind, [string, string]> = {
   hut: ["Refuge", "Hut"], camp: ["Camping", "Campsite"], pass: ["Col", "Pass"], peak: ["Sommet", "Peak"],
   fall: ["Cascade", "Waterfall"], view: ["Point de vue", "Viewpoint"], gap: ["Transfert", "Transfer"],
+  water: ["Point d'eau", "Water point"], shop: ["Ravitaillement", "Resupply"], icon: ["Lieu culte", "Iconic spot"], film: ["Décor de film", "Film location"],
 };
 const GROUP_LABELS: Record<PoiGroup, [string, string]> = {
-  huts: ["Refuges", "Huts"], camps: ["Campings", "Campsites"], summits: ["Sommets et cols", "Peaks and passes"], sights: ["Cascades et vues", "Falls and views"],
+  huts: ["Refuges", "Huts"], camps: ["Campings", "Campsites"], water: ["Points d'eau", "Water"], resupply: ["Ravitaillement", "Resupply"], icons: ["Lieux cultes", "Iconic spots"],
+  films: ["Terre du Milieu", "Middle-earth"], summits: ["Sommets et cols", "Peaks and passes"], sights: ["Cascades et vues", "Falls and views"],
 };
-export const kindLabel = (p: Poi, l: Lang) => (p.t === "hut" && p.biv ? (l === "fr" ? "Bivouac" : "Bivvy") : LABELS[p.t][l === "fr" ? 0 : 1]);
+export function kindLabel(p: Poi, l: Lang): string {
+  const fr = l === "fr";
+  if (p.t === "hut" && p.biv) return fr ? "Bivouac" : "Bivvy";
+  if (p.t === "water") return p.spr ? (fr ? "Source" : "Spring") : p.pot === 1 ? (fr ? "Eau potable" : "Drinking water") : LABELS.water[fr ? 0 : 1];
+  if (p.t === "film" && p.film) return fr ? `Décor · ${p.film[0]}` : `Film location · ${p.film[1]}`;
+  if (p.t === "shop" && p.sub) return SHOP_LABELS[p.sub][fr ? 0 : 1];
+  return LABELS[p.t][fr ? 0 : 1];
+}
+const SHOP_LABELS: Record<NonNullable<Poi["sub"]>, [string, string]> = {
+  super: ["Supermarché", "Supermarket"], general: ["Magasin général", "General store"], conv: ["Épicerie", "Convenience store"],
+  gear: ["Magasin de rando", "Outdoor shop"], post: ["Poste", "Post office"], info: ["Centre d'accueil", "Visitor centre"],
+};
+/** The name in this language (a few film locations have a French one); a nameless tap is called by its kind. */
+export const poiName = (p: Poi, l: Lang) => (l === "fr" && p.nfr) || p.n || kindLabel(p, l);
+/** The short text of a place chosen by hand, in this language. */
+export const poiText = (p: Poi, l: Lang) => (l === "fr" ? p.fr : p.en) ?? null;
 export const groupLabel = (g: PoiGroup, l: Lang) => GROUP_LABELS[g][l === "fr" ? 0 : 1];
 
 /** Map priority: what wins when labels collide (lower first). */
-export const PRIORITY: Record<PoiKind, number> = { gap: 0, hut: 1, pass: 2, camp: 3, peak: 4, fall: 5, view: 6 };
+export const PRIORITY: Record<PoiKind, number> = { gap: 0, icon: 1, film: 2, hut: 3, shop: 4, pass: 5, camp: 6, peak: 7, water: 8, fall: 9, view: 10 };
 
 /** Fold accents and macrons so "wanaka" finds "Wānaka". */
 export const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();

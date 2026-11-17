@@ -4,7 +4,7 @@ import { mediaUrl, OFFLINE_MAP } from "../config";
 import { destination, haversine, type LngLat, type Route } from "../lib/geo";
 import type { Day, Media } from "../types";
 import { installIcons } from "./icons";
-import { fold, GROUP_OF, KIND_COLOR, PRIORITY, type Poi, type PoiGroup, type PoiKind } from "./pois";
+import { fold, GROUP_OF, GROUPS, KIND_COLOR, PRIORITY, type Poi, type PoiGroup, type PoiKind } from "./pois";
 import { flyAlong } from "./replay";
 import { buildStyle, FONT, OFFLINE_FONT, shadeColors, sky, SKY_DAY, SKY_NIGHT, sunLight, type BaseStyle } from "./style";
 import { skyFor, sunPosition } from "./sun";
@@ -62,6 +62,7 @@ const multi = (lines: LngLat[][]): GeoJSON.Feature => ({ type: "Feature", proper
 const zi = (stops: [number, number][]) => ["interpolate", ["linear"], ["zoom"], ...stops.flat()] as unknown as number;
 
 const POI_LAYERS: { id: string; kind: PoiKind; minzoom: number; filter?: unknown[] }[] = [
+  { id: "poi-water", kind: "water", minzoom: 12 },
   { id: "poi-view", kind: "view", minzoom: 12 },
   { id: "poi-fall", kind: "fall", minzoom: 11.5 },
   { id: "poi-peak-minor", kind: "peak", minzoom: 12, filter: ["<", ["coalesce", ["get", "e"], 0], 1600] },
@@ -69,7 +70,10 @@ const POI_LAYERS: { id: string; kind: PoiKind; minzoom: number; filter?: unknown
   { id: "poi-peak-major", kind: "peak", minzoom: 8.4, filter: [">=", ["coalesce", ["get", "e"], 0], 2400] },
   { id: "poi-camp", kind: "camp", minzoom: 10.5 },
   { id: "poi-pass", kind: "pass", minzoom: 9.8 },
+  { id: "poi-shop", kind: "shop", minzoom: 10.4 },
   { id: "poi-hut", kind: "hut", minzoom: 9.2 },
+  { id: "poi-film", kind: "film", minzoom: 7.4 },
+  { id: "poi-icon", kind: "icon", minzoom: 7.4 },
   { id: "poi-gap", kind: "gap", minzoom: 6.5 },
 ];
 const INTERACTIVE = [...POI_LAYERS.map((l) => l.id), "station-1", "station-2", "station-3"];
@@ -94,7 +98,7 @@ export class TrailMap {
   private data: MapData | null = null;
   private live: LiveData | null = null;
   private pois: Poi[] = [];
-  private groups = new Set<PoiGroup>(["huts", "camps", "summits", "sights"]);
+  private groups = new Set<PoiGroup>(GROUPS);
   private selectedAt: LngLat | null = null;
   private photosKey = "";
   private selected: Day | null = null;
@@ -444,7 +448,7 @@ export class TrailMap {
           "icon-image": isPeak ? "poi-peak" : `poi-${L.kind}`,
           "icon-size": isPeak ? 1 : zi([[L.minzoom, 0.82], [13, 1]]),
           "icon-padding": 1,
-          "text-field": isPeak || L.kind === "gap" ? label : ["step", ["zoom"], "", Math.max(11, L.minzoom + 1), label],
+          "text-field": isPeak || L.kind === "gap" ? label : ["step", ["zoom"], "", L.kind === "icon" || L.kind === "film" ? 9.4 : Math.max(11, L.minzoom + 1), label],
           "text-font": F.bold,
           "text-size": isPeak ? 11 : 11.5,
           "text-anchor": "top",

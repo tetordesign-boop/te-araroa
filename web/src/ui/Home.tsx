@@ -131,7 +131,7 @@ function Actions() {
   );
 }
 
-/** Next hut, next pass, next town (and the next road or boat crossing when it's close). */
+/** Next hut, next pass, next town, the next shop to buy food (and the next road or boat crossing when it's close). */
 function OnHisWay() {
   const l = lang.value;
   const ph = phase.value;
@@ -142,6 +142,7 @@ function OnHisWay() {
     ["nextHut", nextPlace(from, ["hut"], list)],
     ["nextPass", nextPlace(from, ["pass"], list)],
     ["nextTown", nextPlace(from, ["town"], list)],
+    ["nextResupply", list.find((p) => p.km > from + 0.3 && p.t === "shop" && FOOD.has(p.poi?.sub ?? "")) ?? null],
   ];
   const gap = nextPlace(from, ["gap"], list);
   if (gap && gap.km - from < 150) picks.push(["nextTransfer", gap]);
@@ -169,6 +170,9 @@ function OnHisWay() {
     </section>
   );
 }
+
+/** the shops that sell food (not the outdoor shop, the post office or the visitor centre) */
+const FOOD = new Set(["super", "general", "conv"]);
 
 function Before() {
   const l = lang.value;
