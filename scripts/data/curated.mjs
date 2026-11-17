@@ -35,7 +35,7 @@ export const CURATED = [
     en: "The pass of the Coast to Coast, the race that crosses the island running, cycling and paddling.",
   },
   {
-    slug: "devils-punchbowl", t: "icon", n: "Devils Punchbowl Falls", find: { names: ["Devils Punchbowl Falls", "Devil's Punchbowl Falls", "Devils Punchbowl", "Devil's Punchbowl"] }, wiki: ["Devils Punchbowl Falls"], max: 3500,
+    slug: "devils-punchbowl", t: "icon", n: "Devils Punchbowl Falls", find: { names: ["Devils Punchbowl Falls", "Devil's Punchbowl Falls", "Devils Punchbowl", "Devil's Punchbowl"] }, wiki: ["Devils Punchbowl Falls"], max: 12000,
     fr: "Une chute de 131 m à dix minutes du village d'Arthur's Pass, où les kea, perroquets de montagne, rôdent autour des voitures.",
     en: "A 131 m waterfall ten minutes from Arthur's Pass village, where kea, the mountain parrots, prowl around the cars.",
   },
@@ -65,9 +65,9 @@ export const CURATED = [
     en: "The restored huts of the Chinese gold miners, beside the Arrow River.",
   },
   {
-    slug: "te-waewae-bay", t: "icon", n: "Te Waewae Bay", find: { names: ["Te Waewae Bay"] }, wiki: ["Te Waewae Bay"], snap: true, max: 15000,
-    fr: "Une longue plage sauvage face au Sud, où l'on croise parfois les dauphins d'Hector, les plus petits du monde.",
-    en: "A long wild beach facing south, where Hector's dolphins, the smallest in the world, sometimes swim by.",
+    slug: "oreti-beach", t: "icon", n: "Oreti Beach", find: { names: ["Oreti Beach"] }, wiki: ["Oreti Beach"], snap: true, max: 8000,
+    fr: "La grande plage avant Invercargill, qu'on suit sur des kilomètres. Burt Munro y lançait sa vieille Indian, l'histoire du film The World's Fastest Indian.",
+    en: "The long beach before Invercargill, walked for kilometres. Burt Munro raced his old Indian here, the story of the film The World's Fastest Indian.",
   },
 
   // ---------------------------------------------------------------- Middle-earth
