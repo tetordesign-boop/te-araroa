@@ -66,7 +66,9 @@ out body;`);
 await sleep(3000);
 // the places chosen by hand, looked up by name a little wider (film locations can be a few km off)
 const [cw, cs, ce, cn] = bboxOf(trail, 0.35);
-const finds = CURATED.filter((c) => c.find).map((c) => `nwr["name"~"${c.find.name.replace(/"/g, '\\"')}",i];`).join("\n  ");
+// (exact names only: a regular expression over every named thing on the island is too slow for Overpass)
+const names = [...new Set(CURATED.flatMap((c) => c.find?.names ?? []))];
+const finds = names.map((x) => `nwr["name"="${x.replace(/"/g, '\\"')}"];`).join("\n  ");
 const curatedEls = await overpass(`[out:json][timeout:240][bbox:${cs},${cw},${cn},${ce}];
 (
   ${finds}
@@ -168,10 +170,9 @@ for (const c of CURATED) {
     console.log(`curated ${c.slug}: ${hit.n} (${hit.t}, km ${hit.km}, ${hit.d} m)`);
     continue;
   }
-  const re = new RegExp(c.find.name, "i");
   const cands = curatedEls.filter((el) => {
     const tg = el.tags ?? {};
-    if (!re.test(tg.name ?? "")) return false;
+    if (!c.find.names.includes(tg.name ?? "")) return false;
     if (c.find.tag && tg[c.find.tag[0]] !== c.find.tag[1]) return false;
     return (el.lat ?? el.center?.lat) !== undefined;
   }).map((el) => {
