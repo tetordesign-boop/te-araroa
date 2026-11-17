@@ -1,5 +1,6 @@
 // Points of interest along the trail, from OpenStreetMap (© OpenStreetMap contributors, ODbL):
-// huts, campsites, water points, passes, peaks, waterfalls, viewpoints, and the places chosen by hand in
+// huts, campsites, water points, resupply (food shops, outdoor shops, post offices, DOC and i-SITE centres),
+// passes, peaks, waterfalls, viewpoints, and the places chosen by hand in
 // curated.mjs (iconic spots, film locations), located on the map too. Each one gets its km on the trail and
 // its distance from it, so the site can say "km 412, 1.2 km off the trail".
 // Usage: node scripts/data/pois.mjs <out.json> [trail.json path or URL]
@@ -64,6 +65,14 @@ const water = await overpass(`[out:json][timeout:240][bbox:${bb}];
 );
 out body;`);
 await sleep(3000);
+const shops = await overpass(`[out:json][timeout:240][bbox:${bb}];
+(
+  nwr["shop"~"^(supermarket|convenience|general|outdoor)$"];
+  nwr["amenity"="post_office"];
+  nwr["tourism"="information"]["information"="office"];
+);
+out center tags;`);
+await sleep(3000);
 // the places chosen by hand, looked up by name a little wider (film locations can be a few km off)
 const [cw, cs, ce, cn] = bboxOf(trail, 0.35);
 // (exact names only: a regular expression over every named thing on the island is too slow for Overpass)
@@ -74,7 +83,7 @@ const curatedEls = await overpass(`[out:json][timeout:240][bbox:${cs},${cw},${cn
   ${finds}
 );
 out center tags;`);
-console.log(`overpass: ${general.length} general, ${peaks.length} peaks, ${water.length} water, ${curatedEls.length} curated candidates`);
+console.log(`overpass: ${general.length} general, ${peaks.length} peaks, ${water.length} water, ${shops.length} shops, ${curatedEls.length} curated candidates`);
 
 const num = (v) => {
   if (v === undefined || v === null) return null;
@@ -93,8 +102,21 @@ function kind(t) {
   if (t.waterway === "waterfall" || t.natural === "waterfall") return "fall";
   if (t.amenity === "drinking_water" || t.amenity === "water_point" || t.man_made === "water_tap" || t.natural === "spring") return "water";
   if (t.natural === "peak" || t.natural === "volcano") return "peak";
+  if (shopKind(t)) return "shop";
   return null;
 }
+/** what kind of resupply: food (supermarket, general store, convenience store), outdoor gear, a post office (where
+ * hikers send themselves food parcels), or a DOC or i-SITE visitor centre (hut tickets, weather, track news) */
+function shopKind(t) {
+  if (t.shop === "supermarket") return "super";
+  if (t.shop === "general") return "general";
+  if (t.shop === "convenience") return "conv";
+  if (t.shop === "outdoor") return "gear";
+  if (t.amenity === "post_office") return "post";
+  if (t.tourism === "information" && t.information === "office" && /\bDOC\b|conservation|i-?SITE|visitor/i.test(`${t.name ?? ""} ${t.operator ?? ""}`)) return "info";
+  return null;
+}
+const SHOP_RANK = { super: 0, general: 1, conv: 2 };
 
 // how far from the trail each kind is still worth showing (metres)
 function keep(k, d, ele, named) {
@@ -105,19 +127,20 @@ function keep(k, d, ele, named) {
     case "view": return named && d <= 1200;
     case "fall": return d <= 2000;
     case "water": return d <= 300;
+    case "shop": return d <= 1500;
     case "peak": return d <= 3000 || (ele !== null && ele >= 1800 && d <= 8000) || (ele !== null && ele >= 2800 && d <= 16000);
     default: return false;
   }
 }
 
 const items = [];
-for (const el of [...general, ...peaks, ...water]) {
+for (const el of [...general, ...peaks, ...water, ...shops]) {
   const t = el.tags ?? {};
   const k = kind(t);
   if (!k) continue;
   const lat = el.lat ?? el.center?.lat, lon = el.lon ?? el.center?.lon;
   if (lat === undefined || lon === undefined) continue;
-  const name = clean(t.name);
+  const name = clean(t.name) ?? (k === "shop" ? clean(t.brand) : null);
   const ele = num(t.ele);
   const { km, d } = locate([lon, lat]);
   if (!keep(k, d, ele, !!name)) continue;
@@ -146,6 +169,7 @@ for (const el of [...general, ...peaks, ...water]) {
   }
   if (t.toilets === "yes") item.wc = 1;
   if (k === "hut" && /biv/i.test(name ?? "")) item.biv = 1;
+  if (k === "shop") item.sub = shopKind(t);
   items.push(item);
 }
 
@@ -159,6 +183,18 @@ for (const it of items) {
   const nearWater = it.t === "water" && kept.find((k) => k.t === "water" && Math.abs(k.c[0] - it.c[0]) < 0.0015 && Math.abs(k.c[1] - it.c[1]) < 0.0011);
   if (!dup && !nearWater) kept.push(it);
 }
+
+// resupply: in each town, the best food shop (a supermarket before a general store before a convenience store),
+// one outdoor shop, one post office, one visitor centre — not every dairy on the high street
+const cluster = (a, b) => Math.abs(a.c[0] - b.c[0]) < 0.025 && Math.abs(a.c[1] - b.c[1]) < 0.018;
+const food = (x) => x.t === "shop" && x.sub in SHOP_RANK;
+const byQuality = kept.filter((x) => x.t === "shop").sort((a, b) => (SHOP_RANK[a.sub] ?? 9) - (SHOP_RANK[b.sub] ?? 9) || a.d - b.d);
+const shopKeep = [];
+for (const s of byQuality) {
+  const taken = shopKeep.some((o) => cluster(o, s) && (food(s) ? food(o) : o.sub === s.sub));
+  if (!taken) shopKeep.push(s);
+}
+for (let i = kept.length - 1; i >= 0; i--) if (kept[i].t === "shop" && !shopKeep.includes(kept[i])) kept.splice(i, 1);
 
 // ---------------------------------------------------------------- the places chosen by hand
 const round5 = (x) => Math.round(x * 1e5) / 1e5;
