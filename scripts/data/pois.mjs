@@ -113,10 +113,14 @@ function shopKind(t) {
   if (t.shop === "convenience") return "conv";
   if (t.shop === "outdoor") return "gear";
   if (t.amenity === "post_office") return "post";
-  if (t.tourism === "information" && t.information === "office" && /\bDOC\b|conservation|i-?SITE|visitor/i.test(`${t.name ?? ""} ${t.operator ?? ""}`)) return "info";
+  if (t.tourism === "information" && t.information === "office" && /\bDOC\b|conservation|i-?\s?SITE/i.test(`${t.name ?? ""} ${t.operator ?? ""} ${t.brand ?? ""}`)) return "info";
   return null;
 }
 const SHOP_RANK = { super: 0, general: 1, conv: 2 };
+/** the chains a hiker can count on (a Four Square is a small supermarket whatever its tag) */
+const CHAIN = /four square|new world|pak'?n'?save|countdown|woolworths|freshchoice|fresh choice|supervalue|super value|foodcentre/i;
+/** food shops that are no resupply: a salmon farm shop, a greenhouse, a bakery */
+const NOT_RESUPPLY = /salmon|greenhouse|farm shop|bakery|butcher|liquor|bottle/i;
 
 // how far from the trail each kind is still worth showing (metres)
 function keep(k, d, ele, named) {
@@ -143,7 +147,9 @@ for (const el of [...general, ...peaks, ...water, ...shops]) {
   const name = clean(t.name) ?? (k === "shop" ? clean(t.brand) : null);
   const ele = num(t.ele);
   const { km, d } = locate([lon, lat]);
-  if (!keep(k, d, ele, !!name)) continue;
+  // a hiker hitches to a shop off the trail when there is none on it: kept for now, sorted out below
+  if (!keep(k, d, ele, !!name) && !(k === "shop" && d <= 10000 && t.shop && t.shop !== "outdoor")) continue;
+  if (k === "shop" && NOT_RESUPPLY.test(name ?? "")) continue;
   // a tap or a spring needs no name (the site calls it by its kind)
   if (!name && k !== "water") continue;
   if (k === "water" && t.natural === "spring" && d > 250) continue;
@@ -169,7 +175,10 @@ for (const el of [...general, ...peaks, ...water, ...shops]) {
   }
   if (t.toilets === "yes") item.wc = 1;
   if (k === "hut" && /biv/i.test(name ?? "")) item.biv = 1;
-  if (k === "shop") item.sub = shopKind(t);
+  if (k === "shop") {
+    item.sub = shopKind(t);
+    if (CHAIN.test(`${name ?? ""} ${t.brand ?? ""}`)) item.chain = 1;
+  }
   items.push(item);
 }
 
@@ -188,13 +197,19 @@ for (const it of items) {
 // one outdoor shop, one post office, one visitor centre — not every dairy on the high street
 const cluster = (a, b) => Math.abs(a.c[0] - b.c[0]) < 0.025 && Math.abs(a.c[1] - b.c[1]) < 0.018;
 const food = (x) => x.t === "shop" && x.sub in SHOP_RANK;
-const byQuality = kept.filter((x) => x.t === "shop").sort((a, b) => (SHOP_RANK[a.sub] ?? 9) - (SHOP_RANK[b.sub] ?? 9) || a.d - b.d);
+const quality = (x) => (x.chain ? 0 : 1) + (SHOP_RANK[x.sub] ?? 9) * 2;
+const byQuality = kept.filter((x) => x.t === "shop").sort((a, b) => quality(a) - quality(b) || a.d - b.d);
 const shopKeep = [];
-for (const s of byQuality) {
+// first what is on the trail (1.5 km), then a food shop up to 10 km off it where the trail has none for 40 km
+for (const s of byQuality.filter((x) => x.d <= 1500)) {
   const taken = shopKeep.some((o) => cluster(o, s) && (food(s) ? food(o) : o.sub === s.sub));
   if (!taken) shopKeep.push(s);
 }
+for (const s of byQuality.filter((x) => x.d > 1500 && food(x))) {
+  if (!shopKeep.some((o) => food(o) && Math.abs(o.km - s.km) < 40)) shopKeep.push(s);
+}
 for (let i = kept.length - 1; i >= 0; i--) if (kept[i].t === "shop" && !shopKeep.includes(kept[i])) kept.splice(i, 1);
+for (const s of shopKeep) delete s.chain;
 
 // ---------------------------------------------------------------- the places chosen by hand
 const round5 = (x) => Math.round(x * 1e5) / 1e5;
