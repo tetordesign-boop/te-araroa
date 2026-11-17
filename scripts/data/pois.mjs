@@ -178,6 +178,9 @@ for (const el of [...general, ...peaks, ...water, ...shops]) {
   if (k === "shop") {
     item.sub = shopKind(t);
     if (CHAIN.test(`${name ?? ""} ${t.brand ?? ""}`)) item.chain = 1;
+    // the town in its address, so "Four Square" reads "Four Square · Havelock" on the site
+    const town = clean(t["addr:suburb"] ?? t["addr:town"] ?? t["addr:city"] ?? t["addr:place"]);
+    if (town && town.length < 40) item.town = town;
   }
   items.push(item);
 }
