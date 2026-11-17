@@ -2,7 +2,8 @@
 // and the Lord of the Rings and Hobbit filming locations near it. Each is found in OpenStreetMap by name
 // (`find`: the exact names it may carry, and optionally the OSM tag that must match), or upgrades a place the map
 // data already has (`upgrade`: its kind and name), so the position always comes from the map, never typed in.
-// `max`: how far from the trail it may be (metres). Texts are short, in French and English.
+// `max`: how far from the trail it may be (metres); `offset` moves the pin off a hut or a town that has its own;
+// `snap` puts it on the trail (a lake it skirts, a beach it follows). Texts are short, in French and English.
 const LOTR = "https://www.newzealand.com/nz/feature/the-lord-of-the-rings-trilogy-filming-locations/";
 const HOBBIT = "https://www.newzealand.com/nz/feature/the-hobbit-trilogy-filming-locations/";
 
@@ -102,12 +103,6 @@ export const CURATED = [
     en: "Where Arwen raises the river against the Ringwraiths. The ford is on the Arrow River Trail just out of Arrowtown, signposted.",
   },
   {
-    slug: "gladden", t: "film", n: "Gladden Fields · Wilcox Green", nfr: "Champs aux Iris · Wilcox Green", find: { names: ["Wilcox Green"] }, max: 8000, src: LOTR,
-    film: ["Le Seigneur des anneaux", "The Lord of the Rings"],
-    fr: "Les champs aux Iris, où Isildur perd l'Anneau au début du premier film.",
-    en: "The Gladden Fields, where Isildur loses the Ring at the start of the first film.",
-  },
-  {
     slug: "skippers", t: "film", n: "Skippers Canyon", find: { names: ["Skippers Canyon", "Skippers"] }, wiki: ["Skippers Canyon"], max: 20000, src: LOTR,
     film: ["Le Seigneur des anneaux", "The Lord of the Rings"],
     fr: "Les parois du canyon ont servi pour la crue du gué de la Bruinen.",
@@ -118,12 +113,6 @@ export const CURATED = [
     film: ["Le Seigneur des anneaux", "The Lord of the Rings"],
     fr: "La Communauté descend l'Anduin dans cette gorge. Les deux statues géantes, les Argonath, ont été ajoutées en studio.",
     en: "The Fellowship paddles down the Anduin through this gorge. The giant Argonath statues were added in the studio.",
-  },
-  {
-    slug: "rohan", t: "film", n: "Rohan · Deer Park Heights", find: { names: ["Deer Park Heights"] }, wiki: ["Deer Park Heights"], max: 15000, src: LOTR,
-    film: ["Le Seigneur des anneaux", "The Lord of the Rings"],
-    fr: "Les réfugiés du Rohan sur la route d'Edoras au Gouffre de Helm.",
-    en: "The people of Rohan on the road from Edoras to Helm's Deep.",
   },
   {
     slug: "ithilien", t: "film", n: "Ithilien · Twelve Mile Delta", find: { names: ["Twelve Mile Delta", "Twelve Mile Delta Campsite", "12 Mile Delta", "12 Mile Delta Campsite"] }, max: 20000, src: LOTR,
@@ -139,7 +128,7 @@ export const CURATED = [
     en: "The end of the journey down the Anduin: Frodo hides from the Uruk-hai, Merry and Pippin from the orcs.",
   },
   {
-    slug: "passburn", t: "film", n: "Passburn", find: { names: ["Passburn", "Pass Burn", "Passburn Hut", "Pass Burn Hut"] }, max: 8000, src: HOBBIT,
+    slug: "passburn", t: "film", n: "Passburn", find: { names: ["Passburn", "Pass Burn", "Passburn Hut", "Pass Burn Hut"] }, offset: [0.005, 0.002], max: 8000, src: HOBBIT,
     film: ["Le Hobbit", "The Hobbit"],
     fr: "L'approche des Monts Brumeux dans Un voyage inattendu, près du Mavora Walkway.",
     en: "The approach to the Misty Mountains in An Unexpected Journey, near the Mavora Walkway.",
