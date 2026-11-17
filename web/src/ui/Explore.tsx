@@ -12,7 +12,7 @@ import { Check, ChevronRight, Close, Play, Search } from "./icons";
 import { detent, go, searchQuery, view } from "./state";
 import { startTrailMode } from "./TrailMode";
 
-const GROUP_KIND = { huts: "hut", camps: "camp", water: "water", icons: "icon", films: "film", summits: "pass", sights: "fall" } as const;
+const GROUP_KIND = { huts: "hut", camps: "camp", water: "water", resupply: "shop", icons: "icon", films: "film", summits: "pass", sights: "fall" } as const;
 
 let wantFocus = false;
 let standIn: HTMLInputElement | null = null;

@@ -1332,7 +1332,7 @@ html.is-tunnel .pband__tile { animation-play-state: paused !important; }
 .pbadge svg { width: 60%; height: 60%; fill: var(--kg, #0C1526); }
 .k-hut { --k: #8B80FF; } .k-camp { --k: #56E39F; } .k-pass { --k: #FF3D9A; } .k-peak { --k: #EAF2FF; }
 .k-fall, .k-view { --k: #4CC3FF; } .k-gap { --k: #9AA8BE; } .k-town { --k: #E0B370; }
-.k-water { --k: #3E8BFF; } .k-icon { --k: #FFD23F; } .k-film { --k: #FF7466; }
+.k-water { --k: #3E8BFF; } .k-shop { --k: #B5E853; } .k-icon { --k: #FFD23F; } .k-film { --k: #FF7466; }
 
 /* search */
 .search {

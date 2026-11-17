@@ -130,6 +130,8 @@ function Facts({ p }: { p: Place }) {
   else if (o.t === "hut" && !o.biv) items.push(t("hutWater"));
   if (o.wc) items.push(t("toilets"));
   if (o.t === "water") items.push(t(o.spr ? "springTreat" : o.pot === 1 ? "drinkable" : o.pot === 0 ? "notDrinkable" : "waterUnknown"));
+  if (o.t === "shop" && o.sub === "post") items.push(t("shopPost"));
+  if (o.t === "shop" && o.sub === "info") items.push(t("shopInfo"));
   if (o.op) items.push(o.op === "DOC" ? t("byDoc") : o.op);
   if (!items.length) return null;
   return <ul class="pfacts" aria-label={l === "fr" ? "Sur place" : "On site"}>{items.map((x) => <li>{x}</li>)}</ul>;

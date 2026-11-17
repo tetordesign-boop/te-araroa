@@ -70,6 +70,7 @@ const POI_LAYERS: { id: string; kind: PoiKind; minzoom: number; filter?: unknown
   { id: "poi-peak-major", kind: "peak", minzoom: 8.4, filter: [">=", ["coalesce", ["get", "e"], 0], 2400] },
   { id: "poi-camp", kind: "camp", minzoom: 10.5 },
   { id: "poi-pass", kind: "pass", minzoom: 9.8 },
+  { id: "poi-shop", kind: "shop", minzoom: 10.4 },
   { id: "poi-hut", kind: "hut", minzoom: 9.2 },
   { id: "poi-film", kind: "film", minzoom: 7.4 },
   { id: "poi-icon", kind: "icon", minzoom: 7.4 },
