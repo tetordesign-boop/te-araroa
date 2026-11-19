@@ -4,6 +4,7 @@ import { fmtDate, fmtKm, nzToday, relTime } from "../lib/format";
 import { fmtWeight, gearTotals } from "../lib/gear";
 import { features } from "./features";
 import { waitingQuestions } from "./QuestionsAdmin";
+import { parcelsLine } from "./Parcels";
 import type { Settings } from "../types";
 import { ChevronLeft, ChevronRight, Locate } from "../ui/icons";
 import { draftForToday, draftFromDay, openDraft } from "./Editor";
@@ -191,6 +192,7 @@ export function Dashboard() {
         <button class="cell" type="button" onClick={() => open({ name: "activate" })}><span class="cell__main"><span class="cell__title">Notifications</span><span class="cell__meta">{activeAll ? "Tes proches prévenus à chaque étape" : "À activer"}</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "tracking" })}><span class="cell__main"><span class="cell__title">Suivi automatique</span><span class="cell__meta">OwnTracks sur ton iPhone</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "gear" })}><span class="cell__main"><span class="cell__title">Mon sac</span><span class="cell__meta">{gearLine()}</span></span><ChevronRight class="cell__chev" /></button>
+        <button class="cell" type="button" onClick={() => open({ name: "parcels" })}><span class="cell__main"><span class="cell__title">Colis</span><span class="cell__meta">{parcelsLine()}</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "settings" })}><span class="cell__main"><span class="cell__title">Réglages</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "help" })}><span class="cell__main"><span class="cell__title">Mode d'emploi</span><span class="cell__meta">Publier, sans réseau, mots, position, en cas de souci</span></span><ChevronRight class="cell__chev" /></button>
       </div>
@@ -207,7 +209,8 @@ function gearLine() {
   const items = adminSettings.value?.gear?.items ?? [];
   if (!items.length) return "Ta liste de matériel, pour le site";
   const tot = gearTotals(items);
-  return `${fmtWeight(tot.base, "fr")} dans le sac, ${tot.n} ${tot.n > 1 ? "objets" : "objet"}`;
+  const n = `${tot.n} ${tot.n > 1 ? "objets" : "objet"}`;
+  return items.some((i) => i.g > 0) ? `${fmtWeight(tot.base, "fr")} dans le sac, ${n}` : `${n}, poids à compléter`;
 }
 
 // ------------------------------------------------------------------ check-in
@@ -574,6 +577,8 @@ export function Help() {
 
       <h2>Mon sac</h2>
       <p>La page « Mon sac » du site montre ton matériel et son poids. Écris ta liste dans <strong>Mon sac</strong>, sur l'accueil du carnet : touche un objet pour le modifier, ou colle d'un coup une liste depuis Notes (une ligne par objet, avec son poids). Ce que tu portes sur toi et la nourriture ne comptent pas dans le poids du sac. La page apparaît sur le site dès qu'il y a un objet.</p>
+      <h2>Colis</h2>
+      <p>Note dans <strong>Colis</strong> la nourriture que tu t'envoies : où elle t'attend (une étape du sentier ou n'importe quel endroit), quand elle est partie, ce qu'il y a dedans et le numéro de suivi. Passe-la sur « Récupéré » une fois dans ton sac. Toi seul vois cette page. En bas, les portions du sentier sans magasin, là où un colis évite de tout porter. La liste reste lisible sans réseau, mais il en faut pour la modifier.</p>
 
       <h2>Ta vidéo de 30 secondes</h2>
       <p>La vidéo <span class="key">« Le Te Araroa en 30 secondes »</span> est sur la page « À propos » du site, et sur l'accueil jusqu'au départ. Chacun la voit dans sa langue, en vertical sur un téléphone et en grand sur un ordinateur. Rien à faire de ton côté.</p>

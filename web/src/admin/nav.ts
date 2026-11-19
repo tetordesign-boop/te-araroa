@@ -8,6 +8,7 @@ export type Page =
   | { name: "messages" }
   | { name: "settings" }
   | { name: "gear" }
+  | { name: "parcels" }
   | { name: "tracking" }
   | { name: "help" }
   | { name: "questions" }

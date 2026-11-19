@@ -30,13 +30,14 @@ export function PackRow({ block }: { block?: boolean }) {
   const items = settings.value?.gear?.items ?? [];
   if (!items.length) return null;
   const tot = gearTotals(items);
+  const weighed = items.some((i) => i.g > 0);
   return (
     <div class={block ? "rows block" : "rows"}>
       <a class="row" href={hrefFor({ name: "pack" })} onClick={(e) => { e.preventDefault(); go({ name: "pack" }); }}>
         <span class="row__thumb row__thumb--empty" aria-hidden="true"><Backpack /></span>
         <span class="row__main">
           <span class="row__title">{t("pack")}</span>
-          <span class="row__meta num">{t("packLine", { kg: fmtWeight(tot.base, l), n: fmtInt(tot.n, l) })}</span>
+          <span class="row__meta num">{weighed ? t("packLine", { kg: fmtWeight(tot.base, l), n: fmtInt(tot.n, l) }) : t("packLineCount", { n: fmtInt(tot.n, l) })}</span>
         </span>
         <ChevronRight class="row__chev" />
       </a>
@@ -58,6 +59,8 @@ export function Pack() {
     );
   }
   const tot = gearTotals(items);
+  // a list written before anything is weighed: what's in it, without a row of zeros
+  const weighed = items.some((i) => i.g > 0);
   const max = tot.byCat[0]?.g || 1;
   const note = (l === "en" && gear?.note_en) || gear?.note_fr;
   const nameOf = (i: GearItem) => (l === "en" && i.name_en) || i.name;
@@ -72,8 +75,8 @@ export function Pack() {
     <div class="page pack">
       <PageHead title={t("pack")} />
       <div class="bigline">
-        <span class="num bigline__v">{kgNum(tot.base, l)}</span>
-        <span class="bigline__u">{t("packBase")}</span>
+        <span class="num bigline__v">{weighed ? kgNum(tot.base, l) : fmtInt(tot.n, l)}</span>
+        <span class="bigline__u">{t(weighed ? "packBase" : "packCount")}</span>
       </div>
 
       {gear?.photo ? (
@@ -83,12 +86,12 @@ export function Pack() {
         </figure>
       ) : note ? <div class="prose voice" style={{ marginTop: "18px" }}><p>{typo(note)}</p></div> : null}
 
-      <dl class="figs">
+      {weighed && <dl class="figs">
         {tot.worn > 0 && <div><dt>{t("packWorn")}</dt><dd class="num"><Fig g={tot.worn} l={l} /></dd></div>}
         {tot.food > 0 && <div><dt>{t("packFood")}</dt><dd class="num"><Fig g={tot.food} l={l} /></dd></div>}
         {tot.food > 0 && <div><dt>{t("packLeaving")}</dt><dd class="num"><Fig g={tot.base + tot.food} l={l} /></dd></div>}
         <div><dt>{t("packItems")}</dt><dd class="num">{fmtInt(tot.n, l)}</dd></div>
-      </dl>
+      </dl>}
 
       {tot.byCat.length > 1 && (
         <section class="block">
@@ -131,7 +134,7 @@ export function Pack() {
                     )}
                     {i.note && <span class="gear__note voice">{typo(i.note)}</span>}
                   </span>
-                  <span class="gear__g num">{i.g ? `${fmtInt(itemG(i), l)} g` : "–"}</span>
+                  {weighed && <span class="gear__g num">{i.g ? `${fmtInt(itemG(i), l)} g` : "–"}</span>}
                 </li>
               ))}
             </ul>
