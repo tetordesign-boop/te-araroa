@@ -1,4 +1,3 @@
-m-shops-wanaka
-m-shops-arthurs
-m-place-shop
-m-home-resupply
+r-m-pack
+r-m-pack-en
+r-m-home-full

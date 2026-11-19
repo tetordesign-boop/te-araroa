@@ -132,6 +132,8 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "r-m-home-full-2", ctx: mobile(false), url: "", act: seq(full, wait(800), (p) => p.evaluate(() => { const b = document.querySelector(".sheet__body"); if (b) b.scrollTop = 640; })) },
   { id: "r-m-about", ctx: mobile(false), url: "#/apropos", act: full },
   { id: "r-m-explore", ctx: mobile(false), url: "#/explorer" },
+  { id: "r-m-pack", ctx: mobile(false), url: "#/sac", act: full, probe: "document.querySelector('.sheet')?.innerText" },
+  { id: "r-m-pack-en", ctx: mobile(false, "en-NZ"), url: "#/sac", act: full, probe: "document.querySelector('.sheet')?.innerText" },
   { id: "r-m-journal", ctx: mobile(false), url: "#/journal", probe: "document.querySelector('.sheet')?.innerText" },
   { id: "r-m-carnet", ctx: mobile(false), url: "admin/", plain: 6000, probe: "document.body.innerText" },
   { id: "r-d-intro", ctx: desktop(false), url: "?intro", intro: true },
