@@ -236,3 +236,9 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 .qcell__form .cell { padding: 0; background: var(--fill); border-radius: 12px; }
 .qcell__form .cell textarea { padding: 12px; }
 .qcell__form .switchrow { padding: 6px 2px; }
+
+/* Colis: where each parcel is at, as a small tag at the end of its row */
+.parcel__status { flex: none; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 650; background: var(--fill); color: var(--ink-2, var(--ink)); }
+.parcel__status.is-sent { background: rgba(62,139,255,.18); color: #8CB8FF; }
+.parcel__status.is-collected { background: rgba(77,190,120,.18); color: #7FD8A0; }
+.parcels__edit .seg { margin: 2px 0; }
