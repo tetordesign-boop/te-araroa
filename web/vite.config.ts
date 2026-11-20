@@ -73,6 +73,7 @@ function activationFiles(): Plugin {
   const base = resolve(__dirname, "../supabase");
   const files = {
     sql: resolve(base, "migrations/20261113000100_questions_voice_push.sql"),
+    sponsors: resolve(base, "migrations/20261120000100_sponsors.sql"),
     util: resolve(base, "functions/_shared/util.ts"),
     webpush: resolve(base, "functions/_shared/webpush.ts"),
     push: resolve(base, "functions/push/index.ts"),
@@ -92,7 +93,7 @@ function activationFiles(): Plugin {
         read(files.webpush),
         read(files.push).replace(/^import .* from "\.\.\/_shared\/[^"]+";\n/gm, ""),
       ].join("\n");
-      return `export const FEATURES_SQL = ${JSON.stringify(read(files.sql))};\nexport const PUSH_FUNCTION = ${JSON.stringify(fn)};\n`;
+      return `export const FEATURES_SQL = ${JSON.stringify(read(files.sql))};\nexport const PUSH_FUNCTION = ${JSON.stringify(fn)};\nexport const SPONSORS_SQL = ${JSON.stringify(read(files.sponsors))};\n`;
     },
   };
 }

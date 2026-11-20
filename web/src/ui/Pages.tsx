@@ -16,6 +16,7 @@ import { PackRow } from "./Pack";
 import { FilmCard } from "./Film";
 import { NotifyCard } from "./Notify";
 import { QuestionsRow } from "./Questions";
+import { SponsorsRow } from "./Sponsors";
 import { lazy, whenIdle } from "./lazy";
 
 /** (the albums come with their own code, fetched once the page has settled) */
@@ -412,6 +413,7 @@ export function About() {
       <FilmCard />
       <PackRow block />
       <QuestionsRow block />
+      <SponsorsRow block />
 
       <section class="block">
         <h2 class="h-section" style={{ marginBottom: "14px" }}>{t("followTitle")}</h2>

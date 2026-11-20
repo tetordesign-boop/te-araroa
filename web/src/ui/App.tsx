@@ -23,6 +23,7 @@ import { MapModes, mapPrefs, modesClosedAt, modesOpen } from "./MapModes";
 import { About, Journal, Stats } from "./Pages";
 import { Pack } from "./Pack";
 import { QuestionsPage } from "./Questions";
+import { SponsorsPage } from "./Sponsors";
 import { PlaceView, placeName } from "./Place";
 import { startReplay } from "./replayControl";
 import { Sheet } from "./Sheet";
@@ -34,6 +35,7 @@ import {
   trailMode, tunnelOpen, view,
 } from "./state";
 import { startTrailMode, TrailMode } from "./TrailMode";
+import { SponsorPins } from "./SponsorPins";
 
 /** the photo voyage, with its own code: fetched once the page has settled, if there are photos to fly through */
 const PhotoTunnel = lazy(() => import("./PhotoTunnel").then((m) => m.PhotoTunnel));
@@ -446,6 +448,7 @@ export function App() {
               : v.name === "about" ? <About />
               : v.name === "pack" ? <Pack />
               : v.name === "questions" ? <QuestionsPage />
+              : v.name === "sponsors" ? <SponsorsPage paid={v.paid} />
               : <Home />}
           </div>
         )}
@@ -470,6 +473,7 @@ export function App() {
 
       {!replayState.value && <ShowPill />}
       {trailMode.value && <TrailMode />}
+      <SponsorPins />
 
       <div class={`toast glass${toastMsg.value ? " is-on" : ""}`} role="status" aria-live="polite">{toastMsg.value}</div>
       {tunnelOpen.value && !introOpen.value && <PhotoTunnel />}

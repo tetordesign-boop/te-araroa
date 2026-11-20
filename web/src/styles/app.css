@@ -1835,3 +1835,183 @@ input, textarea { caret-color: var(--marker); }
 .gear__note { display: block; margin-top: 5px; font-size: 15.5px; line-height: 1.5; color: var(--story); }
 .gear__g { flex: none; font-size: 15px; font-weight: 650; color: var(--ink); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .wbars__bar { animation: none; } }
+
+/* ------------------------------------------------------------------ Parraine le sentier: the trail's tickets
+   The skyline of the whole trail to slide a finger along, the slot a ticket comes out of, the tickets themselves
+   (foil, perforation, stamp), and the rows of small tickets. On the trail you pay the huts with tickets. */
+.spage__lead { margin: 10px 0 0; font-size: 17px; line-height: 1.55; color: var(--story); max-width: 62ch; }
+.ridge { margin-top: 22px; padding: 14px 14px 12px; border-radius: var(--r-card);
+  background: linear-gradient(180deg, rgba(92, 214, 230, 0.07), rgba(140, 170, 222, 0.035)); box-shadow: var(--lit), inset 0 0 0 1px var(--line); }
+.ridge__readout { margin: 0 0 8px; min-height: 22px; font-size: 15px; font-weight: 700; font-stretch: 110%; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color var(--dur-1); }
+.ridge__readout.is-on { color: var(--ink); }
+.ridge__plot { position: relative; height: 150px; touch-action: pan-y; cursor: crosshair; border-radius: 10px; outline-offset: 4px; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.ridge__plot:focus-visible { outline: 2px solid var(--marker-ring); }
+.ridge__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.ridge__line { fill: none; stroke: var(--glacier); stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-linejoin: round; filter: drop-shadow(0 0 5px var(--glacier-glow)); }
+.ridge__col { position: absolute; width: 9px; height: 9px; margin: -5px 0 0 -4.5px; border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 3px rgba(12, 21, 38, 0.9); pointer-events: none; transition: box-shadow var(--dur-2); }
+.ridge__col.is-top { width: 11px; height: 11px; margin: -6px 0 0 -5.5px; background: var(--marker-hot); }
+.ridge__col.is-taken { background: var(--glacier); }
+.ridge__col.is-sel { box-shadow: 0 0 0 3px rgba(12, 21, 38, 0.9), 0 0 0 6px var(--marker-ring); }
+.ridge__tick { position: absolute; bottom: 0; width: 2px; height: 14px; margin-left: -1px; border-radius: 1px; background: var(--glacier); pointer-events: none; }
+.ridge__cursor { position: absolute; top: -4px; bottom: 0; width: 2px; margin-left: -1px; background: var(--marker); box-shadow: 0 0 12px var(--marker-glow); pointer-events: none; }
+.ridge__cursor::before { content: ""; position: absolute; left: 50%; top: -5px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--marker); box-shadow: 0 0 0 4px var(--marker-tint); }
+.ridge__plot:not(.is-drag) .ridge__cursor { transition: left var(--dur-2) var(--ease-out); }
+.ridge__bands { display: flex; gap: 2px; height: 18px; margin-top: 8px; }
+.ridge__band { flex: 1 1 0; min-width: 3px; padding: 0; border: 0; border-radius: 3px; background: rgba(140, 170, 222, 0.24); cursor: pointer;
+  transition: background var(--dur-1), transform var(--dur-1); }
+.ridge__band.is-odd { background: rgba(140, 170, 222, 0.13); }
+.ridge__band.is-taken { background: rgba(92, 214, 230, 0.7); }
+.ridge__band.is-sel { background: var(--marker); }
+.ridge__band:focus-visible { outline: 2px solid var(--marker-ring); outline-offset: 2px; }
+@media (hover: hover) { .ridge__band:hover { background: var(--marker-hot); transform: scaleY(1.2); } }
+.ridge__ends { display: flex; justify-content: space-between; gap: 8px; margin: 7px 0 0; color: var(--ink-3); font-size: 12px; }
+
+/* the slot, and the paper coming out of it */
+.tk-slot { position: relative; margin-top: 20px; padding-top: 6px; min-height: 12px; }
+.tk-slot__mouth { position: absolute; left: 6px; right: 6px; top: 0; height: 12px; border-radius: 6px; z-index: 2;
+  background: linear-gradient(180deg, #03070F, #0B1424); box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(226, 236, 255, 0.09); }
+.tk-slot__paper { overflow: hidden; padding: 0 14px 44px; margin: 0 -14px -44px; }
+.tk { --rx: 0deg; --ry: 0deg; position: relative; margin: 0 14px; perspective: 900px; filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.5));
+  animation: tk-print 900ms cubic-bezier(0.3, 0.6, 0.3, 1) both; }
+@keyframes tk-print {
+  0% { transform: translateY(-100%); }
+  30% { transform: translateY(-58%); } 37% { transform: translateY(-56%); }
+  62% { transform: translateY(-20%); } 69% { transform: translateY(-18%); }
+  100% { transform: none; }
+}
+.tk__card { transform: rotateX(var(--rx)) rotateY(var(--ry)); transition: transform 220ms var(--ease-out); transform-style: preserve-3d; }
+.tk__body { position: relative; overflow: hidden; padding: 18px 20px 24px; border-radius: 22px 22px 0 0;
+  background:
+    repeating-radial-gradient(circle at 86% 14%, rgba(150, 180, 228, 0.075) 0 1px, transparent 1.5px 15px),
+    radial-gradient(120% 90% at 100% 0%, rgba(92, 214, 230, 0.16), transparent 60%),
+    linear-gradient(160deg, #18294B, #0F1B32 58%, #0B1527);
+  -webkit-mask: radial-gradient(circle at 0 100%, #0000 11px, #000 11.5px), radial-gradient(circle at 100% 100%, #0000 11px, #000 11.5px);
+  -webkit-mask-composite: source-in; mask-composite: intersect; }
+.tk__foil { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: 0.6;
+  background: linear-gradient(105deg, transparent 32%, rgba(92, 214, 230, 0.32) 42%, rgba(255, 255, 255, 0.38) 48%, rgba(255, 139, 61, 0.32) 54%, rgba(170, 140, 255, 0.24) 60%, transparent 72%);
+  background-size: 260% 100%; background-position: var(--gx, 120%) 0; transition: background-position 140ms linear;
+  animation: tk-foil 1300ms 700ms cubic-bezier(0.3, 0.7, 0.2, 1) backwards; }
+@keyframes tk-foil { from { background-position: 120% 0; } to { background-position: -40% 0; } }
+.tk__top { display: flex; justify-content: space-between; gap: 10px; margin: 0; font-size: 12.5px; font-weight: 700; font-stretch: 112%; letter-spacing: 0.02em; color: var(--marker-hot); }
+.tk__top .num { color: var(--ink-3); }
+.tk__name { margin: 10px 0 0; padding-right: 112px; font-size: 30px; line-height: 1.04; font-weight: 880; font-stretch: 122%; letter-spacing: -0.03em; text-wrap: balance; }
+.tk__meta { margin: 8px 0 0; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.tk__gets { margin: 14px 0 0; font-family: var(--font-voice); font-size: 16px; line-height: 1.5; color: var(--story); }
+.tk__stamp { position: absolute; right: 16px; top: 42px; display: flex; flex-direction: column; align-items: center; padding: 5px 11px 6px;
+  border: 2.5px solid currentColor; border-radius: 9px; outline: 1px solid currentColor; outline-offset: 2px; transform: rotate(-11deg);
+  font-size: 17px; line-height: 1.1; font-weight: 880; font-stretch: 120%; letter-spacing: -0.01em; color: rgba(243, 246, 251, 0.5); pointer-events: none; }
+.tk__stamp small { max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 700; letter-spacing: 0; }
+.tk__stamp.is-taken { color: var(--glacier); }
+.tk__stamp.is-asked { color: var(--marker-hot); animation: tk-stamp 440ms cubic-bezier(0.2, 1.3, 0.4, 1) both; text-shadow: 0 0 18px var(--marker-glow); }
+@keyframes tk-stamp {
+  0% { opacity: 0; transform: rotate(-22deg) scale(2.6); }
+  55% { opacity: 1; transform: rotate(-9deg) scale(0.92); }
+  100% { opacity: 1; transform: rotate(-11deg) scale(1); }
+}
+.tk__stub { padding: 18px 20px 18px; border-radius: 0 0 22px 22px; background-color: #0E1A30;
+  background-image: linear-gradient(90deg, rgba(150, 180, 228, 0.32) 55%, transparent 0); background-size: 11px 2px; background-repeat: repeat-x; background-position: 14px 0;
+  -webkit-mask: radial-gradient(circle at 0 0, #0000 11px, #000 11.5px), radial-gradient(circle at 100% 0, #0000 11px, #000 11.5px);
+  -webkit-mask-composite: source-in; mask-composite: intersect; }
+.tk__thanks { margin: 0; font-family: var(--font-voice); font-size: 16px; line-height: 1.5; color: var(--story); }
+.tk__form { margin: 0; grid-template-columns: minmax(0, 1fr); }
+.tk__form .note__label { white-space: normal; }
+.tk__stub, .tk__body { min-width: 0; }
+.tk__form .form__row .btn:first-child { flex: 0 0 auto; padding-inline: 18px; }
+.tk__form .form__row .btn--primary { flex: 1; white-space: nowrap; }
+.tk__stub .btn[disabled] { background: var(--fill); color: var(--ink-2); opacity: 1; }
+.tk__hint { color: var(--ink-3); font-weight: 500; }
+.spage__count { margin: 18px 0 0; }
+
+/* the rows of small tickets */
+.tk-deck { margin-top: 30px; }
+.tk-deck__head .fine { margin: 4px 0 0; }
+.tk-deck__row { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  margin: 0 calc(-1 * var(--gutter)); padding: 12px var(--gutter) 8px; scroll-padding-inline: var(--gutter); }
+.tk-deck__row::-webkit-scrollbar { display: none; }
+.tk-mini { position: relative; flex: none; width: 168px; min-height: 126px; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px 11px;
+  scroll-snap-align: start; text-align: left; color: var(--ink); font: inherit; border: 0; border-radius: 16px; cursor: pointer;
+  background-color: #12203A;
+  background-image: linear-gradient(90deg, rgba(150, 180, 228, 0.28) 55%, transparent 0), linear-gradient(160deg, #172947, #0F1B32);
+  background-size: 9px 1.5px, 100% 100%; background-repeat: repeat-x, no-repeat; background-position: 10px calc(100% - 34px), 0 0;
+  box-shadow: inset 0 0 0 1px var(--line);
+  -webkit-mask: radial-gradient(circle at 0 calc(100% - 34px), #0000 7px, #000 7.5px), radial-gradient(circle at 100% calc(100% - 34px), #0000 7px, #000 7.5px);
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+  transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-1); }
+.tk-mini__kind { font-size: 11.5px; font-weight: 700; font-stretch: 110%; color: var(--marker-hot); }
+.tk-mini__name { font-size: 15.5px; line-height: 1.15; font-weight: 800; font-stretch: 112%; letter-spacing: -0.01em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tk-mini__meta { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tk-mini__state { margin-top: auto; padding-top: 12px; font-size: 12px; font-weight: 700; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tk-mini.is-taken .tk-mini__state { color: var(--glacier); }
+.tk-mini.is-on { box-shadow: inset 0 0 0 2px var(--marker); }
+.tk-mini:active { transform: translateY(1px) scale(0.98); }
+.tk-mini:focus-visible { outline: 2px solid var(--marker-ring); outline-offset: 2px; }
+@media (hover: hover) { .tk-mini:hover { transform: translateY(-3px) rotate(-1deg); } }
+.tk-steps { counter-reset: tk; list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 12px; }
+.tk-steps li { counter-increment: tk; display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; font-size: 15.5px; line-height: 1.45; color: var(--story); }
+.tk-steps li::before { content: counter(tk); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--marker-tint); color: var(--marker-hot); font-size: 13px; font-weight: 800; }
+@media (prefers-reduced-motion: reduce) {
+  .tk, .tk__foil, .tk__stamp.is-asked { animation: none; }
+  .tk__card { transition: none; }
+}
+
+/* sponsors on the map: the logo turning like a coin over its spot (five thin layers give it an edge), its shadow
+   narrowing edge-on; a friend's kilometre is a name tag; a tap opens the card above */
+.spin { position: relative; width: 56px; height: 86px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.spin:focus-visible { outline: 2px solid var(--marker-ring); outline-offset: 4px; border-radius: 12px; }
+.spin__float { position: absolute; left: 0; top: 0; width: 56px; height: 56px; perspective: 520px; animation: spin-float 3.2s ease-in-out infinite; }
+.spin__coin { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; animation: spin-y 5.6s linear infinite; }
+.spin__face, .spin__edge { position: absolute; inset: 0; border-radius: 50%; }
+.spin__face { overflow: hidden; background: #fff; backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: translateZ(3px);
+  box-shadow: inset 0 0 0 2.5px rgba(255, 255, 255, 0.95), 0 0 0 2px var(--marker); }
+.spin__face--back { transform: rotateY(180deg) translateZ(3px); }
+.spin__face img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.spin__face::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(120deg, rgba(255, 255, 255, 0.5), transparent 38%, transparent 62%, rgba(255, 255, 255, 0.18)); pointer-events: none; }
+.spin__edge { transform: translateZ(var(--z)); background: linear-gradient(90deg, #B8410A, var(--marker) 50%, #B8410A); }
+.spin__stem { position: absolute; left: 27px; top: 58px; width: 2px; height: 22px; border-radius: 1px; background: linear-gradient(var(--marker), rgba(255, 107, 18, 0.15)); }
+.spin__shadow { position: absolute; left: 12px; top: 78px; width: 32px; height: 8px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), transparent); animation: spin-shadow 5.6s linear infinite; }
+@keyframes spin-y { to { transform: rotateY(360deg); } }
+@keyframes spin-shadow { 0%, 50%, 100% { transform: scaleX(1); } 25%, 75% { transform: scaleX(0.3); } }
+@keyframes spin-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.spin--name { width: auto; height: 40px; }
+.spin__tag { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px 6px 9px; border-radius: 999px; white-space: nowrap;
+  background: var(--surface-solid); color: var(--ink); font-size: 13px; font-weight: 750; font-stretch: 110%; box-shadow: var(--shadow-float), inset 0 0 0 1px var(--line-strong); }
+.spin__tag i { width: 8px; height: 8px; border-radius: 50%; background: var(--marker); box-shadow: 0 0 0 3px var(--marker-tint); }
+.spin--name .spin__stem { left: 50%; top: 28px; height: 12px; margin-left: calc(var(--sx, 0px) - 1px); }
+/* leaning away from the map's buttons: the stem and the shadow stay on the spot */
+.spin__stem, .spin__shadow { margin-left: var(--sx, 0px); }
+.spin__card { position: absolute; left: 50%; bottom: calc(100% + 6px); display: flex; align-items: flex-start; gap: 10px; width: max-content; max-width: 230px;
+  padding: 10px 12px 11px; border-radius: 16px; background: var(--surface-solid); box-shadow: var(--shadow-float), inset 0 0 0 1px var(--line-strong);
+  opacity: 0; pointer-events: none; transform: translate(calc(-50% + var(--dx, 0px)), 6px) scale(0.96); transform-origin: 50% 100%; transition: opacity var(--dur-1), transform var(--dur-2) var(--ease-out); cursor: default; }
+.spin.is-open .spin__card { opacity: 1; pointer-events: auto; transform: translate(calc(-50% + var(--dx, 0px)), 0) scale(1); }
+.spin__cardlogo { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #fff; box-shadow: 0 0 0 2px var(--marker); }
+.spin__cardtext { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; color: var(--ink-2); }
+.spin__cardtext b { font-size: 15px; color: var(--ink); font-weight: 800; font-stretch: 112%; }
+.spin__link { margin-top: 4px; color: var(--marker-hot); font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
+.spin__more { margin-top: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 650; color: var(--ink-3); text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+/* hanging below its spot, near the top of the map: the shadow on the spot, the stem, then the coin; the card opens under it */
+.spin--down .spin__shadow { top: -4px; }
+.spin--down .spin__stem { top: 4px; background: linear-gradient(rgba(255, 107, 18, 0.15), var(--marker)); }
+.spin--down .spin__float { top: 28px; }
+.spin--down .spin__card { bottom: auto; top: calc(100% + 6px); transform-origin: 50% 0; transform: translate(calc(-50% + var(--dx, 0px)), -6px) scale(0.96); }
+.spin--name.spin--down .spin__stem { top: 0; }
+.spin--name.spin--down .spin__tag { margin-top: 12px; }
+@media (prefers-reduced-motion: reduce) { .spin__float, .spin__coin, .spin__shadow { animation: none; } }
+
+/* the sponsor on a given ticket */
+.tk__owner { display: flex; align-items: center; gap: 12px; margin: 14px 0 0; }
+.tk__owner span { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 14px; }
+.tk__owner b { font-weight: 800; }
+.tk__owner a { color: var(--marker-hot); font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
+.tk__logo { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #fff; box-shadow: 0 0 0 2px var(--marker); }
+/* back from Stripe: the ticket is paid */
+.tk-paid { position: relative; margin-top: 16px; padding: 16px 18px 16px 104px; min-height: 76px; border-radius: var(--r-card);
+  background: linear-gradient(160deg, rgba(255, 107, 18, 0.16), rgba(255, 107, 18, 0.05)); box-shadow: inset 0 0 0 1px rgba(255, 139, 61, 0.35); }
+.tk-paid p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--story); }
+.tk-paid b { color: var(--ink); }
+.tk-paid__stamp { position: absolute; left: 16px; top: 50%; padding: 5px 10px 6px; border: 2.5px solid currentColor; border-radius: 9px; outline: 1px solid currentColor; outline-offset: 2px;
+  color: var(--marker-hot); font-size: 17px; font-weight: 880; font-stretch: 120%; transform: translateY(-50%) rotate(-11deg); animation: tk-stamp-paid 520ms 200ms cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+@keyframes tk-stamp-paid { 0% { opacity: 0; transform: translateY(-50%) rotate(-22deg) scale(2.6); } 60% { opacity: 1; transform: translateY(-50%) rotate(-9deg) scale(0.92); } 100% { opacity: 1; transform: translateY(-50%) rotate(-11deg) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .tk-paid__stamp { animation: none; } }

@@ -18,6 +18,7 @@ import { PackRow } from "./Pack";
 import { FilmCard } from "./Film";
 import { NotifyCard } from "./Notify";
 import { QuestionsRow } from "./Questions";
+import { SponsorsRow } from "./Sponsors";
 import { altText, openPlace, PlaceBadge, placeName } from "./Place";
 import { arrival, go, hrefFor, isDesktop } from "./state";
 import { startTrailMode } from "./TrailMode";
@@ -318,6 +319,7 @@ export function Home() {
 
       <div class="block"><NoteToEwan dayId={null} /></div>
       <QuestionsRow block />
+      <SponsorsRow block />
       {ph !== "before" && <NotifyCard block />}
       <Footer />
     </div>
