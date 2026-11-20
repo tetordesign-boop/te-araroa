@@ -1997,3 +1997,12 @@ input, textarea { caret-color: var(--marker); }
 .tk__owner b { font-weight: 800; }
 .tk__owner a { color: var(--marker-hot); font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
 .tk__logo { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #fff; box-shadow: 0 0 0 2px var(--marker); }
+/* back from Stripe: the ticket is paid */
+.tk-paid { position: relative; margin-top: 16px; padding: 16px 18px 16px 104px; min-height: 76px; border-radius: var(--r-card);
+  background: linear-gradient(160deg, rgba(255, 107, 18, 0.16), rgba(255, 107, 18, 0.05)); box-shadow: inset 0 0 0 1px rgba(255, 139, 61, 0.35); }
+.tk-paid p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--story); }
+.tk-paid b { color: var(--ink); }
+.tk-paid__stamp { position: absolute; left: 16px; top: 50%; padding: 5px 10px 6px; border: 2.5px solid currentColor; border-radius: 9px; outline: 1px solid currentColor; outline-offset: 2px;
+  color: var(--marker-hot); font-size: 17px; font-weight: 880; font-stretch: 120%; transform: translateY(-50%) rotate(-11deg); animation: tk-stamp-paid 520ms 200ms cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+@keyframes tk-stamp-paid { 0% { opacity: 0; transform: translateY(-50%) rotate(-22deg) scale(2.6); } 60% { opacity: 1; transform: translateY(-50%) rotate(-9deg) scale(0.92); } 100% { opacity: 1; transform: translateY(-50%) rotate(-11deg) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .tk-paid__stamp { animation: none; } }

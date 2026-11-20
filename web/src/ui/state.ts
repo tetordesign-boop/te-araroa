@@ -11,7 +11,7 @@ export type View =
   | { name: "about" }
   | { name: "pack" }
   | { name: "questions" }
-  | { name: "sponsors" };
+  | { name: "sponsors"; paid?: boolean };
 
 /** the sheet's heights on a phone: "map" leaves the map almost whole, only its grip showing above the navigation */
 export type Detent = "map" | "peek" | "half" | "full";
@@ -27,7 +27,8 @@ function parse(hash: string): View {
   if (a === "apropos" || a === "about") return { name: "about" };
   if (a === "sac" || a === "pack") return { name: "pack" };
   if (a === "questions" || a === "question") return { name: "questions" };
-  if (a === "parrainer" || a === "sponsors" || a === "sponsor") return { name: "sponsors" };
+  // (Stripe sends a sponsor back to #/parrainer/merci once paid)
+  if (a === "parrainer" || a === "sponsors" || a === "sponsor") return b === "merci" || b === "thanks" ? { name: "sponsors", paid: true } : { name: "sponsors" };
   return { name: "home" };
 }
 
@@ -41,6 +42,15 @@ const panelMq = window.matchMedia(PANEL_MQ);
 export const isDesktop = signal(panelMq.matches);
 panelMq.addEventListener("change", (e) => (isDesktop.value = e.matches));
 
+// back from a Stripe payment: its redirect is "…/te-araroa/?merci" (a "#…" may not survive it), which opens the thank-you
+{
+  const q = new URLSearchParams(location.search);
+  if (q.has("merci") && /^#?\/?$/.test(location.hash)) {
+    q.delete("merci");
+    const s = q.toString();
+    history.replaceState(null, "", `${location.pathname}${s ? `?${s}` : ""}#/parrainer/merci`);
+  }
+}
 export const view = signal<View>(parse(location.hash));
 export const detent = signal<Detent>(detentFor(view.value, isDesktop.value));
 export const toastMsg = signal<string | null>(null);
@@ -90,7 +100,7 @@ export function hrefFor(v: View): string {
     case "about": return "#/apropos";
     case "pack": return "#/sac";
     case "questions": return "#/questions";
-    case "sponsors": return "#/parrainer";
+    case "sponsors": return v.paid ? "#/parrainer/merci" : "#/parrainer";
   }
 }
 

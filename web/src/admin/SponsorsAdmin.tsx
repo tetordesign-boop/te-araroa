@@ -10,10 +10,16 @@ import { Bar, CopyBtn } from "./Pages";
 import { say } from "./nav";
 import { sba } from "./sb";
 
-interface Req { id: string; spot_id: string; spot_label: string; name: string; contact: string; link: string | null; offer: string | null; message: string | null; lang: string; status: "new" | "done"; created_at: string }
+interface Req {
+  id: string; spot_id: string; spot_label: string; name: string; contact: string; link: string | null; offer: string | null; message: string | null;
+  lang: string; status: "new" | "done"; pay_url: string | null; paid_at: string | null; created_at: string;
+}
 interface Given { spot_id: string; name: string; logo: string | null; link: string | null }
 
 const requests = signal<Req[] | null>(null);
+/** my Stripe payment link with a price chosen by the payer (settings.sponsor_pay_link) */
+const payLink = signal<string | null>(null);
+const PAY_LINK = /^https:\/\/(buy|donate)\.stripe\.com\/[A-Za-z0-9_]+$/;
 const given = signal<Given[]>([]);
 /** null until asked, false when the tables aren't there yet */
 const ready = signal<boolean | null>(MOCK && new URLSearchParams(location.search).has("nofeatures") ? false : null);
@@ -22,17 +28,20 @@ export async function loadSponsors() {
   if (MOCK) {
     if (ready.value === false) return;
     requests.value = [
-      { id: "r1", spot_id: "col-stag-saddle", spot_label: "Stag Saddle", name: "Kea Coffee", contact: "@keacoffee", link: "@keacoffee", offer: "250 NZD", message: "On adorerait le point le plus haut !", lang: "fr", status: "new", created_at: new Date(Date.now() - 3600e3).toISOString() },
-      { id: "r2", spot_id: "km-120", spot_label: "Kilomètre 120", name: "Léa", contact: "lea@example.com", link: null, offer: "20 €", message: null, lang: "fr", status: "done", created_at: new Date(Date.now() - 86400e3).toISOString() },
+      { id: "r1", spot_id: "col-stag-saddle", spot_label: "Stag Saddle", name: "Kea Coffee", contact: "@keacoffee", link: "@keacoffee", offer: "250 NZD", message: "On adorerait le point le plus haut !", lang: "fr", status: "new", pay_url: null, paid_at: null, created_at: new Date(Date.now() - 3600e3).toISOString() },
+      { id: "r2", spot_id: "km-120", spot_label: "Kilomètre 120", name: "Léa", contact: "lea@example.com", link: null, offer: "20 €", message: null, lang: "fr", status: "done", pay_url: null, paid_at: new Date(Date.now() - 40000e3).toISOString(), created_at: new Date(Date.now() - 86400e3).toISOString() },
     ];
+    payLink.value = "https://buy.stripe.com/test_00example";
     given.value = [{ spot_id: "km-120", name: "Léa", logo: null, link: null }];
     ready.value = true;
     return;
   }
-  const [r, g] = await Promise.all([
-    sba.from("sponsor_requests").select("id, spot_id, spot_label, name, contact, link, offer, message, lang, status, created_at").order("created_at", { ascending: false }).limit(300),
+  const [r, g, st] = await Promise.all([
+    sba.from("sponsor_requests").select("id, spot_id, spot_label, name, contact, link, offer, message, lang, status, pay_url, paid_at, created_at").order("created_at", { ascending: false }).limit(300),
     sba.from("sponsor_spots").select("spot_id, name, logo, link").order("created_at", { ascending: false }),
+    sba.from("settings").select("sponsor_pay_link").eq("id", 1).maybeSingle(),
   ]);
+  if (!st.error) payLink.value = (st.data as { sponsor_pay_link: string | null } | null)?.sponsor_pay_link ?? null;
   if (r.error || g.error) {
     const m = `${r.error?.code ?? ""} ${r.error?.message ?? ""} ${g.error?.code ?? ""} ${g.error?.message ?? ""}`;
     if (/does not exist|schema cache|42P01|42703|PGRST20[45]/i.test(m)) ready.value = false;
@@ -104,7 +113,8 @@ export function SponsorsAdminPage() {
   return (
     <div class="adm">
       <Bar title="Sponsors" />
-      <p class="adm-sub" style={{ marginTop: "12px" }}>Les demandes envoyées depuis la page « Parraine le sentier ». Toi seul les vois. « Attribuer » réserve le ticket sur le site, et le logo tourne en 3D sur la carte à cet endroit, avec le lien.</p>
+      <p class="adm-sub" style={{ marginTop: "12px" }}>Les demandes envoyées depuis la page « Parraine le sentier ». Toi seul les vois. Quand tu es d'accord, envoie le lien de paiement ; une fois payé, « Attribuer » réserve le ticket sur le site et fait tourner le logo sur la carte.</p>
+      <PayLinkBox />
 
       <div class="group__title">Nouvelles demandes</div>
       <div class="group">
@@ -125,6 +135,57 @@ export function SponsorsAdminPage() {
       </>}
     </div>
   );
+}
+
+/** My Stripe link, made once in Stripe ("customers choose what to pay"); each request adds its reference to it. */
+function PayLinkBox() {
+  const [editing, setEditing] = useState(false);
+  const [v, setV] = useState(payLink.value ?? "");
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    const link = v.trim();
+    if (link && !PAY_LINK.test(link)) { say("Ce n'est pas un lien de paiement Stripe : il commence par https://buy.stripe.com/", 3600); return; }
+    setBusy(true);
+    const { error } = MOCK ? { error: null } : await sba.from("settings").update({ sponsor_pay_link: link || null }).eq("id", 1);
+    setBusy(false);
+    if (error) { say("Pas enregistré : vérifie le réseau et réessaie."); return; }
+    payLink.value = link || null;
+    setEditing(false);
+    say(link ? "Lien de paiement enregistré." : "Lien de paiement retiré.");
+  };
+  return (
+    <>
+      <div class="group__title">Paiement</div>
+      <div class="group">
+        {!editing ? (
+          <div class="cell">
+            <span class="cell__main">
+              <span class="cell__title">Lien de paiement Stripe</span>
+              <span class="cell__meta">{payLink.value ? payLink.value.replace(/^https:\/\//, "") : "Pas encore de lien : crée-le dans Stripe, puis colle-le ici."}</span>
+            </span>
+            <button class="textbtn" type="button" onClick={() => { setV(payLink.value ?? ""); setEditing(true); }}>{payLink.value ? "Changer" : "Ajouter"}</button>
+          </div>
+        ) : (
+          <div class="cell cell--stack spons">
+            <label class="cell"><span>Lien</span><input value={v} inputMode="url" autoCapitalize="none" placeholder="https://buy.stripe.com/…" onInput={(e) => setV((e.target as HTMLInputElement).value)} /></label>
+            <div class="spons__actions">
+              <button class="textbtn" type="button" disabled={busy} onClick={() => setEditing(false)}>Annuler</button>
+              <span style={{ flex: 1 }} />
+              <button class="textbtn textbtn--strong" type="button" disabled={busy} onClick={save}>{busy ? "…" : "Enregistrer"}</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/** the payment link for one request: my Stripe link, with the request as its reference (and their email when given) */
+function payUrlFor(r: Req): string | null {
+  if (!payLink.value) return null;
+  const q = new URLSearchParams({ client_reference_id: r.id });
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.contact)) q.set("prefilled_email", r.contact);
+  return `${payLink.value}?${q}`;
 }
 
 /** The tables aren't there yet: how to create them from the phone. */
@@ -230,6 +291,28 @@ function RequestCell({ r }: { r: Req }) {
     requests.value = (requests.value ?? []).filter((x) => x.id !== r.id);
   };
   const site = normLink(r.link);
+  const sendPay = async () => {
+    const url = payUrlFor(r);
+    if (!url) { say("Ajoute d'abord ton lien Stripe, en haut de la page.", 3200); return; }
+    const text = r.lang === "en"
+      ? `Hi ${r.name}! It's a yes for the "${r.spot_label}" ticket, thank you! Here's the secure payment link (Stripe): ${url}`
+      : `Salut ${r.name} ! C'est d'accord pour le ticket « ${r.spot_label} », merci ! Voici le lien de paiement sécurisé (Stripe) : ${url}`;
+    try { await navigator.clipboard.writeText(text); say("Message avec le lien copié : colle-le dans ta réponse.", 3200); }
+    catch { say("Copie impossible sur cet appareil."); return; }
+    if (r.pay_url === url) return;
+    const { error } = MOCK ? { error: null } : await sba.from("sponsor_requests").update({ pay_url: url }).eq("id", r.id);
+    if (!error) requests.value = (requests.value ?? []).map((x) => (x.id === r.id ? { ...x, pay_url: url } : x));
+  };
+  const setPaid = async (paid: boolean) => {
+    if (!paid && !window.confirm("Retirer le paiement de cette demande ?")) return;
+    setBusy(true);
+    const paid_at = paid ? new Date().toISOString() : null;
+    const { error } = MOCK ? { error: null } : await sba.from("sponsor_requests").update({ paid_at }).eq("id", r.id);
+    setBusy(false);
+    if (error) { say("Pas enregistré : vérifie le réseau et réessaie."); return; }
+    requests.value = (requests.value ?? []).map((x) => (x.id === r.id ? { ...x, paid_at } : x));
+    if (paid) say(isGiven ? "Payé." : "Payé. Tu peux attribuer le ticket.", 2600);
+  };
 
   return (
     <div class="cell cell--stack spons">
@@ -241,6 +324,16 @@ function RequestCell({ r }: { r: Req }) {
       {r.offer && <p class="spons__offer">Prix proposé : <b>{r.offer}</b></p>}
       {r.link && <p class="spons__who">{site ? <a href={site} target="_blank" rel="noopener">{r.link}</a> : r.link}</p>}
       {r.message && <p class="spons__msg">{r.message}</p>}
+      <div class="spons__pay">
+        {r.paid_at
+          ? <><span class="spons__paid">Payé le {when(r.paid_at)}</span><span style={{ flex: 1 }} /><button class="textbtn" type="button" disabled={busy} onClick={() => setPaid(false)}>Retirer</button></>
+          : <>
+              <span class="cell__meta">{r.pay_url ? "Lien de paiement envoyé" : "Pas encore payé"}</span>
+              <span style={{ flex: 1 }} />
+              <button class="textbtn" type="button" onClick={sendPay}>{r.pay_url ? "Recopier le lien" : "Lien de paiement"}</button>
+              <button class="textbtn" type="button" disabled={busy} onClick={() => setPaid(true)}>Payé</button>
+            </>}
+      </div>
       {isGiven && !giving && <p class="cell__meta">Ce ticket est attribué.</p>}
       {giving ? (
         <GiveForm spot={r.spot_id} initial={{ spot_id: r.spot_id, name: r.name, link: r.link ?? (/^@/.test(r.contact) ? r.contact : null), logo: null }}

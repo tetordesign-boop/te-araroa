@@ -50,10 +50,11 @@ const W = {
     send: "Envoyer la demande", sending: "Envoi…", cancel: "Annuler",
     needWho: "Écris ton nom ou celui de ta marque.", needContact: "Laisse-moi un moyen de te répondre.",
     err: { rate: "Trop de demandes d'un coup : réessaie dans quelques minutes.", links: "Un seul lien par message, s'il te plaît.", closed: "Les demandes ne sont pas encore ouvertes : réessaie bientôt.", error: "La demande n'est pas partie : vérifie ta connexion et réessaie." } as Record<Exclude<AskResult, "ok">, string>,
-    thanks: "C'est noté. Je te réponds dès que j'ai du réseau.",
+    thanks: "C'est noté. Je te réponds dès que j'ai du réseau. Tu ne paies qu'après mon accord, par un lien sécurisé.",
+    paidTitle: "Paiement reçu, merci !", paidText: "Ton ticket est à toi. Ton logo arrive sur la carte dès que je l'ai ajouté, et tu passes dans la vidéo quand j'arrive à ton emplacement.",
     another: "Choisir un autre ticket",
     how: "Comment ça marche",
-    steps: ["Tu choisis ton ticket et tu proposes ton prix.", "Je te réponds dès que j'ai du réseau.", "Ton logo tourne en 3D sur la carte à ton emplacement, avec ton lien, puis tu passes dans les vidéos quand j'y arrive."],
+    steps: ["Tu choisis ton ticket et tu proposes ton prix.", "Je te réponds dès que j'ai du réseau. Si on est d'accord, je t'envoie un lien de paiement sécurisé (Stripe).", "Ton logo tourne en 3D sur la carte à ton emplacement, avec ton lien, puis tu passes dans les vidéos quand j'y arrive."],
     counts: (free: number) => `${free} tickets libres, sans compter les kilomètres`,
   },
   en: {
@@ -85,10 +86,11 @@ const W = {
     send: "Send the request", sending: "Sending…", cancel: "Cancel",
     needWho: "Write your name or your brand's.", needContact: "Leave me a way to reach you.",
     err: { rate: "Too many requests at once: try again in a few minutes.", links: "One link per message, please.", closed: "Requests aren't open yet: try again soon.", error: "The request didn't go through: check your connection and try again." } as Record<Exclude<AskResult, "ok">, string>,
-    thanks: "Got it. I'll get back to you as soon as I have signal.",
+    thanks: "Got it. I'll get back to you as soon as I have signal. You only pay once I've said yes, through a secure link.",
+    paidTitle: "Payment received, thank you!", paidText: "The ticket is yours. Your logo goes on the map as soon as I've added it, and you're in the video when I reach your spot.",
     another: "Pick another ticket",
     how: "How it works",
-    steps: ["You pick your ticket and name your price.", "I get back to you as soon as I have signal.", "Your logo spins in 3D on the map at your spot, with your link, then you're in the videos when I get there."],
+    steps: ["You pick your ticket and name your price.", "I get back to you as soon as I have signal. If we agree, I send you a secure payment link (Stripe).", "Your logo spins in 3D on the map at your spot, with your link, then you're in the videos when I get there."],
     counts: (free: number) => `${free} free tickets, not counting the kilometres`,
   },
 };
@@ -124,7 +126,7 @@ function TicketIcon() {
 // ------------------------------------------------------------------ the page
 const fmtK = (km: number, l: Lang) => fmtInt(Math.round(km), l);
 
-export function SponsorsPage() {
+export function SponsorsPage({ paid }: { paid?: boolean }) {
   const l = lang.value, w = words();
   const [sel, setSel] = useState<Spot | null>(null);
   const [printed, setPrinted] = useState(0); // a new print each time, even of the same ticket
@@ -152,6 +154,12 @@ export function SponsorsPage() {
   return (
     <div class="page spage">
       <PageHead title={t("sponsors")} />
+      {paid && (
+        <div class="tk-paid" role="status">
+          <span class="tk-paid__stamp" aria-hidden="true">{l === "fr" ? "Payé" : "Paid"}</span>
+          <p><b>{w.paidTitle}</b> {w.paidText}</p>
+        </div>
+      )}
       <p class="spage__lead voice">{w.lead}</p>
 
       <Ridge onPick={(s) => pick(s, true)} selected={sel} />

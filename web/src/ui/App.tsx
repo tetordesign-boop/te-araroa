@@ -448,7 +448,7 @@ export function App() {
               : v.name === "about" ? <About />
               : v.name === "pack" ? <Pack />
               : v.name === "questions" ? <QuestionsPage />
-              : v.name === "sponsors" ? <SponsorsPage />
+              : v.name === "sponsors" ? <SponsorsPage paid={v.paid} />
               : <Home />}
           </div>
         )}

@@ -256,3 +256,5 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 .spons__offer b { color: var(--ink); }
 .spons__who a { color: var(--marker-hot, #FF8B3D); text-decoration: none; }
 .spons__logo { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #fff; }
+.spons__pay { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 8px 0 2px; border-top: 1px solid var(--line, rgba(150, 180, 228, 0.16)); margin-top: 4px; }
+.spons__paid { font-size: 14px; font-weight: 700; color: #7FD8A0; }

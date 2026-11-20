@@ -34,6 +34,12 @@ create table if not exists public.sponsor_requests (
   message text check (message is null or char_length(message) <= 400),
   lang text not null default 'fr' check (lang in ('fr', 'en')),
   status text not null default 'new' check (status in ('new', 'done')),
+  -- the payment, once we agree: the amount, the secure Stripe link sent to the sponsor, and when it was paid
+  amount_cents integer check (amount_cents is null or amount_cents between 100 and 10000000),
+  currency text check (currency is null or currency in ('nzd', 'eur')),
+  pay_url text check (pay_url is null or (pay_url ~ '^https://(buy|checkout)\.stripe\.com/' and char_length(pay_url) <= 600)),
+  checkout_id text check (checkout_id is null or char_length(checkout_id) <= 200),
+  paid_at timestamptz,
   device_id uuid,
   ip_hash text,
   created_at timestamptz not null default now()
@@ -47,8 +53,8 @@ drop policy if exists "Ewan deletes requests" on public.sponsor_requests;
 create policy "Ewan deletes requests" on public.sponsor_requests for delete to authenticated using ((select public.is_admin()));
 -- (the device and the hash of the address, kept for rate limiting, are never readable)
 revoke all on public.sponsor_requests from anon, authenticated;
-grant select (id, spot_id, spot_label, name, contact, link, offer, message, lang, status, created_at) on public.sponsor_requests to authenticated;
-grant update (status) on public.sponsor_requests to authenticated;
+grant select (id, spot_id, spot_label, name, contact, link, offer, message, lang, status, amount_cents, currency, pay_url, checkout_id, paid_at, created_at) on public.sponsor_requests to authenticated;
+grant update (status, amount_cents, currency, pay_url, paid_at) on public.sponsor_requests to authenticated;
 grant delete on public.sponsor_requests to authenticated;
 create index if not exists sponsor_requests_recent on public.sponsor_requests (created_at desc);
 
@@ -87,3 +93,9 @@ begin
 end $$;
 revoke all on function public.request_sponsor(text, text, text, text, text, text, text, text, uuid) from public;
 grant execute on function public.request_sponsor(text, text, text, text, text, text, text, text, uuid) to anon, authenticated;
+
+
+-- The Stripe payment link with a price chosen by the payer, made once in Stripe: the Carnet adds the request's
+-- reference to it, so each payment says which ticket it was for. A payment link isn't a secret (it only takes money).
+alter table public.settings add column if not exists sponsor_pay_link text
+  check (sponsor_pay_link is null or sponsor_pay_link ~ '^https://(buy|donate)\.stripe\.com/[A-Za-z0-9_]+$');
