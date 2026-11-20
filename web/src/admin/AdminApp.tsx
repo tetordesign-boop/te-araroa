@@ -7,6 +7,7 @@ import { flash, page } from "./nav";
 import { Checkin, Dashboard, Help, Notes, SettingsPage, Tracking } from "./Pages";
 import { GearPage } from "./Gear";
 import { loadParcels, ParcelsPage } from "./Parcels";
+import { loadSponsors, SponsorsAdminPage } from "./SponsorsAdmin";
 import { Activate } from "./Activate";
 import { checkFeatures } from "./features";
 import { loadAdminQuestions, QuestionsAdmin } from "./QuestionsAdmin";
@@ -37,6 +38,7 @@ export function AdminApp() {
     loadServer();
     loadRoute();
     loadParcels();
+    loadSponsors();
     // what is switched on yet (questions, voice notes, notifications), then the questions waiting for an answer
     checkFeatures().then(() => loadAdminQuestions());
     afterSync(() => loadServer());
@@ -44,7 +46,7 @@ export function AdminApp() {
     // (reading photo GPS, compressing videos, resumable uploads): the service worker keeps them.
     const warm = () => { import("exifr").catch(() => {}); import("mediabunny").catch(() => {}); import("tus-js-client").catch(() => {}); };
     if (navigator.onLine) window.setTimeout(warm, 2500);
-    window.addEventListener("online", () => { loadServer(); loadRoute(); loadParcels(); checkFeatures().then(() => loadAdminQuestions()); window.setTimeout(warm, 2500); });
+    window.addEventListener("online", () => { loadServer(); loadRoute(); loadParcels(); loadSponsors(); checkFeatures().then(() => loadAdminQuestions()); window.setTimeout(warm, 2500); });
   }, [admin]);
 
   if (!session.value || (signingIn.value && admin !== true)) return <AuthPage />;
@@ -83,6 +85,7 @@ export function AdminApp() {
         : p.name === "settings" ? <SettingsPage />
         : p.name === "gear" ? <GearPage />
         : p.name === "parcels" ? <ParcelsPage />
+        : p.name === "sponsors" ? <SponsorsAdminPage />
         : p.name === "tracking" ? <Tracking />
         : p.name === "help" ? <Help />
         : p.name === "questions" ? <QuestionsAdmin />

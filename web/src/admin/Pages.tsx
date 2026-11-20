@@ -5,6 +5,7 @@ import { fmtWeight, gearTotals } from "../lib/gear";
 import { features } from "./features";
 import { waitingQuestions } from "./QuestionsAdmin";
 import { parcelsLine } from "./Parcels";
+import { sponsorsLine } from "./SponsorsAdmin";
 import type { Settings } from "../types";
 import { ChevronLeft, ChevronRight, Locate } from "../ui/icons";
 import { draftForToday, draftFromDay, openDraft } from "./Editor";
@@ -193,6 +194,7 @@ export function Dashboard() {
         <button class="cell" type="button" onClick={() => open({ name: "tracking" })}><span class="cell__main"><span class="cell__title">Suivi automatique</span><span class="cell__meta">OwnTracks sur ton iPhone</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "gear" })}><span class="cell__main"><span class="cell__title">Mon sac</span><span class="cell__meta">{gearLine()}</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "parcels" })}><span class="cell__main"><span class="cell__title">Colis</span><span class="cell__meta">{parcelsLine()}</span></span><ChevronRight class="cell__chev" /></button>
+        <button class="cell" type="button" onClick={() => open({ name: "sponsors" })}><span class="cell__main"><span class="cell__title">Sponsors</span><span class="cell__meta">{sponsorsLine()}</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "settings" })}><span class="cell__main"><span class="cell__title">Réglages</span></span><ChevronRight class="cell__chev" /></button>
         <button class="cell" type="button" onClick={() => open({ name: "help" })}><span class="cell__main"><span class="cell__title">Mode d'emploi</span><span class="cell__meta">Publier, sans réseau, mots, position, en cas de souci</span></span><ChevronRight class="cell__chev" /></button>
       </div>

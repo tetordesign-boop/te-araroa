@@ -10,7 +10,8 @@ export type View =
   | { name: "stats" }
   | { name: "about" }
   | { name: "pack" }
-  | { name: "questions" };
+  | { name: "questions" }
+  | { name: "sponsors" };
 
 /** the sheet's heights on a phone: "map" leaves the map almost whole, only its grip showing above the navigation */
 export type Detent = "map" | "peek" | "half" | "full";
@@ -26,6 +27,7 @@ function parse(hash: string): View {
   if (a === "apropos" || a === "about") return { name: "about" };
   if (a === "sac" || a === "pack") return { name: "pack" };
   if (a === "questions" || a === "question") return { name: "questions" };
+  if (a === "parrainer" || a === "sponsors" || a === "sponsor") return { name: "sponsors" };
   return { name: "home" };
 }
 
@@ -88,6 +90,7 @@ export function hrefFor(v: View): string {
     case "about": return "#/apropos";
     case "pack": return "#/sac";
     case "questions": return "#/questions";
+    case "sponsors": return "#/parrainer";
   }
 }
 
@@ -157,7 +160,7 @@ window.addEventListener("popstate", () => {
   view.value = v;
   if (v.name === "home" && detent.value === "full") detent.value = "half";
   else if ((v.name === "place" || v.name === "day") && !isDesktop.value && (detent.value === "peek" || detent.value === "map")) detent.value = "half";
-  else if (v.name === "explore" || v.name === "journal" || v.name === "stats" || v.name === "about" || v.name === "pack" || v.name === "questions") detent.value = "full";
+  else if (v.name === "explore" || v.name === "journal" || v.name === "stats" || v.name === "about" || v.name === "pack" || v.name === "questions" || v.name === "sponsors") detent.value = "full";
 });
 
 let toastTimer: number | undefined;
