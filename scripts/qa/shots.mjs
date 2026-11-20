@@ -136,6 +136,13 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "r-m-pack-en", ctx: mobile(false, "en-NZ"), url: "#/sac", act: full, probe: "document.querySelector('.sheet')?.innerText" },
   { id: "r-m-journal", ctx: mobile(false), url: "#/journal", probe: "document.querySelector('.sheet')?.innerText" },
   { id: "r-m-carnet", ctx: mobile(false), url: "admin/", plain: 6000, probe: "document.body.innerText" },
+  // the sponsors: the coins on the map (real logos), the page of tickets, the way back from Stripe
+  { id: "r-m-spin", ctx: mobile(false), url: "", act: seq(wait(3000), (p) => p.waitForSelector(".spin", { timeout: 20000 }).catch(() => {}), wait(2500)),
+    probe: "JSON.stringify([...document.querySelectorAll('.spin')].map((e) => ({ cls: e.className, r: [e.getBoundingClientRect().left, e.getBoundingClientRect().top].map(Math.round), img: e.querySelector('img')?.naturalWidth ?? null })))" },
+  { id: "r-m-spin-open", ctx: mobile(false), url: "", act: seq(wait(3000), (p) => p.waitForSelector(".spin", { timeout: 20000 }).catch(() => {}), wait(2000), tap(".spin__float, .spin__tag"), wait(900)),
+    probe: "document.querySelector('.spin__card')?.innerText" },
+  { id: "r-m-parrainer", ctx: mobile(false), url: "#/parrainer", act: seq(full, wait(1500)), probe: "document.querySelector('.spage__count')?.innerText" },
+  { id: "r-m-merci", ctx: mobile(false), url: "?merci", act: seq(full, wait(1200)), probe: "location.hash + ' | ' + (document.querySelector('.tk-paid')?.innerText ?? 'no banner')" },
   { id: "r-d-intro", ctx: desktop(false), url: "?intro", intro: true },
   { id: "r-d-home", ctx: desktop(false), url: "", probe: "document.querySelector('.sheet, .panel')?.innerText" },
   // the site online (with base.txt): no developer hooks there, so plain waits
