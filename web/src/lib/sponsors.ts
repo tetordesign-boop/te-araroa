@@ -5,9 +5,10 @@
 // profile), so nothing is typed twice; which ones are taken comes from `sponsor_spots`, and a request goes through
 // `request_sponsor` (rate limited, private until I read it in the Carnet).
 import { computed, signal } from "@preact/signals";
-import { MOCK } from "../config";
+import { MOCK, mediaUrl } from "../config";
 import type { Lang } from "../types";
 import { deviceId, route, sb } from "./data";
+import type { LngLat } from "./geo";
 import { haversine } from "./geo";
 import { pois, profile, shortStation } from "./places";
 
@@ -24,7 +25,8 @@ export interface Spot {
   alt?: number;
 }
 
-export interface Taken { spot_id: string; name: string }
+/** a spot given to someone: their name, and for a brand its logo (a file in the media bucket) and its link */
+export interface Taken { spot_id: string; name: string; logo: string | null; link: string | null }
 
 // ------------------------------------------------------------------ the fixed ones
 const both = (s: string): Record<Lang, string> => ({ fr: s, en: s });
@@ -125,7 +127,7 @@ export function spotById(id: string): Spot | null {
 }
 
 // ------------------------------------------------------------------ taken, and asking for one
-export const taken = signal<Map<string, string>>(new Map());
+export const taken = signal<Map<string, Taken>>(new Map());
 export const sponsorsReady = signal<boolean | null>(MOCK ? true : null);
 let loading: Promise<void> | null = null;
 
@@ -133,26 +135,33 @@ export function loadTaken(force = false): Promise<void> {
   if (loading && !force) return loading;
   loading = (async () => {
     if (MOCK) {
-      taken.value = new Map([["col-goat-pass", "Kea Coffee"], ["section-02", "Mamie Jo"], ["km-120", "Léa"], ["km-121", "Léa"], ["galere-sandflies", "Bzzz Off"]]);
+      const t = (spot_id: string, name: string, logo: string | null = null, link: string | null = null): [string, Taken] => [spot_id, { spot_id, name, logo, link }];
+      taken.value = new Map([
+        t("col-goat-pass", "Kea Coffee", mockLogo("K", "#1F7A5C", "#F5E9C8"), "https://www.instagram.com/keacoffee"),
+        t("depart", "Tūī Outdoors", mockLogo("T", "#FF6B12", "#1A0A00"), "https://example.com"),
+        t("section-02", "Mamie Jo"), t("km-120", "Léa"), t("km-121", "Léa"), t("galere-sandflies", "Bzzz Off"),
+      ]);
       return;
     }
-    const { data, error } = await sb.from("sponsor_spots").select("spot_id,name");
+    const { data, error } = await sb.from("sponsor_spots").select("spot_id,name,logo,link");
     if (error) {
       if (/does not exist|schema cache|42P01|PGRST205/i.test(`${error.code} ${error.message}`)) sponsorsReady.value = false;
       loading = null;
       return;
     }
     sponsorsReady.value = true;
-    taken.value = new Map((data as Taken[]).map((r) => [r.spot_id, r.name]));
+    taken.value = new Map((data as Taken[]).map((r) => [r.spot_id, r]));
   })().catch(() => { loading = null; });
   return loading;
 }
 
 export type AskResult = "ok" | "rate" | "links" | "closed" | "error";
-export async function requestSpot(spot: Spot, who: string, contact: string, message: string, lang: Lang): Promise<AskResult> {
+export interface Ask { who: string; contact: string; link: string; offer: string; message: string }
+export async function requestSpot(spot: Spot, a: Ask, lang: Lang): Promise<AskResult> {
   if (MOCK) { await new Promise((r) => setTimeout(r, 500)); return "ok"; }
   const { error } = await sb.rpc("request_sponsor", {
-    p_spot: spot.id, p_label: spot.name.fr, p_name: who, p_contact: contact, p_message: message || null, p_lang: lang, p_device: deviceId,
+    p_spot: spot.id, p_label: spot.name.fr, p_name: a.who, p_contact: a.contact, p_link: a.link || null, p_offer: a.offer || null,
+    p_message: a.message || null, p_lang: lang, p_device: deviceId,
   });
   if (!error) return "ok";
   const m = `${error.code} ${error.message}`;
@@ -160,4 +169,29 @@ export async function requestSpot(spot: Spot, who: string, contact: string, mess
   if (m.includes("too_many_links")) return "links";
   if (/PGRST202|Could not find the function|does not exist/i.test(m)) return "closed";
   return "error";
+}
+
+// ------------------------------------------------------------------ logos and where they go on the map
+/** the logo's address (a file in the media bucket; the made-up ones of ?mock are drawn inline) */
+export const logoSrc = (t: Taken | undefined | null) => (!t?.logo ? null : t.logo.startsWith("data:") ? t.logo : mediaUrl(t.logo));
+
+/** where a spot stands on the map: a point, or the middle of a stretch; the hardships and my gear stand nowhere */
+export function spotCoord(s: Spot): LngLat | null {
+  if (s.km === undefined) return null;
+  const k = s.km2 !== undefined ? (s.km + s.km2) / 2 : s.km;
+  return route.value.pointAt(Math.max(0, k - (s.kind === "km" ? 0.5 : 0)));
+}
+
+/** How a link reads on a button: Instagram, or the site's address without its "https://www." */
+export function linkLabel(link: string): string {
+  try {
+    const u = new URL(link);
+    if (/(^|\.)instagram\.com$/.test(u.hostname)) { const h = u.pathname.split("/").filter(Boolean)[0]; return h ? `@${h}` : "Instagram"; }
+    return u.hostname.replace(/^www\./, "");
+  } catch (_) { return link; }
+}
+
+function mockLogo(letter: string, bg: string, fg: string): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" rx="60" fill="${bg}"/><text x="60" y="80" font-family="Arial Black,Arial" font-weight="900" font-size="64" text-anchor="middle" fill="${fg}">${letter}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

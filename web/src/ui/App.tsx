@@ -35,6 +35,7 @@ import {
   trailMode, tunnelOpen, view,
 } from "./state";
 import { startTrailMode, TrailMode } from "./TrailMode";
+import { SponsorPins } from "./SponsorPins";
 
 /** the photo voyage, with its own code: fetched once the page has settled, if there are photos to fly through */
 const PhotoTunnel = lazy(() => import("./PhotoTunnel").then((m) => m.PhotoTunnel));
@@ -472,6 +473,7 @@ export function App() {
 
       {!replayState.value && <ShowPill />}
       {trailMode.value && <TrailMode />}
+      <SponsorPins />
 
       <div class={`toast glass${toastMsg.value ? " is-on" : ""}`} role="status" aria-live="polite">{toastMsg.value}</div>
       {tunnelOpen.value && !introOpen.value && <PhotoTunnel />}

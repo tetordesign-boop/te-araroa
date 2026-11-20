@@ -1,10 +1,13 @@
 -- "Les tickets du sentier": sponsoring a piece of my Te Araroa (a kilometre, a pass, a section, a food parcel…).
--- sponsor_spots: the spots I've given to someone, public (the site shows the name on the spot).
+-- sponsor_spots: the spots I've given to someone, public: the site shows the name on the ticket, and the logo turns in
+-- 3D on the map at that spot, with the link to the sponsor's site or Instagram (the logo is a file in the media bucket).
 -- sponsor_requests: what people ask for from the site without an account (request_sponsor: rate limited like the
 -- questions), private: only I read them, in the Carnet. Who asked and how to reach them never leave it.
 create table if not exists public.sponsor_spots (
   spot_id text primary key check (spot_id ~ '^[a-z0-9-]{1,80}$'),
   name text not null check (char_length(btrim(name)) between 1 and 60),
+  logo text check (logo is null or logo ~ '^sponsors/[A-Za-z0-9._-]{1,120}$'),
+  link text check (link is null or (link ~ '^https://[^\s]+$' and char_length(link) <= 300)),
   created_at timestamptz not null default now()
 );
 alter table public.sponsor_spots enable row level security;
@@ -26,6 +29,8 @@ create table if not exists public.sponsor_requests (
   spot_label text not null check (char_length(spot_label) between 1 and 120),
   name text not null check (char_length(btrim(name)) between 1 and 60),
   contact text not null check (char_length(btrim(contact)) between 1 and 120),
+  link text check (link is null or char_length(link) <= 200),
+  offer text check (offer is null or char_length(offer) <= 60),
   message text check (message is null or char_length(message) <= 400),
   lang text not null default 'fr' check (lang in ('fr', 'en')),
   status text not null default 'new' check (status in ('new', 'done')),
@@ -42,18 +47,21 @@ drop policy if exists "Ewan deletes requests" on public.sponsor_requests;
 create policy "Ewan deletes requests" on public.sponsor_requests for delete to authenticated using ((select public.is_admin()));
 -- (the device and the hash of the address, kept for rate limiting, are never readable)
 revoke all on public.sponsor_requests from anon, authenticated;
-grant select (id, spot_id, spot_label, name, contact, message, lang, status, created_at) on public.sponsor_requests to authenticated;
+grant select (id, spot_id, spot_label, name, contact, link, offer, message, lang, status, created_at) on public.sponsor_requests to authenticated;
 grant update (status) on public.sponsor_requests to authenticated;
 grant delete on public.sponsor_requests to authenticated;
 create index if not exists sponsor_requests_recent on public.sponsor_requests (created_at desc);
 
-create or replace function public.request_sponsor(p_spot text, p_label text, p_name text, p_contact text, p_message text, p_lang text, p_device uuid)
+-- (the price is the one they choose: free text, "50 €", "200 NZD", "du matériel")
+create or replace function public.request_sponsor(p_spot text, p_label text, p_name text, p_contact text, p_link text, p_offer text, p_message text, p_lang text, p_device uuid)
 returns uuid language plpgsql volatile security definer set search_path = '' as $$
 declare
   v_hash text := private.caller_ip_hash();
   v_name text := btrim(regexp_replace(coalesce(p_name, ''), '\s+', ' ', 'g'));
   v_contact text := btrim(coalesce(p_contact, ''));
   v_msg text := nullif(btrim(coalesce(p_message, '')), '');
+  v_link text := nullif(btrim(coalesce(p_link, '')), '');
+  v_offer text := nullif(btrim(regexp_replace(coalesce(p_offer, ''), '\s+', ' ', 'g')), '');
   v_label text := btrim(coalesce(p_label, ''));
   v_id uuid;
 begin
@@ -62,7 +70,9 @@ begin
   if char_length(v_name) < 1 or char_length(v_name) > 60 then raise exception 'bad_name'; end if;
   if char_length(v_contact) < 1 or char_length(v_contact) > 120 then raise exception 'bad_contact'; end if;
   if v_msg is not null and char_length(v_msg) > 400 then raise exception 'bad_message'; end if;
-  if (select count(*) from regexp_matches(coalesce(v_msg, '') || ' ' || v_contact, 'https?://', 'g')) > 1 then raise exception 'too_many_links'; end if;
+  if v_link is not null and char_length(v_link) > 200 then raise exception 'bad_link'; end if;
+  if v_offer is not null and char_length(v_offer) > 60 then raise exception 'bad_offer'; end if;
+  if (select count(*) from regexp_matches(coalesce(v_msg, '') || ' ' || v_contact || ' ' || coalesce(v_offer, ''), 'https?://', 'g')) > 1 then raise exception 'too_many_links'; end if;
   if (select count(*) from public.sponsor_requests r
       where (r.ip_hash = v_hash or r.device_id = p_device) and r.created_at > now() - interval '10 minutes') >= 4 then
     raise exception 'rate_limited';
@@ -70,10 +80,10 @@ begin
   if (select count(*) from public.sponsor_requests r where r.ip_hash = v_hash and r.created_at > now() - interval '1 day') >= 30 then
     raise exception 'rate_limited';
   end if;
-  insert into public.sponsor_requests (spot_id, spot_label, name, contact, message, lang, device_id, ip_hash)
-  values (p_spot, v_label, v_name, v_contact, v_msg, case when p_lang = 'en' then 'en' else 'fr' end, p_device, v_hash)
+  insert into public.sponsor_requests (spot_id, spot_label, name, contact, link, offer, message, lang, device_id, ip_hash)
+  values (p_spot, v_label, v_name, v_contact, v_link, v_offer, v_msg, case when p_lang = 'en' then 'en' else 'fr' end, p_device, v_hash)
   returning id into v_id;
   return v_id;
 end $$;
-revoke all on function public.request_sponsor(text, text, text, text, text, text, uuid) from public;
-grant execute on function public.request_sponsor(text, text, text, text, text, text, uuid) to anon, authenticated;
+revoke all on function public.request_sponsor(text, text, text, text, text, text, text, text, uuid) from public;
+grant execute on function public.request_sponsor(text, text, text, text, text, text, text, text, uuid) to anon, authenticated;

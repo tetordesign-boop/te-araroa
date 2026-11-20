@@ -6,6 +6,7 @@ import "./styles/app.css";
 import { lang } from "./i18n";
 import { startData } from "./lib/data";
 import { loadPlaces } from "./lib/places";
+import { loadTaken } from "./lib/sponsors";
 import { startPush } from "./lib/push";
 import { installTapSounds } from "./lib/sound";
 import { loadMap } from "./map/load";
@@ -25,6 +26,8 @@ startData();
 // the map's code starts downloading now, alongside the data, without holding up the first screen
 loadMap();
 loadPlaces();
+// the sponsors' logos on the map, once the first screen is up (a small table, only the spots given)
+window.setTimeout(() => loadTaken(), 1200);
 installTapSounds();
 installIconFx();
 if (window.matchMedia("(pointer: coarse)").matches) {

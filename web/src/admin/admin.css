@@ -252,3 +252,7 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 .spons__msg { margin: 0; font-size: 15px; line-height: 1.45; color: var(--ink); white-space: pre-wrap; }
 .spons__give .cell { padding-inline: 0; }
 .spons__actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 2px; }
+.spons__offer { margin: 0; font-size: 15px; color: var(--ink-2); }
+.spons__offer b { color: var(--ink); }
+.spons__who a { color: var(--marker-hot, #FF8B3D); text-decoration: none; }
+.spons__logo { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #fff; }

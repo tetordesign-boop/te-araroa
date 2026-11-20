@@ -10,7 +10,7 @@ import { fmtInt } from "../lib/format";
 import { profile } from "../lib/places";
 import { play } from "../lib/sound";
 import {
-  cols, ends, galeres, gearSpots, heightAt, kmSpot, loadTaken, nearKm, parcelSpots, requestSpot, sections, taken, totalKm,
+  cols, ends, galeres, gearSpots, heightAt, kmSpot, linkLabel, loadTaken, logoSrc, nearKm, parcelSpots, requestSpot, sections, taken, totalKm,
   type AskResult, type Spot, type SpotKind,
 } from "../lib/sponsors";
 import type { Lang } from "../types";
@@ -22,7 +22,7 @@ import { go, hrefFor, isDesktop, mapApi } from "./state";
 // ------------------------------------------------------------------ words (first person; place names stay as they are)
 const W = {
   fr: {
-    lead: "Je marche 1 334 km, de Ship Cove à Bluff. Chaque kilomètre, chaque col, chaque colis peut porter ton nom ou celui de ta marque. Sur le sentier, on paie les refuges avec des tickets : ici, chaque emplacement en est un.",
+    lead: "Je marche 1 334 km, de Ship Cove à Bluff. Chaque kilomètre, chaque col, chaque colis peut porter ton nom ou celui de ta marque, et tu proposes le prix que tu veux. Sur le sentier, on paie les refuges avec des tickets : ici, chaque emplacement en est un.",
     hint: "Fais glisser ton doigt sur le sentier",
     hintKeys: "Flèches pour avancer, Entrée pour prendre le ticket",
     kind: { km: "Kilomètre", col: "Col", section: "Section", end: "Départ et arrivée", colis: "Colis", galere: "Galère", gear: "Matériel" } as Record<SpotKind, string>,
@@ -33,11 +33,11 @@ const W = {
       gear: "Un patch ou un sticker, dans chaque photo.",
     } as Record<string, string>,
     gets: {
-      km: "Ton nom sur la carte à ce kilomètre. Et quand j'y passe, je t'envoie une photo de l'endroit.",
-      col: "Ton nom ou ton logo sur la carte au col, et dans l'épisode où je le passe : « ce col vous est présenté par… ».",
-      section: "Ton nom sur toute la section sur la carte, et sur l'écran titre de son épisode.",
-      end: "Ton logo à cet endroit sur la carte, dans le teaser et dans le film de la fin.",
-      colis: "Tu remplis le colis de nourriture qui m'attend sur cette portion sans magasin, et je l'ouvre en vidéo.",
+      km: "Ton nom ou ton logo sur la carte à ce kilomètre. Et quand j'y passe, je t'envoie une photo de l'endroit.",
+      col: "Ton logo en 3D sur la carte interactive, au col, avec le lien vers ton site ou ton Insta. Et dans l'épisode où je le passe : « ce col vous est présenté par… ».",
+      section: "Ton logo en 3D sur la carte au milieu de la section, avec ton lien, et sur l'écran titre de son épisode.",
+      end: "Ton logo en 3D sur la carte à cet endroit, avec ton lien, dans le teaser et dans le film de la fin.",
+      colis: "Tu remplis le colis de nourriture qui m'attend sur cette portion sans magasin, je l'ouvre en vidéo, et ton logo tourne sur la carte à cet endroit.",
       galere: "Ta marque présente cette galère chaque fois qu'elle arrive dans mes vidéos. Il y en aura.",
       gear: "Ton patch ou ton sticker sur mon matériel, dans chaque photo et chaque vidéo.",
     } as Record<SpotKind, string>,
@@ -45,17 +45,19 @@ const W = {
     free: "Libre", takenBy: "Réservé", asked: "Demandé",
     want: "Je veux ce ticket", gone: "Déjà réservé",
     who: "Ton nom ou ta marque", contact: "Pour te répondre", contactHint: "e-mail ou Instagram", msg: "Un mot", msgHint: "facultatif",
+    link: "Ton site ou ton Insta", linkHint: "pour le lien sous ton logo", offer: "Ton prix", offerHint: "celui que tu veux", offerEx: "30 €, 200 NZD, du matériel…",
+    visit: "Voir",
     send: "Envoyer la demande", sending: "Envoi…", cancel: "Annuler",
     needWho: "Écris ton nom ou celui de ta marque.", needContact: "Laisse-moi un moyen de te répondre.",
     err: { rate: "Trop de demandes d'un coup : réessaie dans quelques minutes.", links: "Un seul lien par message, s'il te plaît.", closed: "Les demandes ne sont pas encore ouvertes : réessaie bientôt.", error: "La demande n'est pas partie : vérifie ta connexion et réessaie." } as Record<Exclude<AskResult, "ok">, string>,
-    thanks: "C'est noté. Je te réponds avec ma proposition dès que j'ai du réseau.",
+    thanks: "C'est noté. Je te réponds dès que j'ai du réseau.",
     another: "Choisir un autre ticket",
     how: "Comment ça marche",
-    steps: ["Tu choisis ton ticket et tu m'envoies ta demande.", "Je te réponds avec ma proposition, dès que j'ai du réseau.", "Ton nom apparaît sur la carte, puis dans les vidéos quand j'y passe."],
+    steps: ["Tu choisis ton ticket et tu proposes ton prix.", "Je te réponds dès que j'ai du réseau.", "Ton logo tourne en 3D sur la carte à ton emplacement, avec ton lien, puis tu passes dans les vidéos quand j'y arrive."],
     counts: (free: number) => `${free} tickets libres, sans compter les kilomètres`,
   },
   en: {
-    lead: "I'm walking 1,334 km, from Ship Cove to Bluff. Every kilometre, every pass, every food parcel can carry your name or your brand's. On the trail you pay for huts with tickets: here, every spot is one.",
+    lead: "I'm walking 1,334 km, from Ship Cove to Bluff. Every kilometre, every pass, every food parcel can carry your name or your brand's, at the price you choose. On the trail you pay for huts with tickets: here, every spot is one.",
     hint: "Slide your finger along the trail",
     hintKeys: "Arrow keys to move, Enter to take the ticket",
     kind: { km: "Kilometre", col: "Pass", section: "Section", end: "Start and finish", colis: "Food parcel", galere: "Hardship", gear: "Gear" } as Record<SpotKind, string>,
@@ -66,11 +68,11 @@ const W = {
       gear: "A patch or a sticker, in every photo.",
     } as Record<string, string>,
     gets: {
-      km: "Your name on the map at this kilometre. And when I walk through it, I send you a photo of the spot.",
-      col: "Your name or logo on the map at the pass, and in the episode where I cross it: “this pass is brought to you by…”.",
-      section: "Your name along the whole section on the map, and on its episode's title card.",
-      end: "Your logo at this spot on the map, in the teaser and in the final film.",
-      colis: "You fill the food parcel waiting for me on this stretch with no shop, and I open it on camera.",
+      km: "Your name or logo on the map at this kilometre. And when I walk through it, I send you a photo of the spot.",
+      col: "Your logo in 3D on the interactive map, at the pass, with a link to your site or Instagram. And in the episode where I cross it: “this pass is brought to you by…”.",
+      section: "Your logo in 3D on the map in the middle of the section, with your link, and on its episode's title card.",
+      end: "Your logo in 3D on the map at this spot, with your link, in the teaser and in the final film.",
+      colis: "You fill the food parcel waiting for me on this stretch with no shop, I open it on camera, and your logo spins on the map right there.",
       galere: "Your brand presents this hardship every time it shows up in my videos. It will.",
       gear: "Your patch or sticker on my gear, in every photo and every video.",
     } as Record<SpotKind, string>,
@@ -78,13 +80,15 @@ const W = {
     free: "Free", takenBy: "Taken", asked: "Requested",
     want: "I want this ticket", gone: "Already taken",
     who: "Your name or your brand", contact: "How to reach you", contactHint: "email or Instagram", msg: "A word", msgHint: "optional",
+    link: "Your website or Instagram", linkHint: "for the link under your logo", offer: "Your price", offerHint: "whatever you like", offerEx: "NZ$50, €30, some gear…",
+    visit: "Visit",
     send: "Send the request", sending: "Sending…", cancel: "Cancel",
     needWho: "Write your name or your brand's.", needContact: "Leave me a way to reach you.",
     err: { rate: "Too many requests at once: try again in a few minutes.", links: "One link per message, please.", closed: "Requests aren't open yet: try again soon.", error: "The request didn't go through: check your connection and try again." } as Record<Exclude<AskResult, "ok">, string>,
-    thanks: "Got it. I'll get back to you with my offer as soon as I have signal.",
+    thanks: "Got it. I'll get back to you as soon as I have signal.",
     another: "Pick another ticket",
     how: "How it works",
-    steps: ["You pick your ticket and send me your request.", "I get back to you with my offer, as soon as I have signal.", "Your name shows on the map, then in the videos when I walk past."],
+    steps: ["You pick your ticket and name your price.", "I get back to you as soon as I have signal.", "Your logo spins in 3D on the map at your spot, with your link, then you're in the videos when I get there."],
     counts: (free: number) => `${free} free tickets, not counting the kilometres`,
   },
 };
@@ -325,7 +329,7 @@ function metaOf(s: Spot, l: Lang): string {
 
 function MiniTicket({ s, on, onPick }: { s: Spot; on: boolean; onPick: () => void }) {
   const l = lang.value, w = words();
-  const by = taken.value.get(s.id);
+  const by = taken.value.get(s.id)?.name;
   return (
     <button type="button" class={`tk-mini${by ? " is-taken" : ""}${on ? " is-on" : ""}`} data-sfx="none" onClick={onPick}
       aria-label={`${kindOf(s, l)} : ${s.name[l]}${by ? `, ${w.takenBy}` : ""}`}>
@@ -339,13 +343,17 @@ function MiniTicket({ s, on, onPick }: { s: Spot; on: boolean; onPick: () => voi
 
 function Ticket({ spot }: { spot: Spot }) {
   const l = lang.value, w = words();
-  const by = taken.value.get(spot.id);
+  const owner = taken.value.get(spot.id);
+  const by = owner?.name;
+  const logo = logoSrc(owner);
   const el = useRef<HTMLElement>(null);
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const [who, setWho] = useState("");
   const [contact, setContact] = useState("");
   const [msg, setMsg] = useState("");
+  const [link, setLink] = useState("");
+  const [offer, setOffer] = useState("");
   const [trap, setTrap] = useState("");
   const [state, setState] = useState<{ kind: "idle" | "sending" | "error"; msg?: string }>({ kind: "idle" });
   const whoField = useRef<HTMLInputElement>(null);
@@ -378,7 +386,7 @@ function Ticket({ spot }: { spot: Spot }) {
     if (!who.trim()) { setState({ kind: "error", msg: w.needWho }); whoField.current?.focus(); shake(whoField.current); return; }
     if (!contact.trim()) { setState({ kind: "error", msg: w.needContact }); contactField.current?.focus(); shake(contactField.current); return; }
     setState({ kind: "sending" });
-    const r = await requestSpot(spot, who.trim(), contact.trim(), msg.trim(), l);
+    const r = await requestSpot(spot, { who: who.trim(), contact: contact.trim(), link: link.trim(), offer: offer.trim(), message: msg.trim() }, l);
     if (r !== "ok") { setState({ kind: "error", msg: w.err[r] }); return; }
     setState({ kind: "idle" });
     setOpen(false);
@@ -402,6 +410,12 @@ function Ticket({ spot }: { spot: Spot }) {
           <h3 class="tk__name">{spot.name[l]}</h3>
           {metaOf(spot, l) && <p class="tk__meta num">{metaOf(spot, l)}</p>}
           <p class="tk__gets">{w.gets[spot.kind]}</p>
+          {owner && (logo || owner.link) && (
+            <p class="tk__owner">
+              {logo && <img class="tk__logo" src={logo} alt="" width={40} height={40} loading="lazy" />}
+              <span><b>{owner.name}</b>{owner.link && <a href={owner.link} target="_blank" rel="noopener">{w.visit} {linkLabel(owner.link)}</a>}</span>
+            </p>
+          )}
           <span class={`tk__stamp${sent ? " is-asked" : by ? " is-taken" : ""}`} aria-hidden={!sent && !by}>
             {stamp}{by && !sent ? <small>{by}</small> : null}
           </span>
@@ -419,6 +433,10 @@ function Ticket({ spot }: { spot: Spot }) {
               <input ref={whoField} id="tk-who" class="field" type="text" maxLength={60} autoComplete="organization" value={who} onInput={(e) => setWho((e.target as HTMLInputElement).value)} />
               <label class="note__label" for="tk-contact">{w.contact} <span class="tk__hint">({w.contactHint})</span></label>
               <input ref={contactField} id="tk-contact" class="field" type="text" maxLength={120} autoComplete="email" inputMode="email" value={contact} onInput={(e) => setContact((e.target as HTMLInputElement).value)} />
+              <label class="note__label" for="tk-offer">{w.offer} <span class="tk__hint">({w.offerHint})</span></label>
+              <input id="tk-offer" class="field" type="text" maxLength={60} placeholder={w.offerEx} value={offer} onInput={(e) => setOffer((e.target as HTMLInputElement).value)} />
+              <label class="note__label" for="tk-link">{w.link} <span class="tk__hint">({w.linkHint})</span></label>
+              <input id="tk-link" class="field" type="text" maxLength={200} inputMode="url" autoComplete="url" autoCapitalize="none" placeholder="@…  /  monsite.com" value={link} onInput={(e) => setLink((e.target as HTMLInputElement).value)} />
               <label class="note__label" for="tk-msg">{w.msg} <span class="tk__hint">({w.msgHint})</span></label>
               <textarea id="tk-msg" class="field" rows={2} maxLength={400} value={msg} onInput={(e) => setMsg((e.target as HTMLTextAreaElement).value)} />
               <input type="text" name="website" tabIndex={-1} autoComplete="off" class="sr-only" aria-hidden="true" value={trap} onInput={(e) => setTrap((e.target as HTMLInputElement).value)} />
