@@ -2,6 +2,8 @@
 // trail, its shadow narrowing as it turns edge-on. A tap opens a small card under it: the name, the place, the link
 // to its site or Instagram, and the way to the trail's tickets. A spot given to someone without a logo (a friend's
 // kilometre) is a small name tag instead. Spots with no place (the hardships, my gear) aren't on the map.
+// Near the top of the map (Ship Cove and the first kilometres, at the top of the whole island), a coin standing over
+// its spot would sit under the header: there it hangs below its spot instead, and goes back up when there's room.
 import { useEffect } from "preact/hooks";
 import { lang } from "../i18n";
 import { route } from "../lib/data";
@@ -31,13 +33,27 @@ function build(spot: Spot, owner: Taken, l: "fr" | "en", close: () => void): HTM
         <span class="spin__face spin__face--back"><img src="${esc(logo)}" alt="" draggable="false"></span>
       </div></div><span class="spin__stem"></span><span class="spin__shadow"></span>`
     : `${card}<span class="spin__tag"><i></i>${esc(owner.name)}</span><span class="spin__stem"></span>`;
+  // the card stays on screen, and clear of the map's buttons on the right where they're level with it
+  const fitCard = () => {
+    const card = el.querySelector<HTMLElement>(".spin__card");
+    if (!card) return;
+    const pin = el.getBoundingClientRect(), w = card.offsetWidth, h = card.offsetHeight;
+    const cx = pin.left + pin.width / 2;
+    const top = el.classList.contains("spin--down") ? pin.bottom + 6 : pin.top - 6 - h;
+    let hi = window.innerWidth - 8;
+    const ctl = document.querySelector(".controls")?.getBoundingClientRect();
+    if (ctl && ctl.width && ctl.left > cx && top < ctl.bottom && top + h > ctl.top) hi = Math.min(hi, ctl.left - 8);
+    const left = cx - w / 2;
+    const dx = left + w > hi ? Math.max(8 - left, hi - (left + w)) : left < 8 ? 8 - left : 0;
+    card.style.setProperty("--dx", `${Math.round(dx)}px`);
+  };
   const toggle = (e: Event) => {
     if ((e.target as HTMLElement).closest(".spin__link")) return; // the link opens by itself
     e.stopPropagation();
     if ((e.target as HTMLElement).closest(".spin__more")) { go({ name: "sponsors" }); return; }
     const open = !el.classList.contains("is-open");
     close();
-    if (open) { el.classList.add("is-open"); el.setAttribute("aria-expanded", "true"); el.style.zIndex = "6"; }
+    if (open) { fitCard(); el.classList.add("is-open"); el.setAttribute("aria-expanded", "true"); el.style.zIndex = "6"; }
   };
   el.addEventListener("click", toggle);
   el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(e); } if (e.key === "Escape") close(); });
@@ -53,17 +69,41 @@ export function SponsorPins() {
     if (!m || !t.size) return;
     const els: HTMLElement[] = [];
     const close = () => els.forEach((e) => { e.classList.remove("is-open"); e.setAttribute("aria-expanded", "false"); e.style.zIndex = ""; });
-    const pins: { remove(): unknown }[] = [];
+    type Pin = { el: HTMLElement; mk: ReturnType<typeof m.marker>; c: [number, number]; h: number; down: boolean; dx: number };
+    const pins: Pin[] = [];
     for (const [id, owner] of t) {
       const spot = spotById(id);
       const c = spot && spotCoord(spot);
       if (!spot || !c) continue;
       const el = build(spot, owner, l, close);
       els.push(el);
-      pins.push(m.marker({ element: el, anchor: "bottom" }).setLngLat(c).addTo(m.map));
+      const mk = m.marker({ element: el, anchor: "bottom" }).setLngLat(c).addTo(m.map);
+      pins.push({ el, mk, c: c as [number, number], h: el.classList.contains("spin--name") ? 40 : 86, down: false, dx: 0 });
     }
+    // and where the map's buttons are level with it, it leans left, its stem still on the spot
+    const place = () => {
+      const pad = m.viewPadding, box = m.map.getContainer().getBoundingClientRect();
+      const ctl = document.querySelector(".controls")?.getBoundingClientRect();
+      for (const p of pins) {
+        const pt = m.map.project(p.c);
+        const down = pt.y - p.h < pad.top && pt.y + p.h < box.height - pad.bottom;
+        const x = box.left + pt.x, top = box.top + pt.y - (down ? 0 : p.h), half = p.el.offsetWidth / 2;
+        let dx = 0;
+        if (ctl?.width && top < ctl.bottom && top + p.h > ctl.top && x + half > ctl.left - 6 && x - half < ctl.right) {
+          dx = Math.round(Math.max(-(half - 10), ctl.left - 6 - (x + half)));
+        }
+        if (down === p.down && dx === p.dx) continue;
+        p.down = down; p.dx = dx;
+        p.el.classList.toggle("spin--down", down);
+        p.el.style.setProperty("--sx", `${-dx}px`);
+        p.mk.setOffset([dx, down ? p.h : 0]);
+      }
+    };
+    place();
+    m.map.on("move", place);
+    m.map.on("resize", place);
     m.map.on("click", close);
-    return () => { m.map.off("click", close); pins.forEach((p) => p.remove()); };
+    return () => { m.map.off("move", place); m.map.off("resize", place); m.map.off("click", close); pins.forEach((p) => p.mk.remove()); };
   }, [m, t, l, r, known]);
   return null;
 }

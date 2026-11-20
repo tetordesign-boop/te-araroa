@@ -11,6 +11,7 @@ import { deviceId, route, sb } from "./data";
 import type { LngLat } from "./geo";
 import { haversine } from "./geo";
 import { pois, profile, shortStation } from "./places";
+export { isFreeOffer } from "./offer";
 
 export type SpotKind = "km" | "col" | "section" | "end" | "colis" | "galere" | "gear";
 export interface Spot {

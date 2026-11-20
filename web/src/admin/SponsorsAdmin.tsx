@@ -6,6 +6,7 @@
 import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { MOCK, mediaUrl } from "../config";
+import { isFreeOffer } from "../lib/offer";
 import { Bar, CopyBtn } from "./Pages";
 import { say } from "./nav";
 import { sba } from "./sb";
@@ -30,6 +31,7 @@ export async function loadSponsors() {
     requests.value = [
       { id: "r1", spot_id: "col-stag-saddle", spot_label: "Stag Saddle", name: "Kea Coffee", contact: "@keacoffee", link: "@keacoffee", offer: "250 NZD", message: "On adorerait le point le plus haut !", lang: "fr", status: "new", pay_url: null, paid_at: null, created_at: new Date(Date.now() - 3600e3).toISOString() },
       { id: "r2", spot_id: "km-120", spot_label: "Kilomètre 120", name: "Léa", contact: "lea@example.com", link: null, offer: "20 €", message: null, lang: "fr", status: "done", pay_url: null, paid_at: new Date(Date.now() - 40000e3).toISOString(), created_at: new Date(Date.now() - 86400e3).toISOString() },
+      { id: "r3", spot_id: "km-1", spot_label: "Kilomètre 1", name: "Tom", contact: "@tom", link: null, offer: "0", message: "Pour le premier pas !", lang: "fr", status: "new", pay_url: null, paid_at: null, created_at: new Date(Date.now() - 600e3).toISOString() },
     ];
     payLink.value = "https://buy.stripe.com/test_00example";
     given.value = [{ spot_id: "km-120", name: "Léa", logo: null, link: null }];
@@ -182,7 +184,7 @@ function PayLinkBox() {
 
 /** the payment link for one request: my Stripe link, with the request as its reference (and their email when given) */
 function payUrlFor(r: Req): string | null {
-  if (!payLink.value) return null;
+  if (!payLink.value || isFreeOffer(r.offer)) return null;
   const q = new URLSearchParams({ client_reference_id: r.id });
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.contact)) q.set("prefilled_email", r.contact);
   return `${payLink.value}?${q}`;
@@ -291,6 +293,7 @@ function RequestCell({ r }: { r: Req }) {
     requests.value = (requests.value ?? []).filter((x) => x.id !== r.id);
   };
   const site = normLink(r.link);
+  const free = isFreeOffer(r.offer);
   const sendPay = async () => {
     const url = payUrlFor(r);
     if (!url) { say("Ajoute d'abord ton lien Stripe, en haut de la page.", 3200); return; }
@@ -321,11 +324,13 @@ function RequestCell({ r }: { r: Req }) {
         <span class="cell__meta">{when(r.created_at)}{r.lang === "en" ? " · en anglais" : ""}</span>
       </div>
       <p class="spons__who"><b>{r.name}</b> · <button class="textbtn" type="button" onClick={copy}>{r.contact}</button></p>
-      {r.offer && <p class="spons__offer">Prix proposé : <b>{r.offer}</b></p>}
+      {r.offer && <p class="spons__offer">Prix proposé : <b>{r.offer}</b>{free ? " (gratuit)" : ""}</p>}
       {r.link && <p class="spons__who">{site ? <a href={site} target="_blank" rel="noopener">{r.link}</a> : r.link}</p>}
       {r.message && <p class="spons__msg">{r.message}</p>}
       <div class="spons__pay">
-        {r.paid_at
+        {free && !r.paid_at
+          ? <span class="cell__meta">Gratuit : pas de paiement à demander. Tu peux attribuer le ticket directement.</span>
+          : r.paid_at
           ? <><span class="spons__paid">Payé le {when(r.paid_at)}</span><span style={{ flex: 1 }} /><button class="textbtn" type="button" disabled={busy} onClick={() => setPaid(false)}>Retirer</button></>
           : <>
               <span class="cell__meta">{r.pay_url ? "Lien de paiement envoyé" : "Pas encore payé"}</span>

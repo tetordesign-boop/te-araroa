@@ -11,8 +11,7 @@ import { profile } from "../lib/places";
 import { play } from "../lib/sound";
 import {
   cols, ends, galeres, gearSpots, heightAt, kmSpot, linkLabel, loadTaken, logoSrc, nearKm, parcelSpots, requestSpot, sections, taken, totalKm,
-  type AskResult, type Spot, type SpotKind,
-} from "../lib/sponsors";
+  type AskResult, type Spot, type SpotKind, isFreeOffer } from "../lib/sponsors";
 import type { Lang } from "../types";
 import { ChevronRight } from "./icons";
 import { PageHead } from "./Pages";
@@ -51,6 +50,7 @@ const W = {
     needWho: "Écris ton nom ou celui de ta marque.", needContact: "Laisse-moi un moyen de te répondre.",
     err: { rate: "Trop de demandes d'un coup : réessaie dans quelques minutes.", links: "Un seul lien par message, s'il te plaît.", closed: "Les demandes ne sont pas encore ouvertes : réessaie bientôt.", error: "La demande n'est pas partie : vérifie ta connexion et réessaie." } as Record<Exclude<AskResult, "ok">, string>,
     thanks: "C'est noté. Je te réponds dès que j'ai du réseau. Tu ne paies qu'après mon accord, par un lien sécurisé.",
+    thanksFree: "C'est noté, merci ! Je te réponds dès que j'ai du réseau. Prix à 0 : tu n'as rien à payer.",
     paidTitle: "Paiement reçu, merci !", paidText: "Ton ticket est à toi. Ton logo arrive sur la carte dès que je l'ai ajouté, et tu passes dans la vidéo quand j'arrive à ton emplacement.",
     another: "Choisir un autre ticket",
     how: "Comment ça marche",
@@ -87,6 +87,7 @@ const W = {
     needWho: "Write your name or your brand's.", needContact: "Leave me a way to reach you.",
     err: { rate: "Too many requests at once: try again in a few minutes.", links: "One link per message, please.", closed: "Requests aren't open yet: try again soon.", error: "The request didn't go through: check your connection and try again." } as Record<Exclude<AskResult, "ok">, string>,
     thanks: "Got it. I'll get back to you as soon as I have signal. You only pay once I've said yes, through a secure link.",
+    thanksFree: "Got it, thank you! I'll get back to you as soon as I have signal. A price of 0: there's nothing to pay.",
     paidTitle: "Payment received, thank you!", paidText: "The ticket is yours. Your logo goes on the map as soon as I've added it, and you're in the video when I reach your spot.",
     another: "Pick another ticket",
     how: "How it works",
@@ -434,7 +435,7 @@ function Ticket({ spot }: { spot: Spot }) {
               {by ? w.gone : w.want}
             </button>
           )}
-          {sent && <p class="tk__thanks" role="status">{w.thanks}</p>}
+          {sent && <p class="tk__thanks" role="status">{isFreeOffer(offer) ? w.thanksFree : w.thanks}</p>}
           {open && (
             <form class="form tk__form" onSubmit={submit} noValidate>
               <label class="note__label" for="tk-who">{w.who}</label>

@@ -1979,16 +1979,25 @@ input, textarea { caret-color: var(--marker); }
 .spin__tag { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px 6px 9px; border-radius: 999px; white-space: nowrap;
   background: var(--surface-solid); color: var(--ink); font-size: 13px; font-weight: 750; font-stretch: 110%; box-shadow: var(--shadow-float), inset 0 0 0 1px var(--line-strong); }
 .spin__tag i { width: 8px; height: 8px; border-radius: 50%; background: var(--marker); box-shadow: 0 0 0 3px var(--marker-tint); }
-.spin--name .spin__stem { left: 50%; top: 28px; height: 12px; margin-left: -1px; }
+.spin--name .spin__stem { left: 50%; top: 28px; height: 12px; margin-left: calc(var(--sx, 0px) - 1px); }
+/* leaning away from the map's buttons: the stem and the shadow stay on the spot */
+.spin__stem, .spin__shadow { margin-left: var(--sx, 0px); }
 .spin__card { position: absolute; left: 50%; bottom: calc(100% + 6px); display: flex; align-items: flex-start; gap: 10px; width: max-content; max-width: 230px;
   padding: 10px 12px 11px; border-radius: 16px; background: var(--surface-solid); box-shadow: var(--shadow-float), inset 0 0 0 1px var(--line-strong);
-  opacity: 0; pointer-events: none; transform: translate(-50%, 6px) scale(0.96); transform-origin: 50% 100%; transition: opacity var(--dur-1), transform var(--dur-2) var(--ease-out); cursor: default; }
-.spin.is-open .spin__card { opacity: 1; pointer-events: auto; transform: translate(-50%, 0) scale(1); }
+  opacity: 0; pointer-events: none; transform: translate(calc(-50% + var(--dx, 0px)), 6px) scale(0.96); transform-origin: 50% 100%; transition: opacity var(--dur-1), transform var(--dur-2) var(--ease-out); cursor: default; }
+.spin.is-open .spin__card { opacity: 1; pointer-events: auto; transform: translate(calc(-50% + var(--dx, 0px)), 0) scale(1); }
 .spin__cardlogo { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #fff; box-shadow: 0 0 0 2px var(--marker); }
 .spin__cardtext { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; color: var(--ink-2); }
 .spin__cardtext b { font-size: 15px; color: var(--ink); font-weight: 800; font-stretch: 112%; }
 .spin__link { margin-top: 4px; color: var(--marker-hot); font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
 .spin__more { margin-top: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 650; color: var(--ink-3); text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+/* hanging below its spot, near the top of the map: the shadow on the spot, the stem, then the coin; the card opens under it */
+.spin--down .spin__shadow { top: -4px; }
+.spin--down .spin__stem { top: 4px; background: linear-gradient(rgba(255, 107, 18, 0.15), var(--marker)); }
+.spin--down .spin__float { top: 28px; }
+.spin--down .spin__card { bottom: auto; top: calc(100% + 6px); transform-origin: 50% 0; transform: translate(calc(-50% + var(--dx, 0px)), -6px) scale(0.96); }
+.spin--name.spin--down .spin__stem { top: 0; }
+.spin--name.spin--down .spin__tag { margin-top: 12px; }
 @media (prefers-reduced-motion: reduce) { .spin__float, .spin__coin, .spin__shadow { animation: none; } }
 
 /* the sponsor on a given ticket */
