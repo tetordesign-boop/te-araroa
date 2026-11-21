@@ -8,6 +8,8 @@ import { Checkin, Dashboard, Help, Notes, SettingsPage, Tracking } from "./Pages
 import { GearPage } from "./Gear";
 import { loadParcels, ParcelsPage } from "./Parcels";
 import { loadSponsors, SponsorsAdminPage } from "./SponsorsAdmin";
+import { AlertsPage } from "./Alerts";
+import { refreshAlerts } from "./alerts";
 import { Activate } from "./Activate";
 import { checkFeatures } from "./features";
 import { loadAdminQuestions, QuestionsAdmin } from "./QuestionsAdmin";
@@ -39,6 +41,7 @@ export function AdminApp() {
     loadRoute();
     loadParcels();
     loadSponsors();
+    void refreshAlerts();
     // what is switched on yet (questions, voice notes, notifications), then the questions waiting for an answer
     checkFeatures().then(() => loadAdminQuestions());
     afterSync(() => loadServer());
@@ -86,6 +89,7 @@ export function AdminApp() {
         : p.name === "gear" ? <GearPage />
         : p.name === "parcels" ? <ParcelsPage />
         : p.name === "sponsors" ? <SponsorsAdminPage />
+        : p.name === "alerts" ? <AlertsPage />
         : p.name === "tracking" ? <Tracking />
         : p.name === "help" ? <Help />
         : p.name === "questions" ? <QuestionsAdmin />

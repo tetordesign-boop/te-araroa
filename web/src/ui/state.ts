@@ -42,11 +42,15 @@ const panelMq = window.matchMedia(PANEL_MQ);
 export const isDesktop = signal(panelMq.matches);
 panelMq.addEventListener("change", (e) => (isDesktop.value = e.matches));
 
-// back from a Stripe payment: its redirect is "…/te-araroa/?merci" (a "#…" may not survive it), which opens the thank-you
+// back from a Stripe payment: "…/te-araroa/?merci&cs=<its session>" (a "#…" may not survive it) opens the thank-you,
+// which asks the server what was paid (the session is kept for that page, not left in the address)
 {
   const q = new URLSearchParams(location.search);
   if (q.has("merci") && /^#?\/?$/.test(location.hash)) {
+    const cs = q.get("cs");
+    if (cs && /^cs_(live|test)_[A-Za-z0-9_]{6,200}$/.test(cs)) { try { sessionStorage.setItem("ta-cs", cs); } catch (_) { /* private mode */ } }
     q.delete("merci");
+    q.delete("cs");
     const s = q.toString();
     history.replaceState(null, "", `${location.pathname}${s ? `?${s}` : ""}#/parrainer/merci`);
   }

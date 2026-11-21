@@ -1,17 +1,18 @@
 // "Les tickets du sentier": sponsor a piece of my Te Araroa. On the trail you pay the huts with tickets, so here each
 // spot is one. The whole trail is drawn as its skyline (the elevation profile): a finger slides along it, an orange
 // cursor follows with the km, the place and the height, and snaps to a pass when near one; let go and a ticket comes
-// out of the slot below, foil catching the light. "Je veux ce ticket" opens a small form inside it, and once sent an
-// orange stamp lands on it. Below the skyline, the tickets that aren't a point on it: start and finish, the passes
-// and sections in a row each, the food parcels, the hardships and the places on my gear.
+// out of the slot below, foil catching the light. "Je veux ce ticket" opens a small form inside it: a price, and the
+// payment goes straight to Stripe (the ticket is given as soon as it's paid); or, with no budget, a request I answer.
+// Below the skyline, the tickets that aren't a point on it: start and finish, the passes and sections in a row each.
+// At the foot, "un coup de pouce": a gift of the amount chosen, for those who just want to help.
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { lang, t } from "../i18n";
 import { fmtInt } from "../lib/format";
 import { profile } from "../lib/places";
 import { play } from "../lib/sound";
 import {
-  cols, ends, galeres, gearSpots, heightAt, kmSpot, linkLabel, loadTaken, logoSrc, nearKm, parcelSpots, requestSpot, sections, taken, totalKm,
-  type AskResult, type Spot, type SpotKind, isFreeOffer } from "../lib/sponsors";
+  buySpot, cols, confirmPayment, ends, giveGift, GIFT_EUR, heightAt, kmSpot, linkLabel, loadTaken, logoSrc, MAX_EUR, MIN_EUR, nearKm,
+  requestSpot, sections, sweepPayments, taken, totalKm, type Paid, type Spot, type SpotKind } from "../lib/sponsors";
 import type { Lang } from "../types";
 import { ChevronRight } from "./icons";
 import { PageHead } from "./Pages";
@@ -21,78 +22,96 @@ import { go, hrefFor, isDesktop, mapApi } from "./state";
 // ------------------------------------------------------------------ words (first person; place names stay as they are)
 const W = {
   fr: {
-    lead: "Je marche 1 334 km, de Ship Cove à Bluff. Chaque kilomètre, chaque col, chaque colis peut porter ton nom ou celui de ta marque, et tu proposes le prix que tu veux. Sur le sentier, on paie les refuges avec des tickets : ici, chaque emplacement en est un.",
+    lead: "Je marche 1 334 km, de Ship Cove à Bluff. Chaque kilomètre, chaque col, chaque section peut porter ton nom ou celui de ta marque, au prix que tu choisis. Sur le sentier, on paie les refuges avec des tickets : ici, chaque emplacement en est un.",
     hint: "Fais glisser ton doigt sur le sentier",
     hintKeys: "Flèches pour avancer, Entrée pour prendre le ticket",
-    kind: { km: "Kilomètre", col: "Col", section: "Section", end: "Départ et arrivée", colis: "Colis", galere: "Galère", gear: "Matériel" } as Record<SpotKind, string>,
-    decks: { end: "Le départ et l'arrivée", col: "Les cols", section: "Les sections", colis: "Les colis", galere: "Les galères", gear: "Mon matériel" } as Record<string, string>,
-    deckNote: {
-      colis: "Les portions de plus de 100 km sans magasin.",
-      galere: "Une marque présente la galère, à chaque fois qu'elle arrive.",
-      gear: "Un patch ou un sticker, dans chaque photo.",
-    } as Record<string, string>,
+    kind: { km: "Kilomètre", col: "Col", section: "Section", end: "Départ et arrivée" } as Record<SpotKind, string>,
+    decks: { end: "Le départ et l'arrivée", col: "Les cols", section: "Les sections" } as Record<string, string>,
     gets: {
       km: "Ton nom ou ton logo sur la carte à ce kilomètre. Et quand j'y passe, je t'envoie une photo de l'endroit.",
       col: "Ton logo en 3D sur la carte interactive, au col, avec le lien vers ton site ou ton Insta. Et dans l'épisode où je le passe : « ce col vous est présenté par… ».",
       section: "Ton logo en 3D sur la carte au milieu de la section, avec ton lien, et sur l'écran titre de son épisode.",
       end: "Ton logo en 3D sur la carte à cet endroit, avec ton lien, dans le teaser et dans le film de la fin.",
-      colis: "Tu remplis le colis de nourriture qui m'attend sur cette portion sans magasin, je l'ouvre en vidéo, et ton logo tourne sur la carte à cet endroit.",
-      galere: "Ta marque présente cette galère chaque fois qu'elle arrive dans mes vidéos. Il y en aura.",
-      gear: "Ton patch ou ton sticker sur mon matériel, dans chaque photo et chaque vidéo.",
     } as Record<SpotKind, string>,
-    near: "près de", highest: "le point le plus haut du sentier", noShop: "sans magasin", from: (a: string, b: string) => `du km ${a} au km ${b}`,
+    near: "près de", highest: "le point le plus haut du sentier", from: (a: string, b: string) => `du km ${a} au km ${b}`,
     free: "Libre", takenBy: "Réservé", asked: "Demandé",
     want: "Je veux ce ticket", gone: "Déjà réservé",
-    who: "Ton nom ou ta marque", contact: "Pour te répondre", contactHint: "e-mail ou Instagram", msg: "Un mot", msgHint: "facultatif",
-    link: "Ton site ou ton Insta", linkHint: "pour le lien sous ton logo", offer: "Ton prix", offerHint: "celui que tu veux", offerEx: "30 €, 200 NZD, du matériel…",
+    who: "Ton nom ou ta marque", contact: "Pour te joindre", contactHint: "e-mail ou Instagram", msg: "Un mot", msgHint: "facultatif",
     visit: "Voir",
-    send: "Envoyer la demande", sending: "Envoi…", cancel: "Annuler",
-    needWho: "Écris ton nom ou celui de ta marque.", needContact: "Laisse-moi un moyen de te répondre.",
-    err: { rate: "Trop de demandes d'un coup : réessaie dans quelques minutes.", links: "Un seul lien par message, s'il te plaît.", closed: "Les demandes ne sont pas encore ouvertes : réessaie bientôt.", error: "La demande n'est pas partie : vérifie ta connexion et réessaie." } as Record<Exclude<AskResult, "ok">, string>,
-    thanks: "C'est noté. Je te réponds dès que j'ai du réseau. Tu ne paies qu'après mon accord, par un lien sécurisé.",
-    thanksFree: "C'est noté, merci ! Je te réponds dès que j'ai du réseau. Prix à 0 : tu n'as rien à payer.",
-    paidTitle: "Paiement reçu, merci !", paidText: "Ton ticket est à toi. Ton logo arrive sur la carte dès que je l'ai ajouté, et tu passes dans la vidéo quand j'arrive à ton emplacement.",
-    another: "Choisir un autre ticket",
+    link: "Ton site ou ton Insta", linkHint: "pour le lien sous ton logo", logo: "Ton logo", logoHint: "facultatif, carré de préférence", logoPick: "Choisir une image", logoChange: "Changer",
+    price: "Ton prix", priceHint: `à partir de ${MIN_EUR} €`,
+    askFree: "Pas de budget : je demande ce ticket gratuitement", askFreeHint: "sur accord, je te réponds",
+    pay: (n: string) => `Payer ${n} € et prendre le ticket`, send: "Envoyer la demande", sending: "Un instant…", cancel: "Annuler",
+    secure: "Paiement sécurisé par Stripe : carte, Apple Pay ou Google Pay. Le ticket est à toi dès que c'est payé.",
+    needWho: "Écris ton nom ou celui de ta marque.", needContact: "Laisse-moi un moyen de te joindre.", needPrice: `Le prix commence à ${MIN_EUR} €.`, badLogo: "Ce fichier n'est pas une image.",
+    err: {
+      rate: "Trop de demandes d'un coup : réessaie dans quelques minutes.", links: "Un seul lien par message, s'il te plaît.",
+      taken: "Quelqu'un vient de le prendre : choisis-en un autre.", held: "Quelqu'un est en train de le payer : choisis-en un autre, ou réessaie dans une demi-heure.",
+      closed: "Le paiement n'est pas encore ouvert : réessaie bientôt.", error: "Ça n'est pas parti : vérifie ta connexion et réessaie.",
+    } as Record<string, string>,
+    thanksFree: "C'est noté, merci ! Je te réponds dès que j'ai du réseau.",
+    checking: "Je vérifie le paiement…",
+    paidTitle: "Paiement reçu, merci !",
+    paidTicket: (label: string) => `Le ticket « ${label} » est à toi : ton nom est déjà sur la carte, et tu passes dans la vidéo quand j'y arrive.`,
+    paidConflict: "Quelqu'un a pris ce ticket juste avant toi. Je te contacte pour t'en proposer un autre ou te rembourser.",
+    paidUnpaid: "Le paiement n'est pas encore confirmé. Si tu as payé, ton ticket arrive dans quelques minutes.",
+    paidGift: (n: string) => `Merci pour ce coup de pouce de ${n} € ! Ça m'aide vraiment sur le sentier.`,
     how: "Comment ça marche",
-    steps: ["Tu choisis ton ticket et tu proposes ton prix.", "Je te réponds dès que j'ai du réseau. Si on est d'accord, je t'envoie un lien de paiement sécurisé (Stripe).", "Ton logo tourne en 3D sur la carte à ton emplacement, avec ton lien, puis tu passes dans les vidéos quand j'y arrive."],
+    steps: [`Tu choisis ton ticket et ton prix, à partir de ${MIN_EUR} €.`, "Tu paies en sécurité avec Stripe : carte, Apple Pay ou Google Pay.", "Le ticket est à toi tout de suite : ton logo tourne en 3D sur la carte avec ton lien, puis tu passes dans les vidéos quand j'y arrive."],
+    freeNote: "Pas de budget ? Tu peux aussi demander un ticket gratuitement : je te réponds.",
     counts: (free: number) => `${free} tickets libres, sans compter les kilomètres`,
+    gift: {
+      title: "Un coup de pouce",
+      lead: "Pas besoin de ticket pour m'aider : si tu veux juste me soutenir, choisis un montant. Ça m'aide pour les repas, les refuges et le matériel en route.",
+      other: "Autre", otherLabel: "Autre montant, en euros", name: "Ton prénom", word: "Un mot pour moi", optional: "facultatif",
+      give: (n: string) => `Donner ${n} €`, pick: "Choisis un montant", tooSmall: "Le montant commence à 1 €.",
+    },
   },
   en: {
-    lead: "I'm walking 1,334 km, from Ship Cove to Bluff. Every kilometre, every pass, every food parcel can carry your name or your brand's, at the price you choose. On the trail you pay for huts with tickets: here, every spot is one.",
+    lead: "I'm walking 1,334 km, from Ship Cove to Bluff. Every kilometre, every pass, every section can carry your name or your brand's, at the price you choose. On the trail you pay for huts with tickets: here, every spot is one.",
     hint: "Slide your finger along the trail",
     hintKeys: "Arrow keys to move, Enter to take the ticket",
-    kind: { km: "Kilometre", col: "Pass", section: "Section", end: "Start and finish", colis: "Food parcel", galere: "Hardship", gear: "Gear" } as Record<SpotKind, string>,
-    decks: { end: "The start and the finish", col: "The passes", section: "The sections", colis: "The food parcels", galere: "The hardships", gear: "My gear" } as Record<string, string>,
-    deckNote: {
-      colis: "The stretches of 100 km or more with no shop.",
-      galere: "A brand presents the hardship, every time it shows up.",
-      gear: "A patch or a sticker, in every photo.",
-    } as Record<string, string>,
+    kind: { km: "Kilometre", col: "Pass", section: "Section", end: "Start and finish" } as Record<SpotKind, string>,
+    decks: { end: "The start and the finish", col: "The passes", section: "The sections" } as Record<string, string>,
     gets: {
       km: "Your name or logo on the map at this kilometre. And when I walk through it, I send you a photo of the spot.",
       col: "Your logo in 3D on the interactive map, at the pass, with a link to your site or Instagram. And in the episode where I cross it: “this pass is brought to you by…”.",
       section: "Your logo in 3D on the map in the middle of the section, with your link, and on its episode's title card.",
       end: "Your logo in 3D on the map at this spot, with your link, in the teaser and in the final film.",
-      colis: "You fill the food parcel waiting for me on this stretch with no shop, I open it on camera, and your logo spins on the map right there.",
-      galere: "Your brand presents this hardship every time it shows up in my videos. It will.",
-      gear: "Your patch or sticker on my gear, in every photo and every video.",
     } as Record<SpotKind, string>,
-    near: "near", highest: "the highest point of the trail", noShop: "with no shop", from: (a: string, b: string) => `from km ${a} to km ${b}`,
+    near: "near", highest: "the highest point of the trail", from: (a: string, b: string) => `from km ${a} to km ${b}`,
     free: "Free", takenBy: "Taken", asked: "Requested",
     want: "I want this ticket", gone: "Already taken",
     who: "Your name or your brand", contact: "How to reach you", contactHint: "email or Instagram", msg: "A word", msgHint: "optional",
-    link: "Your website or Instagram", linkHint: "for the link under your logo", offer: "Your price", offerHint: "whatever you like", offerEx: "NZ$50, €30, some gear…",
     visit: "Visit",
-    send: "Send the request", sending: "Sending…", cancel: "Cancel",
-    needWho: "Write your name or your brand's.", needContact: "Leave me a way to reach you.",
-    err: { rate: "Too many requests at once: try again in a few minutes.", links: "One link per message, please.", closed: "Requests aren't open yet: try again soon.", error: "The request didn't go through: check your connection and try again." } as Record<Exclude<AskResult, "ok">, string>,
-    thanks: "Got it. I'll get back to you as soon as I have signal. You only pay once I've said yes, through a secure link.",
-    thanksFree: "Got it, thank you! I'll get back to you as soon as I have signal. A price of 0: there's nothing to pay.",
-    paidTitle: "Payment received, thank you!", paidText: "The ticket is yours. Your logo goes on the map as soon as I've added it, and you're in the video when I reach your spot.",
-    another: "Pick another ticket",
+    link: "Your website or Instagram", linkHint: "for the link under your logo", logo: "Your logo", logoHint: "optional, square if you can", logoPick: "Choose an image", logoChange: "Change",
+    price: "Your price", priceHint: `from €${MIN_EUR}`,
+    askFree: "No budget: I'm asking for this ticket for free", askFreeHint: "if I agree, I'll get back to you",
+    pay: (n: string) => `Pay €${n} and take the ticket`, send: "Send the request", sending: "One moment…", cancel: "Cancel",
+    secure: "Secure payment by Stripe: card, Apple Pay or Google Pay. The ticket is yours as soon as it's paid.",
+    needWho: "Write your name or your brand's.", needContact: "Leave me a way to reach you.", needPrice: `The price starts at €${MIN_EUR}.`, badLogo: "That file isn't an image.",
+    err: {
+      rate: "Too many requests at once: try again in a few minutes.", links: "One link per message, please.",
+      taken: "Someone just took it: pick another one.", held: "Someone is paying for it right now: pick another one, or try again in half an hour.",
+      closed: "Payments aren't open yet: try again soon.", error: "It didn't go through: check your connection and try again.",
+    } as Record<string, string>,
+    thanksFree: "Got it, thank you! I'll get back to you as soon as I have signal.",
+    checking: "Checking the payment…",
+    paidTitle: "Payment received, thank you!",
+    paidTicket: (label: string) => `The “${label}” ticket is yours: your name is already on the map, and you're in the video when I get there.`,
+    paidConflict: "Someone took this ticket just before you. I'll contact you to offer another one or refund you.",
+    paidUnpaid: "The payment isn't confirmed yet. If you paid, your ticket arrives in a few minutes.",
+    paidGift: (n: string) => `Thank you for this €${n} boost! It really helps on the trail.`,
     how: "How it works",
-    steps: ["You pick your ticket and name your price.", "I get back to you as soon as I have signal. If we agree, I send you a secure payment link (Stripe).", "Your logo spins in 3D on the map at your spot, with your link, then you're in the videos when I get there."],
+    steps: [`You pick your ticket and your price, from €${MIN_EUR}.`, "You pay securely with Stripe: card, Apple Pay or Google Pay.", "The ticket is yours at once: your logo spins in 3D on the map with your link, then you're in the videos when I get there."],
+    freeNote: "No budget? You can also ask for a ticket for free: I'll get back to you.",
     counts: (free: number) => `${free} free tickets, not counting the kilometres`,
+    gift: {
+      title: "A helping hand",
+      lead: "No ticket needed to help: if you'd just like to support me, pick an amount. It goes to meals, huts and gear along the way.",
+      other: "Other", otherLabel: "Another amount, in euros", name: "Your first name", word: "A word for me", optional: "optional",
+      give: (n: string) => `Give €${n}`, pick: "Pick an amount", tooSmall: "The amount starts at €1.",
+    },
   },
 };
 const words = () => W[lang.value];
@@ -132,7 +151,7 @@ export function SponsorsPage({ paid }: { paid?: boolean }) {
   const [sel, setSel] = useState<Spot | null>(null);
   const [printed, setPrinted] = useState(0); // a new print each time, even of the same ticket
   const slot = useRef<HTMLDivElement>(null);
-  useEffect(() => { loadTaken(true); }, []);
+  useEffect(() => { loadTaken(true); void sweepPayments(); }, []);
 
   const pick = (s: Spot, scroll = false) => {
     setSel(s);
@@ -147,20 +166,13 @@ export function SponsorsPage({ paid }: { paid?: boolean }) {
     if (scroll) requestAnimationFrame(() => slot.current?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }));
   };
 
-  const decks: [string, Spot[]][] = [
-    ["end", ends.value], ["col", cols.value], ["section", sections.value], ["colis", parcelSpots.value], ["galere", galeres], ["gear", gearSpots],
-  ];
+  const decks: [string, Spot[]][] = [["end", ends.value], ["col", cols.value], ["section", sections.value]];
   const freeCount = decks.reduce((n, [, list]) => n + list.filter((s) => !taken.value.has(s.id)).length, 0);
 
   return (
     <div class="page spage">
       <PageHead title={t("sponsors")} />
-      {paid && (
-        <div class="tk-paid" role="status">
-          <span class="tk-paid__stamp" aria-hidden="true">{l === "fr" ? "Payé" : "Paid"}</span>
-          <p><b>{w.paidTitle}</b> {w.paidText}</p>
-        </div>
-      )}
+      {paid && <PaidBanner />}
       <p class="spage__lead voice">{w.lead}</p>
 
       <Ridge onPick={(s) => pick(s, true)} selected={sel} />
@@ -175,7 +187,6 @@ export function SponsorsPage({ paid }: { paid?: boolean }) {
         <section class="tk-deck" aria-labelledby={`deck-${key}`}>
           <div class="tk-deck__head">
             <h2 class="h-section" id={`deck-${key}`}>{w.decks[key]}</h2>
-            {w.deckNote[key] && <p class="fine">{w.deckNote[key]}</p>}
           </div>
           <div class="tk-deck__row">
             {list.map((s) => <MiniTicket s={s} on={sel?.id === s.id} onPick={() => pick(s, true)} />)}
@@ -186,9 +197,101 @@ export function SponsorsPage({ paid }: { paid?: boolean }) {
       <section class="block" aria-labelledby="tk-how">
         <h2 class="h-section" id="tk-how">{w.how}</h2>
         <ol class="tk-steps">{w.steps.map((s) => <li>{s}</li>)}</ol>
+        <p class="fine" style={{ marginTop: "10px" }}>{w.freeNote}</p>
       </section>
+
+      <Gift />
+
       <p class="fine block" style={{ marginTop: "20px" }}>{l === "fr" ? "Le tracé, les cols et les altitudes viennent des données du site (OpenStreetMap)." : "The route, passes and heights come from the site's data (OpenStreetMap)."}</p>
     </div>
+  );
+}
+
+/** Back from Stripe: the server asks Stripe what was paid, gives the ticket if it was one, and says so. */
+function PaidBanner() {
+  const l = lang.value, w = words();
+  const [res, setRes] = useState<Paid | "checking">("checking");
+  useEffect(() => {
+    let cs: string | null = null;
+    try { cs = sessionStorage.getItem("ta-cs"); } catch (_) { /* private mode */ }
+    if (!cs) { setRes(null); return; }
+    let live = true, tries = 0;
+    const ask = async () => {
+      const r = await confirmPayment(cs!);
+      if (!live) return;
+      // (the payment can take a few seconds to settle: asked again a few times)
+      if (r && r.status === "unpaid" && ++tries < 4) { window.setTimeout(ask, 2500); return; }
+      setRes(r);
+      if (r && r.status !== "unpaid") { try { sessionStorage.removeItem("ta-cs"); } catch (_) { /* ignore */ } }
+      if (r?.kind === "ticket") loadTaken(true);
+      if (r && r.status === "paid") play("signed");
+    };
+    void ask();
+    return () => { live = false; };
+  }, []);
+  const euros = (c?: number) => fmtInt(Math.round((c ?? 0) / 100), l);
+  const text = res === "checking" ? w.checking
+    : !res ? w.paidUnpaid
+    : res.kind === "gift" ? (res.status === "paid" ? w.paidGift(euros(res.amount)) : w.paidUnpaid)
+    : res.status === "paid" ? w.paidTicket(res.label ?? "") : res.status === "conflict" ? w.paidConflict : w.paidUnpaid;
+  const done = res !== "checking" && !!res && res.status !== "unpaid";
+  const ticketPaid = res !== "checking" && !!res && res.kind === "ticket";
+  return (
+    <div class={`tk-paid${done ? "" : " is-waiting"}`} role="status">
+      {done && <span class="tk-paid__stamp" aria-hidden="true">{l === "fr" ? "Payé" : "Paid"}</span>}
+      <p>{done && ticketPaid && <b>{w.paidTitle} </b>}{text}</p>
+    </div>
+  );
+}
+
+/** "Un coup de pouce": a gift of the amount chosen, paid on Stripe. */
+function Gift() {
+  const l = lang.value, w = words().gift;
+  const [amount, setAmount] = useState<number | "other">(GIFT_EUR[1]);
+  const [other, setOther] = useState("");
+  const [name, setName] = useState("");
+  const [word, setWord] = useState("");
+  const [state, setState] = useState<{ kind: "idle" | "sending" | "error"; msg?: string }>({ kind: "idle" });
+  const euros = amount === "other" ? Math.round(parseFloat(other.replace(",", ".")) || 0) : amount;
+  const submit = async (e: Event) => {
+    e.preventDefault();
+    if (state.kind === "sending") return;
+    if (!(euros >= 1)) { setState({ kind: "error", msg: w.tooSmall }); return; }
+    setState({ kind: "sending" });
+    const url = await giveGift(Math.min(euros, MAX_EUR), name.trim(), word.trim(), l);
+    if (typeof url === "string" && url !== "closed") { location.href = url; return; }
+    setState({ kind: "error", msg: words().err[url === "closed" ? "closed" : "error"] });
+  };
+  return (
+    <section class="block gift" aria-labelledby="gift-title">
+      <h2 class="h-section" id="gift-title">{w.title}</h2>
+      <p class="gift__lead voice">{w.lead}</p>
+      <form class="form gift__form" onSubmit={submit} noValidate>
+        <div class="gift__amounts" role="radiogroup" aria-label={w.pick}>
+          {GIFT_EUR.map((n) => (
+            <button type="button" role="radio" aria-checked={amount === n} class={`gift__amount num${amount === n ? " is-on" : ""}`} data-sfx="tap" onClick={() => setAmount(n)}>
+              {l === "fr" ? `${n} €` : `€${n}`}
+            </button>
+          ))}
+          <button type="button" role="radio" aria-checked={amount === "other"} class={`gift__amount${amount === "other" ? " is-on" : ""}`} data-sfx="tap" onClick={() => setAmount("other")}>{w.other}</button>
+        </div>
+        {amount === "other" && (
+          <>
+            <label class="note__label" for="gift-other">{w.otherLabel}</label>
+            <input id="gift-other" class="field num" type="number" inputMode="numeric" min={1} max={MAX_EUR} step={1} value={other} onInput={(e) => setOther((e.target as HTMLInputElement).value)} />
+          </>
+        )}
+        <label class="note__label" for="gift-name">{w.name} <span class="tk__hint">({w.optional})</span></label>
+        <input id="gift-name" class="field" type="text" maxLength={60} autoComplete="given-name" value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} />
+        <label class="note__label" for="gift-word">{w.word} <span class="tk__hint">({w.optional})</span></label>
+        <textarea id="gift-word" class="field" rows={2} maxLength={300} value={word} onInput={(e) => setWord((e.target as HTMLTextAreaElement).value)} />
+        <button class="btn btn--primary btn--block" type="submit" data-sfx="none" disabled={state.kind === "sending" || !(euros >= 1)}>
+          {state.kind === "sending" ? words().sending : w.give(fmtInt(euros || 0, l))}
+        </button>
+        <p class="fine gift__secure">{l === "fr" ? "Paiement sécurisé par Stripe : carte, Apple Pay ou Google Pay." : "Secure payment by Stripe: card, Apple Pay or Google Pay."}</p>
+        <p class={state.kind === "error" ? "form__msg is-error" : "sr-only"} role="status" aria-live="polite">{state.kind === "error" ? state.msg : ""}</p>
+      </form>
+    </section>
   );
 }
 
@@ -330,7 +433,6 @@ function metaOf(s: Spot, l: Lang): string {
     case "km": { const n = nearKm(s.km ?? 0), h = heightAt(s.km ?? 0); return [n ? `${w.near} ${n}` : null, h !== null ? `${fmtInt(h, l)} m` : null].filter(Boolean).join(" · "); }
     case "col": { const top = (s.alt ?? 0) >= Math.max(...cols.value.map((c) => c.alt ?? 0)); return [`km ${fmtK(s.km ?? 0, l)}`, s.alt ? `${fmtInt(s.alt, l)} m` : null, top ? w.highest : null].filter(Boolean).join(" · "); }
     case "section": return `${fmtK(len, l)} km · ${w.from(fmtK(s.km ?? 0, l), fmtK(s.km2 ?? 0, l))}`;
-    case "colis": return `${fmtK(len, l)} km ${w.noShop}`;
     case "end": return `km ${fmtK(s.km ?? 0, l)}`;
     default: return "";
   }
@@ -350,6 +452,24 @@ function MiniTicket({ s, on, onPick }: { s: Spot; on: boolean; onPick: () => voi
   );
 }
 
+/** A logo chosen by the buyer, made small and square-safe here (at most 320 px, PNG on white): a few tens of kB. */
+async function shrinkLogo(file: File): Promise<Blob | null> {
+  if (!/^image\//.test(file.type) || file.size > 15 * 1024 * 1024) return null;
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, 320 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(bmp.width * k));
+    c.height = Math.max(1, Math.round(bmp.height * k));
+    const g = c.getContext("2d");
+    if (!g) return null;
+    g.fillStyle = "#fff";
+    g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise<Blob | null>((r) => c.toBlob(r, "image/png"));
+  } catch (_) { return null; }
+}
+
 function Ticket({ spot }: { spot: Spot }) {
   const l = lang.value, w = words();
   const owner = taken.value.get(spot.id);
@@ -362,12 +482,17 @@ function Ticket({ spot }: { spot: Spot }) {
   const [contact, setContact] = useState("");
   const [msg, setMsg] = useState("");
   const [link, setLink] = useState("");
-  const [offer, setOffer] = useState("");
+  const [euros, setEuros] = useState(spot.kind === "km" ? "10" : "50");
+  const [askFree, setAskFree] = useState(false);
+  const [mine, setMine] = useState<{ blob: Blob; url: string } | null>(null);
   const [trap, setTrap] = useState("");
   const [state, setState] = useState<{ kind: "idle" | "sending" | "error"; msg?: string }>({ kind: "idle" });
   const whoField = useRef<HTMLInputElement>(null);
   const contactField = useRef<HTMLInputElement>(null);
+  const priceField = useRef<HTMLInputElement>(null);
   useEffect(() => { if (open) { untilt(); whoField.current?.focus(); } }, [open]);
+  useEffect(() => () => { if (mine) URL.revokeObjectURL(mine.url); }, [mine]);
+  const price = Math.round(parseFloat(euros.replace(",", ".")) || 0);
 
   // the foil follows a mouse; a finger scrolls the page, so there the light sweeps once on its own
   const tilt = (e: PointerEvent) => {
@@ -389,22 +514,41 @@ function Ticket({ spot }: { spot: Spot }) {
     if (!f?.animate || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     f.animate([{ transform: "none" }, { transform: "translateX(-7px)" }, { transform: "translateX(6px)" }, { transform: "translateX(-3px)" }, { transform: "none" }], { duration: 320, easing: "ease-in-out" });
   };
+  const pickLogo = async (e: Event) => {
+    const f = (e.target as HTMLInputElement).files?.[0];
+    (e.target as HTMLInputElement).value = "";
+    if (!f) return;
+    const blob = await shrinkLogo(f);
+    if (!blob) { setState({ kind: "error", msg: w.badLogo }); return; }
+    setMine({ blob, url: URL.createObjectURL(blob) });
+    setState({ kind: "idle" });
+  };
   const submit = async (e: Event) => {
     e.preventDefault();
     if (trap || state.kind === "sending") return;
     if (!who.trim()) { setState({ kind: "error", msg: w.needWho }); whoField.current?.focus(); shake(whoField.current); return; }
     if (!contact.trim()) { setState({ kind: "error", msg: w.needContact }); contactField.current?.focus(); shake(contactField.current); return; }
+    if (!askFree && !(price >= MIN_EUR && price <= MAX_EUR)) { setState({ kind: "error", msg: w.needPrice }); priceField.current?.focus(); shake(priceField.current); return; }
     setState({ kind: "sending" });
-    const r = await requestSpot(spot, { who: who.trim(), contact: contact.trim(), link: link.trim(), offer: offer.trim(), message: msg.trim() }, l);
-    if (r !== "ok") { setState({ kind: "error", msg: w.err[r] }); return; }
-    setState({ kind: "idle" });
-    setOpen(false);
-    setSent(true);
-    play("signed");
-    // the stamp lands: the ticket gives under it
-    if (el.current?.animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      el.current.animate([{ transform: "none" }, { transform: "translateY(3px) scale(0.985)", offset: 0.35 }, { transform: "none" }], { duration: 420, delay: 180, easing: "ease-out" });
+    if (askFree) {
+      // a ticket for free: a request I answer in the Carnet (so nobody can fill the map for nothing)
+      const r = await requestSpot(spot, { who: who.trim(), contact: contact.trim(), link: link.trim(), offer: "0", message: msg.trim() }, l);
+      if (r !== "ok") { setState({ kind: "error", msg: w.err[r] }); return; }
+      setState({ kind: "idle" });
+      setOpen(false);
+      setSent(true);
+      play("signed");
+      // the stamp lands: the ticket gives under it
+      if (el.current?.animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        el.current.animate([{ transform: "none" }, { transform: "translateY(3px) scale(0.985)", offset: 0.35 }, { transform: "none" }], { duration: 420, delay: 180, easing: "ease-out" });
+      }
+      return;
     }
+    // bought: held a moment, then straight to Stripe; back on the site the ticket is given (see PaidBanner)
+    const r = await buySpot(spot, { who: who.trim(), contact: contact.trim(), link: link.trim(), message: msg.trim(), euros: price, logo: mine?.blob ?? null }, l);
+    if (!r.ok) { setState({ kind: "error", msg: w.err[r.why] }); if (r.why === "taken") loadTaken(true); return; }
+    play("whoosh");
+    location.href = r.url;
   };
 
   const stamp = sent ? w.asked : by ? `${w.takenBy}` : w.free;
@@ -435,24 +579,44 @@ function Ticket({ spot }: { spot: Spot }) {
               {by ? w.gone : w.want}
             </button>
           )}
-          {sent && <p class="tk__thanks" role="status">{isFreeOffer(offer) ? w.thanksFree : w.thanks}</p>}
+          {sent && <p class="tk__thanks" role="status">{w.thanksFree}</p>}
           {open && (
             <form class="form tk__form" onSubmit={submit} noValidate>
               <label class="note__label" for="tk-who">{w.who}</label>
               <input ref={whoField} id="tk-who" class="field" type="text" maxLength={60} autoComplete="organization" value={who} onInput={(e) => setWho((e.target as HTMLInputElement).value)} />
               <label class="note__label" for="tk-contact">{w.contact} <span class="tk__hint">({w.contactHint})</span></label>
               <input ref={contactField} id="tk-contact" class="field" type="text" maxLength={120} autoComplete="email" inputMode="email" value={contact} onInput={(e) => setContact((e.target as HTMLInputElement).value)} />
-              <label class="note__label" for="tk-offer">{w.offer} <span class="tk__hint">({w.offerHint})</span></label>
-              <input id="tk-offer" class="field" type="text" maxLength={60} placeholder={w.offerEx} value={offer} onInput={(e) => setOffer((e.target as HTMLInputElement).value)} />
               <label class="note__label" for="tk-link">{w.link} <span class="tk__hint">({w.linkHint})</span></label>
               <input id="tk-link" class="field" type="text" maxLength={200} inputMode="url" autoComplete="url" autoCapitalize="none" placeholder="@…  /  monsite.com" value={link} onInput={(e) => setLink((e.target as HTMLInputElement).value)} />
+              {!askFree && (
+                <>
+                  <span class="note__label">{w.logo} <span class="tk__hint">({w.logoHint})</span></span>
+                  <label class="tk__logopick">
+                    {mine ? <img src={mine.url} alt="" width={44} height={44} /> : <span class="tk__logoempty" aria-hidden="true" />}
+                    <span>{mine ? w.logoChange : w.logoPick}</span>
+                    <input type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" class="sr-only" onChange={pickLogo} />
+                  </label>
+                  <label class="note__label" for="tk-price">{w.price} <span class="tk__hint">({w.priceHint})</span></label>
+                  <div class="tk__price">
+                    <input ref={priceField} id="tk-price" class="field num" type="number" inputMode="numeric" min={MIN_EUR} max={MAX_EUR} step={1} value={euros} onInput={(e) => setEuros((e.target as HTMLInputElement).value)} />
+                    <span aria-hidden="true">€</span>
+                  </div>
+                </>
+              )}
               <label class="note__label" for="tk-msg">{w.msg} <span class="tk__hint">({w.msgHint})</span></label>
               <textarea id="tk-msg" class="field" rows={2} maxLength={400} value={msg} onInput={(e) => setMsg((e.target as HTMLTextAreaElement).value)} />
+              <label class="tk__free">
+                <input type="checkbox" checked={askFree} onChange={(e) => { setAskFree((e.target as HTMLInputElement).checked); setState({ kind: "idle" }); }} />
+                <span>{w.askFree}<small>{w.askFreeHint}</small></span>
+              </label>
               <input type="text" name="website" tabIndex={-1} autoComplete="off" class="sr-only" aria-hidden="true" value={trap} onInput={(e) => setTrap((e.target as HTMLInputElement).value)} />
               <div class="form__row">
                 <button class="btn" type="button" data-sfx="close" onClick={() => { setOpen(false); setState({ kind: "idle" }); }}>{w.cancel}</button>
-                <button class="btn btn--primary" type="submit" data-sfx="none" disabled={state.kind === "sending"}>{state.kind === "sending" ? w.sending : w.send}</button>
+                <button class="btn btn--primary" type="submit" data-sfx="none" disabled={state.kind === "sending"}>
+                  {state.kind === "sending" ? w.sending : askFree ? w.send : w.pay(fmtInt(price >= MIN_EUR ? price : MIN_EUR, l))}
+                </button>
               </div>
+              {!askFree && <p class="fine tk__secure">{w.secure}</p>}
               <p class={state.kind === "error" ? "form__msg is-error" : "sr-only"} role="status" aria-live="polite">{state.kind === "error" ? state.msg : ""}</p>
             </form>
           )}

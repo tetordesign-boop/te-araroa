@@ -23,6 +23,7 @@ const db = {
   days: [],
   push_sent: [],
   push_subs: [],
+  admin_push: [],
   admins: [{ user_id: "u1" }],
 };
 const secrets = new Map();
@@ -32,6 +33,7 @@ function table(name) {
     select() { return q; }, order() { return q; },
     eq(c, v) { filters.push((r) => r[c] === v); return q; },
     in(c, v) { filters.push((r) => v.includes(r[c])); return q; },
+    contains(c, v) { filters.push((r) => v.every((x) => r[c].includes(x))); return q; },
     gte(c, v) { filters.push((r) => r[c] >= v); return q; },
     range(a, b) { range = [a, b]; return q; },
     maybeSingle() { single = true; return q; },
@@ -70,7 +72,7 @@ globalThis.__createClient = () => ({
 let handler;
 globalThis.Deno = { serve: (h) => { handler = h; }, env: { get: (k) => ({ SUPABASE_URL: "http://db", SUPABASE_SERVICE_ROLE_KEY: "service" })[k] } };
 await import(join(dir, "push.ts"));
-const call = (method, body, token) => handler(new Request("http://fn/push", { method, headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: body ? JSON.stringify(body) : undefined }));
+const call = (method, body, token, extra = {}) => handler(new Request("http://fn/push", { method, headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}), ...extra }, body: body ? JSON.stringify(body) : undefined }));
 
 // ---------------------------------------------------------------- a pretend push service: two phones
 const phones = [];
@@ -102,12 +104,12 @@ const server = createServer(async (req, res) => {
 });
 await new Promise((r) => server.listen(0, r));
 const base = `http://localhost:${server.address().port}`;
-for (const [name, lang] of [["maman", "fr"], ["kiwi", "en"]]) {
+for (const [name, lang] of [["maman", "fr"], ["kiwi", "en"], ["ewan", "fr"], ["ewan-ipad", "fr"]]) {
   const keys = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
   const raw = new Uint8Array(await crypto.subtle.exportKey("raw", keys.publicKey));
   const auth = crypto.getRandomValues(new Uint8Array(16));
   phones.push({ name, path: `/${name}`, keys, raw, auth });
-  db.push_subs.push({ endpoint: `${base}/${name}`, p256dh: b64u.encode(raw), auth: b64u.encode(auth), lang, fails: 0, hello_at: null });
+  if (!name.startsWith("ewan")) db.push_subs.push({ endpoint: `${base}/${name}`, p256dh: b64u.encode(raw), auth: b64u.encode(auth), lang, fails: 0, hello_at: null });
 }
 db.push_subs.push({ endpoint: `${base}/gone`, p256dh: db.push_subs[0].p256dh, auth: db.push_subs[0].auth, lang: "fr", fails: 0, hello_at: null });
 
@@ -168,4 +170,43 @@ db.days.push(lone);
 await call("POST", { action: "notify", days: [lone.id] }, "a.admin.jwt");
 assert.equal(received.filter((x) => x.phone === "maman").at(-1).body, "23,4 km et 1 210 m de montée.");
 console.log("ok  a day without a title says its figures:", JSON.stringify(received.filter((x) => x.phone === "maman").at(-1).body));
+// ---------------------------------------------------------------- my alerts
+// (the two last phones are mine, signed up in the Carnet: not followers)
+const mine = phones.filter((x) => x.name.startsWith("ewan"));
+db.admin_push.push(
+  { endpoint: `${base}/ewan`, p256dh: b64u.encode(mine[0].raw), auth: b64u.encode(mine[0].auth), kinds: ["sponsor", "message", "question"], fails: 0 },
+  { endpoint: `${base}/ewan-ipad`, p256dh: b64u.encode(mine[1].raw), auth: b64u.encode(mine[1].auth), kinds: ["sponsor", "follower"], fails: 2 },
+);
+secrets.set("admin_push_secret", "s3cr3t-from-the-database");
+const alert = { action: "ewan", kind: "sponsor", title: "Demande de sponsor : Stag Saddle", body: "Kea Coffee, 250 NZD : On adorerait le point le plus haut !", url: "admin/#sponsors" };
+assert.equal((await call("POST", alert)).status, 401, "no secret, no alert");
+assert.equal((await call("POST", alert, null, { "x-push-secret": "guess" })).status, 401, "a wrong secret, no alert");
+let n0 = received.length;
+r = await (await call("POST", alert, null, { "x-push-secret": "s3cr3t-from-the-database" })).json();
+assert.equal(r.phones, 2); assert.equal(r.ok, 2);
+const a = received.slice(n0);
+assert.deepEqual(a.map((x) => x.phone).sort(), ["ewan", "ewan-ipad"]);
+assert.equal(a[0].title, "Demande de sponsor : Stag Saddle");
+assert.equal(a[0].url, "https://tetordesign-boop.github.io/te-araroa/admin/#sponsors");
+assert.equal(a[0].tag, "carnet-sponsor");
+assert.equal(db.admin_push.find((x) => x.endpoint.endsWith("ipad")).fails, 0, "a phone that receives again is in good standing");
+console.log("ok  a sponsor request reaches my phones:", JSON.stringify(a[0].title));
+
+n0 = received.length;
+r = await (await call("POST", { ...alert, kind: "follower", title: "Un nouvel abonné", body: "3 téléphones suivent tes étapes.", url: "https://evil.example/" }, null, { "x-push-secret": "s3cr3t-from-the-database" })).json();
+assert.equal(r.phones, 1, "only the phone that asked for new followers");
+assert.equal(received.at(-1).phone, "ewan-ipad");
+assert.equal(received.at(-1).url, "https://tetordesign-boop.github.io/te-araroa/admin/", "a link elsewhere becomes the Carnet");
+assert.equal((await call("POST", { ...alert, kind: "anything" }, null, { "x-push-secret": "s3cr3t-from-the-database" })).status, 400);
+console.log("ok  each phone gets the kinds it chose; links only to the Carnet; unknown kinds refused");
+
+assert.equal((await call("POST", { action: "ewan-test", endpoint: `${base}/ewan` })).status, 401, "the test needs my sign-in");
+r = await (await call("POST", { action: "ewan-test", endpoint: `${base}/ewan` }, "a.admin.jwt")).json();
+assert.equal(r.ok, 1); assert.equal(received.at(-1).phone, "ewan"); assert.equal(received.at(-1).title, "Alertes activées");
+console.log("ok  the Carnet's test alert, to that phone only");
+
+db.admin_push.push({ endpoint: `${base}/lost`, p256dh: db.admin_push[0].p256dh, auth: db.admin_push[0].auth, kinds: ["question"], fails: 0 });
+await call("POST", { ...alert, kind: "question" }, null, { "x-push-secret": "s3cr3t-from-the-database" });
+assert.ok(!db.admin_push.some((x) => x.endpoint.endsWith("/lost")), "a phone that unsubscribed is forgotten");
+console.log("ok  a phone that is gone is forgotten");
 server.close();
