@@ -172,14 +172,17 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
     }), probe: "window.__qa" },
   // the purchase and the gift, online: the page, the gift, a ticket's form, back from Stripe, and the server functions
   { id: "p-m-pay-page", ctx: mobile(false), url: "#/parrainer", plain: 12000, act: seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(1200)),
-    probe: "JSON.stringify([...document.querySelectorAll('.tk__top span:first-child')].reduce((m, e) => (m[e.innerText] = (m[e.innerText] || 0) + 1, m), {})) + ' | gift ' + !!document.querySelector('.gift') + ' | ' + (/galère|colis|mon sac/i.test(document.body.innerText) ? 'OLD KINDS STILL THERE' : 'no old kinds')" },
+    probe: "[...document.querySelectorAll('.tk-deck')].map((d) => d.querySelector('h2').innerText + ' ' + d.querySelectorAll('.tk-mini').length).join(', ') + ' | gift ' + !!document.querySelector('.gift') + ' | ' + (/galère|colis|mon sac/i.test(document.body.innerText) ? 'OLD KINDS STILL THERE' : 'no old kinds')" },
   { id: "p-m-pay-gift", ctx: mobile(false), url: "#/parrainer", plain: 12000,
     act: seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(1200), (p) => p.evaluate(() => document.querySelector(".gift")?.scrollIntoView({ block: "start" })), wait(900), tap(".gift__amount:nth-child(2)"), wait(700)),
     probe: "document.querySelector('.gift')?.innerText" },
   { id: "p-m-pay-form", ctx: mobile(false), url: "#/parrainer", plain: 12000,
-    act: seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(1200), tap(".tk__stub .btn--primary:not([disabled])"), wait(900), (p) => p.evaluate(() => document.querySelector(".tk__form")?.scrollIntoView({ block: "start" })), wait(900)),
-    probe: "document.querySelector('.tk__form')?.innerText" },
-  { id: "p-d-pay-page", ctx: desktop(false), url: "#/parrainer", plain: 12000 },
+    act: seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(1200), tap(".tk-mini:not(.is-taken)"), wait(2500), tap(".tk__stub .btn--primary:not([disabled])"), wait(900), (p) => p.evaluate(() => document.querySelector(".tk__form")?.scrollIntoView({ block: "start" })), wait(900)),
+    probe: "(document.querySelector('.tk__name')?.innerText ?? 'no ticket') + ' | ' + (document.querySelector('.tk__form')?.innerText ?? 'no form')" },
+  { id: "p-m-pay-free", ctx: mobile(false), url: "#/parrainer", plain: 12000,
+    act: seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(1200), tap(".tk-mini:not(.is-taken)"), wait(2500), tap(".tk__stub .btn--primary:not([disabled])"), wait(900), tap(".tk__free input"), wait(700), (p) => p.evaluate(() => document.querySelector(".tk__form")?.scrollIntoView({ block: "start" })), wait(900)),
+    probe: "document.querySelector('.tk__form')?.innerText ?? 'no form'" },
+  { id: "p-d-pay-page", ctx: desktop(false), url: "#/parrainer", plain: 12000, act: seq(tap(".tk-mini:not(.is-taken)"), wait(2500)) },
   { id: "p-m-pay-merci", ctx: mobile(false), url: "?merci&cs=cs_test_qaprobe0000", plain: 14000, probe: "location.hash + ' | ' + (document.querySelector('.tk-paid')?.innerText ?? 'no banner')" },
   { id: "p-m-pay-fn", ctx: mobile(false), url: "", plain: 3000, act: (p) => p.evaluate(async () => {
       const U = "https://jmedorwtksxxnzwyjvbz.supabase.co", K = "sb_publishable_-XKxRnwVevyUpGjZ9HF0NQ_4B_ykHCx";

@@ -1,4 +1,4 @@
-p-m-pay
+p-m-pay-page
+p-m-pay-form
+p-m-pay-free
 p-d-pay
-p-m-carnet
-p-m-home
