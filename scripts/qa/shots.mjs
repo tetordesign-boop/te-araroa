@@ -170,6 +170,46 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
       const csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]') ? "csp on" : "NO CSP";
       window.__qa = `${csp} | signup ${r.disable_signup ? "closed" : "OPEN"} | autoconfirm ${r.mailer_autoconfirm} | anonymous ${r.anonymous_users ?? "?"} | providers ${Object.entries(r.external || {}).filter(([, v]) => v).map(([k]) => k).join(",")}`;
     }), probe: "window.__qa" },
+  // the purchase and the gift, online: the page, the gift, a ticket's form, back from Stripe, and the server functions
+  { id: "p-m-pay-page", ctx: mobile(false), url: "#/parrainer", plain: 12000, act: seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(1200)),
+    probe: "JSON.stringify([...document.querySelectorAll('.tk__top span:first-child')].reduce((m, e) => (m[e.innerText] = (m[e.innerText] || 0) + 1, m), {})) + ' | gift ' + !!document.querySelector('.gift') + ' | ' + (/galère|colis|mon sac/i.test(document.body.innerText) ? 'OLD KINDS STILL THERE' : 'no old kinds')" },
+  { id: "p-m-pay-gift", ctx: mobile(false), url: "#/parrainer", plain: 12000,
+    act: seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(1200), (p) => p.evaluate(() => document.querySelector(".gift")?.scrollIntoView({ block: "start" })), wait(900), tap(".gift__amount:nth-child(2)"), wait(700)),
+    probe: "document.querySelector('.gift')?.innerText" },
+  { id: "p-m-pay-form", ctx: mobile(false), url: "#/parrainer", plain: 12000,
+    act: seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(1200), tap(".tk__stub .btn--primary:not([disabled])"), wait(900), (p) => p.evaluate(() => document.querySelector(".tk__form")?.scrollIntoView({ block: "start" })), wait(900)),
+    probe: "document.querySelector('.tk__form')?.innerText" },
+  { id: "p-d-pay-page", ctx: desktop(false), url: "#/parrainer", plain: 12000 },
+  { id: "p-m-pay-merci", ctx: mobile(false), url: "?merci&cs=cs_test_qaprobe0000", plain: 14000, probe: "location.hash + ' | ' + (document.querySelector('.tk-paid')?.innerText ?? 'no banner')" },
+  { id: "p-m-pay-fn", ctx: mobile(false), url: "", plain: 3000, act: (p) => p.evaluate(async () => {
+      const U = "https://jmedorwtksxxnzwyjvbz.supabase.co", K = "sb_publishable_-XKxRnwVevyUpGjZ9HF0NQ_4B_ykHCx";
+      const h = { apikey: K, "Content-Type": "application/json" };
+      const post = (fn, body, extra = {}) => fetch(`${U}/functions/v1/${fn}`, { method: "POST", headers: { ...h, ...extra }, body: JSON.stringify(body) })
+        .then(async (r) => `${r.status} ${(await r.text()).slice(0, 80)}`).catch((e) => `ERR ${e}`);
+      // (only the status and how many rows: never what they hold)
+      const rest = (path, init = {}) => fetch(`${U}/rest/v1/${path}`, { headers: h, ...init }).then(async (r) => {
+        const j = await r.json().catch(() => null);
+        return `${r.status} ${Array.isArray(j) ? j.length + " rows" : String(j?.message ?? j ?? "").slice(0, 70)}`;
+      }).catch((e) => `ERR ${e}`);
+      const out = {
+        sweep: await post("checkout", { action: "sweep" }),
+        gift: await post("checkout", { action: "gift", amount: 500, lang: "fr" }),
+        confirm: await post("checkout", { action: "confirm", session: "cs_test_qaprobe0000" }),
+        check: await post("checkout", { action: "check" }),
+        ewan: await post("push", { action: "ewan", kind: "gift", title: "x", body: "x" }),
+        ewanFake: await post("push", { action: "ewan", kind: "gift", title: "x", body: "x" }, { "x-push-secret": "nope" }),
+        ewanTest: await post("push", { action: "ewan-test", endpoint: "https://example.com/x" }),
+        key: await fetch(`${U}/functions/v1/push?key`, { headers: { apikey: K } }).then((r) => `${r.status}`).catch((e) => `ERR ${e}`),
+        buyBad: await rest("rpc/start_purchase", { method: "POST", body: JSON.stringify({ p_spot: "bogus", p_label: "x", p_name: "x", p_contact: "x", p_link: null, p_message: null, p_amount_cents: 500, p_lang: "fr", p_device: crypto.randomUUID() }) }),
+        gifts: await rest("gifts?select=id&limit=1"),
+        adminPush: await rest("admin_push?select=endpoint&limit=1"),
+        reqContact: await rest("sponsor_requests?select=contact&limit=1"),
+        reqPublic: await rest("sponsor_requests?select=kind,hold_until&limit=1"),
+        keyHint: await rest("rpc/admin_stripe_key_hint", { method: "POST", body: "{}" }),
+        setKey: await rest("rpc/admin_set_stripe_key", { method: "POST", body: JSON.stringify({ p_key: "rk_test_" + "x".repeat(24) }) }),
+      };
+      window.__qa = Object.entries(out).map(([k, v]) => `${k}: ${v}`).join(" || ");
+    }), probe: "window.__qa" },
   // the database as visitors reach it: each request's status, and the live feed's channel joined
   { id: "p-m-data", ctx: mobile(false), url: "", plain: 3000, act: watchData, probe: "window.__qa" },
 ];

@@ -1,10 +1,4 @@
-p-m-home
-p-m-nav-journal
-p-m-shelf
-p-m-explore
-p-m-spin
-p-m-auth
+p-m-pay
+p-d-pay
 p-m-carnet
-p-m-data
-p-m-voyage
-p-d-home
+p-m-home
