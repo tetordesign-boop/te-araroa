@@ -41,7 +41,7 @@ const W = {
     link: "Ton site ou ton Insta", linkHint: "pour le lien sous ton logo", logo: "Ton logo", logoHint: "facultatif, carré de préférence", logoPick: "Choisir une image", logoChange: "Changer",
     price: "Ton prix", priceHint: `à partir de ${MIN_EUR} €`,
     askFree: "Pas de budget : je demande ce ticket gratuitement", askFreeHint: "sur accord, je te réponds",
-    pay: (n: string) => `Payer ${n} € et prendre le ticket`, send: "Envoyer la demande", sending: "Un instant…", cancel: "Annuler",
+    pay: (n: string) => `Payer ${n} €`, send: "Envoyer la demande", sending: "Un instant…", cancel: "Annuler",
     secure: "Paiement sécurisé par Stripe : carte, Apple Pay ou Google Pay. Le ticket est à toi dès que c'est payé.",
     needWho: "Écris ton nom ou celui de ta marque.", needContact: "Laisse-moi un moyen de te joindre.", needPrice: `Le prix commence à ${MIN_EUR} €.`, badLogo: "Ce fichier n'est pas une image.",
     err: {
@@ -87,7 +87,7 @@ const W = {
     link: "Your website or Instagram", linkHint: "for the link under your logo", logo: "Your logo", logoHint: "optional, square if you can", logoPick: "Choose an image", logoChange: "Change",
     price: "Your price", priceHint: `from €${MIN_EUR}`,
     askFree: "No budget: I'm asking for this ticket for free", askFreeHint: "if I agree, I'll get back to you",
-    pay: (n: string) => `Pay €${n} and take the ticket`, send: "Send the request", sending: "One moment…", cancel: "Cancel",
+    pay: (n: string) => `Pay €${n}`, send: "Send the request", sending: "One moment…", cancel: "Cancel",
     secure: "Secure payment by Stripe: card, Apple Pay or Google Pay. The ticket is yours as soon as it's paid.",
     needWho: "Write your name or your brand's.", needContact: "Leave me a way to reach you.", needPrice: `The price starts at €${MIN_EUR}.`, badLogo: "That file isn't an image.",
     err: {
