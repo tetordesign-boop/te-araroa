@@ -11,8 +11,9 @@ import { detent, isDesktop, mapApi, type Detent } from "./state";
 // it, "map": the map almost whole, the sheet down to its grip; a swipe down or the map's own button takes it there)
 const PEEK = 300;
 const ORDER: Detent[] = ["full", "half", "peek", "map"];
-/** the map almost whole: of the sheet, only its grip shows, above the navigation floating over its foot */
-const mapHeight = () => {
+/** the map almost whole: of the sheet, only its grip shows, above the navigation floating over its foot (measured
+ * with the rest, not on every move of the finger: reading where the navigation is would lay the page out each time) */
+const mapHeightNow = () => {
   const nav = document.querySelector<HTMLElement>(".lnav");
   const top = nav ? nav.getBoundingClientRect().top : window.innerHeight - 80;
   return Math.max(60, Math.round(window.innerHeight - top + 24));
@@ -24,7 +25,8 @@ const FOLLOWERS = ".maplibregl-ctrl-bottom-right, .replay-fab, .replay-hud, .map
 export function Sheet({ children, label, inert }: { children: ComponentChildren; label: string; inert?: boolean }) {
   const ref = useRef<HTMLElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
-  const geo = useRef({ sheetH: window.innerHeight - 90, vh: window.innerHeight });
+  const geo = useRef({ sheetH: window.innerHeight - 90, vh: window.innerHeight, mapH: 104 });
+  const riders = useRef<HTMLElement[] | null>(null);
   const anim = useRef({ y: Number.NaN, v: 0, target: 0, raf: 0, dragging: false, justDragged: false, flickV: 0 });
   const current = detent.value;
 
@@ -32,7 +34,7 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
     const { sheetH, vh } = geo.current;
     const peek = Math.min(PEEK, sheetH * 0.5);
     const half = Math.min(sheetH, Math.max(peek + 90, Math.round(vh * 0.55)));
-    return { map: Math.min(mapHeight(), peek - 40), peek, half, full: sheetH };
+    return { map: Math.min(geo.current.mapH, peek - 40), peek, half, full: sheetH };
   };
   const yFor = (d: Detent) => geo.current.sheetH - heights()[d];
 
@@ -49,9 +51,12 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
     const visible = `${(isDesktop.value ? 0 : Math.max(0, geo.current.sheetH - y)).toFixed(0)}px`;
     if (rest) {
       for (const f of document.querySelectorAll<HTMLElement>(FOLLOWERS)) f.style.removeProperty("--sheet-visible");
+      riders.current = null;
       document.documentElement.style.setProperty("--sheet-visible", visible);
     } else {
-      for (const f of document.querySelectorAll<HTMLElement>(FOLLOWERS)) f.style.setProperty("--sheet-visible", visible);
+      // (looked up once per movement, not on every frame of it)
+      riders.current ??= [...document.querySelectorAll<HTMLElement>(FOLLOWERS)];
+      for (const f of riders.current) f.style.setProperty("--sheet-visible", visible);
     }
   };
 
@@ -87,7 +92,7 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
     const el = ref.current;
     if (!el) return;
     const measure = () => {
-      geo.current = { sheetH: el.offsetHeight, vh: window.innerHeight };
+      geo.current = { sheetH: el.offsetHeight, vh: window.innerHeight, mapH: mapHeightNow() };
       if (!anim.current.dragging) { cancelAnimationFrame(anim.current.raf); place(yFor(detent.peek()), true); }
     };
     measure();
@@ -96,6 +101,11 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
     window.addEventListener("resize", measure);
     return () => { ro.disconnect(); window.removeEventListener("resize", measure); };
   }, []);
+
+  // the page knows the sheet's height: what it hides can rest (the sponsors' coins on the map stop turning under it)
+  useLayoutEffect(() => {
+    document.documentElement.dataset.sheet = isDesktop.value ? "panel" : current;
+  }, [current, isDesktop.value]);
 
   useLayoutEffect(() => {
     if (anim.current.dragging) return;
@@ -110,7 +120,8 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
     const visible = heights()[current];
     // beside the panel (its width depends on the screen: narrower on a phone held sideways)
     // (its layout box: during the presentation it is slid away by a transform)
-    const panelRight = ref.current ? ref.current.offsetLeft + ref.current.offsetWidth : 446;
+    // (read only for the panel: on a phone it would lay the page out for nothing)
+    const panelRight = isDesktop.value && ref.current ? ref.current.offsetLeft + ref.current.offsetWidth : 446;
     const short = vh < 520;
     mapApi.value?.setPadding(isDesktop.value
       ? { left: panelRight - 6, bottom: short ? 20 : 40, top: short ? 24 : 90, right: 70 }
@@ -230,6 +241,15 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
       if (s?.pulling) end(e.target, e.timeStamp);
     };
 
+    // while the content scrolls (and a moment after), what moves on its own inside it holds still: the photo band
+    let still = 0;
+    const onScroll = () => {
+      if (!still) el.classList.add("is-scrolling");
+      clearTimeout(still);
+      still = window.setTimeout(() => { still = 0; el.classList.remove("is-scrolling"); }, 220);
+    };
+    body.addEventListener("scroll", onScroll, { passive: true });
+
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerup", onUp);
@@ -239,6 +259,8 @@ export function Sheet({ children, label, inert }: { children: ComponentChildren;
     body.addEventListener("touchend", onTouchEnd);
     body.addEventListener("touchcancel", onTouchEnd);
     return () => {
+      clearTimeout(still);
+      body.removeEventListener("scroll", onScroll);
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerup", onUp);

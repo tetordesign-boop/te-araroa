@@ -21,6 +21,20 @@ const requests = signal<Req[] | null>(null);
 /** my Stripe payment link with a price chosen by the payer (settings.sponsor_pay_link) */
 const payLink = signal<string | null>(null);
 const PAY_LINK = /^https:\/\/(buy|donate)\.stripe\.com\/[A-Za-z0-9_]+$/;
+/** my Stripe link sells tickets of fixed amounts (1, 5, 10, 100 €) whose quantities the sponsor sets (Stripe doesn't
+ * let every account leave the price to the payer): then the message says to make the total the agreed amount. Kept
+ * on this phone. */
+const UNITS_KEY = "spons-pay-units";
+const payUnits = signal<boolean>((() => { try { return localStorage.getItem(UNITS_KEY) !== "off"; } catch (_) { return true; } })());
+/** the euros in what they offered ("50 €", "50", "50,00 €"), or nothing when it's another currency or no number */
+function euros(offer: string | null): string | null {
+  const v = (offer ?? "").toLowerCase();
+  if (/nzd|nz\$|\$|usd|aud|chf|£|gbp/.test(v)) return null;
+  const m = /(\d+(?:[.,]\d{1,2})?)/.exec(v.replace(/\s/g, ""));
+  if (!m) return null;
+  const n = Math.round(parseFloat(m[1].replace(",", ".")));
+  return n >= 1 ? String(n) : null;
+}
 const given = signal<Given[]>([]);
 /** null until asked, false when the tables aren't there yet */
 const ready = signal<boolean | null>(MOCK && new URLSearchParams(location.search).has("nofeatures") ? false : null);
@@ -177,6 +191,14 @@ function PayLinkBox() {
             </div>
           </div>
         )}
+        <label class="switchrow">
+          <span class="switchrow__text">Lien à quantités<small>{payUnits.value ? "Le message dit au sponsor d'ajuster les quantités pour arriver au montant convenu." : "Le sponsor choisit lui-même le montant sur la page Stripe."}</small></span>
+          <input type="checkbox" role="switch" checked={payUnits.value} onChange={(e) => {
+            const on = (e.target as HTMLInputElement).checked;
+            payUnits.value = on;
+            try { localStorage.setItem(UNITS_KEY, on ? "on" : "off"); } catch (_) { /* ignore */ }
+          }} />
+        </label>
       </div>
     </>
   );
@@ -297,9 +319,13 @@ function RequestCell({ r }: { r: Req }) {
   const sendPay = async () => {
     const url = payUrlFor(r);
     if (!url) { say("Ajoute d'abord ton lien Stripe, en haut de la page.", 3200); return; }
-    const text = r.lang === "en"
+    const n = euros(r.offer);
+    const units = !payUnits.value ? ""
+      : r.lang === "en" ? `\nOn the payment page, adjust the quantities so the total comes to the agreed amount${n ? ` (€${n})` : ""}.`
+      : `\nSur la page de paiement, ajuste les quantités pour que le total fasse le montant convenu${n ? ` (${n} €)` : ""}.`;
+    const text = (r.lang === "en"
       ? `Hi ${r.name}! It's a yes for the "${r.spot_label}" ticket, thank you! Here's the secure payment link (Stripe): ${url}`
-      : `Salut ${r.name} ! C'est d'accord pour le ticket « ${r.spot_label} », merci ! Voici le lien de paiement sécurisé (Stripe) : ${url}`;
+      : `Salut ${r.name} ! C'est d'accord pour le ticket « ${r.spot_label} », merci ! Voici le lien de paiement sécurisé (Stripe) : ${url}`) + units;
     try { await navigator.clipboard.writeText(text); say("Message avec le lien copié : colle-le dans ta réponse.", 3200); }
     catch { say("Copie impossible sur cet appareil."); return; }
     if (r.pay_url === url) return;

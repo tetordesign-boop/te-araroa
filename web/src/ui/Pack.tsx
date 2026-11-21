@@ -6,7 +6,7 @@
 import { useState } from "preact/hooks";
 import { mediaUrl } from "../config";
 import { lang, t, type Key } from "../i18n";
-import { fmtInt, typo } from "../lib/format";
+import { fmtInt, numberFormat, typo } from "../lib/format";
 import { fmtWeight, GEAR_CATS, gearTotals, itemG, sectionG, type GearCat, type GearItem } from "../lib/gear";
 import { settings } from "../lib/data";
 import { Backpack, ChevronRight } from "./icons";
@@ -17,7 +17,7 @@ const catName = (c: GearCat) => t(`gear_${c}` as Key);
 const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** "8,4" for the big line (kg, one decimal) */
-const kgNum = (g: number, l: "fr" | "en") => new Intl.NumberFormat(l === "fr" ? "fr-FR" : "en-NZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(g / 1000);
+const kgNum = (g: number, l: "fr" | "en") => numberFormat(l === "fr" ? "fr-FR" : "en-NZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(g / 1000);
 /** a figure with its unit apart, as in the stats */
 const Fig = ({ g, l }: { g: number; l: "fr" | "en" }) => {
   const [v, u] = fmtWeight(g, l).split(" ");

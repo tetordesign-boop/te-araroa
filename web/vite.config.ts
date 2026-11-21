@@ -42,6 +42,36 @@ function preloadFonts(): Plugin {
   };
 }
 
+/** A content security policy for the built pages (GitHub Pages can't send headers, so it goes in a <meta>): scripts
+ * only from the site itself, so nothing slipped into a page can run; the map's workers, the photos, tiles and the
+ * database over https; videos only from YouTube (no cookies) and Vimeo. Styles stay open: the code and the map set
+ * them inline. Not in development, where Vite injects its own scripts. */
+function contentSecurityPolicy(): Plugin {
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "media-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https: wss://*.supabase.co",
+    "worker-src 'self' blob:",
+    "child-src 'self' blob:",
+    "frame-src https://www.youtube-nocookie.com https://player.vimeo.com",
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+  return {
+    name: "content-security-policy",
+    apply: "build",
+    transformIndexHtml(html) {
+      return html.replace('<meta charset="utf-8" />', `<meta charset="utf-8" />\n    <meta http-equiv="Content-Security-Policy" content="${csp}" />`);
+    },
+  };
+}
+
 /** Writes this build's files into the service worker (public/sw.js, `BUILD`), so it keeps them all on the phone from
  * the moment it installs, and is itself new with every version of the site. */
 function precacheList(): Plugin {
@@ -100,7 +130,7 @@ function activationFiles(): Plugin {
 
 export default defineConfig({
   base: "./",
-  plugins: [preact(), absoluteShareLinks(), preloadFonts(), precacheList(), activationFiles()],
+  plugins: [preact(), contentSecurityPolicy(), absoluteShareLinks(), preloadFonts(), precacheList(), activationFiles()],
   build: {
     target: "es2020",
     sourcemap: false,

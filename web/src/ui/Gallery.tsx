@@ -15,6 +15,8 @@ function embedHtml(url: string): string {
   if (yt) return `<iframe src="https://www.youtube-nocookie.com/embed/${yt}?playsinline=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="${t("video")}"></iframe>`;
   const vm = /vimeo\.com\/(\d+)/.exec(url);
   if (vm) return `<iframe src="https://player.vimeo.com/video/${vm[1]}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="${t("video")}"></iframe>`;
+  // any other link opens in a new tab, and only if it's a web address
+  if (!/^https?:\/\/[^\s"'<>]+$/i.test(url)) return "";
   return `<a href="${encodeURI(url)}" target="_blank" rel="noopener" style="color:#fff;font:600 17px system-ui">${t("openVideo")}</a>`;
 }
 

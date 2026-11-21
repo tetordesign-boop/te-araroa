@@ -212,6 +212,39 @@ const replayable = computed(() => {
 
 const viewKey = (v: ReturnType<typeof view.peek>) => (v.name === "day" ? `day-${v.n}` : v.name === "place" ? `place-${v.id}` : v.name);
 
+// The pieces of the page that change often (the sheet's height, a replay's progress, a message, the map modes card)
+// each read their own state, so that changing it redraws them alone, not the whole page and the view in the sheet.
+function ModesCard() {
+  return modesOpen.value ? <MapModes /> : null;
+}
+function ReplayFab() {
+  const r = replayable.value;
+  if (!r || replayState.value || cameraShow.value || (!isDesktop.value && detent.value === "full")) return null;
+  return (
+    <button class="replay-fab glass" type="button" data-sfx="whoosh" onClick={() => startReplay(r)}>
+      <Replay />{t("replay3d")}
+    </button>
+  );
+}
+function ReplayHud() {
+  const s = replayState.value;
+  if (!s) return null;
+  return (
+    <div class="replay-hud glass" role="status">
+      <span class="replay-hud__title">{t("day", { n: s.n })}</span>
+      <span class="replay-hud__bar"><span style={{ width: `${Math.round(s.progress * 100)}%` }} /></span>
+      <button class="iconbtn" type="button" data-sfx="close" aria-label={t("stopReplay")} onClick={() => replayState.value?.stop()}><Close /></button>
+    </div>
+  );
+}
+function Pill() {
+  return replayState.value ? null : <ShowPill />;
+}
+function Toast() {
+  const m = toastMsg.value;
+  return <div class={`toast glass${m ? " is-on" : ""}`} role="status" aria-live="polite">{m}</div>;
+}
+
 export function App() {
   const mapEl = useRef<HTMLDivElement>(null);
 
@@ -429,7 +462,7 @@ export function App() {
       </header>
 
       <Controls />
-      {modesOpen.value && <MapModes />}
+      <ModesCard />
 
       <Sheet label={t("whereNow")} inert={!!trailMode.value || introOpen.value || tunnelOpen.value}>
         {isDesktop.value && <Brand inPanel />}
@@ -457,25 +490,13 @@ export function App() {
 
       <LiquidNav inert={!!trailMode.value || introOpen.value || tunnelOpen.value} />
 
-      {replayable.value && !replayState.value && !cameraShow.value && (isDesktop.value || detent.value !== "full") && (
-        <button class="replay-fab glass" type="button" data-sfx="whoosh" onClick={() => startReplay(replayable.value!)}>
-          <Replay />{t("replay3d")}
-        </button>
-      )}
-
-      {replayState.value && (
-        <div class="replay-hud glass" role="status">
-          <span class="replay-hud__title">{t("day", { n: replayState.value.n })}</span>
-          <span class="replay-hud__bar"><span style={{ width: `${Math.round(replayState.value.progress * 100)}%` }} /></span>
-          <button class="iconbtn" type="button" data-sfx="close" aria-label={t("stopReplay")} onClick={() => replayState.value?.stop()}><Close /></button>
-        </div>
-      )}
-
-      {!replayState.value && <ShowPill />}
+      <ReplayFab />
+      <ReplayHud />
+      <Pill />
       {trailMode.value && <TrailMode />}
       <SponsorPins />
 
-      <div class={`toast glass${toastMsg.value ? " is-on" : ""}`} role="status" aria-live="polite">{toastMsg.value}</div>
+      <Toast />
       {tunnelOpen.value && !introOpen.value && <PhotoTunnel />}
       {introOpen.value && <Intro />}
     </>

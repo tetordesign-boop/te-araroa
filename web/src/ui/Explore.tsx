@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from "preact/hooks";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import { lang, t } from "../i18n";
 import { phase, progressKm, route } from "../lib/data";
 import { fmtKm } from "../lib/format";
@@ -93,9 +93,17 @@ function Sections({ list }: { list: Place[] }) {
     }
     return out.filter((s) => s.items.length);
   }, [list, towns]);
+  // the whole trail is a long list: the first sections now, the rest a few per frame, so opening the explorer
+  // never holds the navigation's drop or the finger
+  const [shownN, setShownN] = useState(3);
+  useEffect(() => {
+    if (shownN >= sections.length) return;
+    const id = requestAnimationFrame(() => setShownN((n) => n + 3));
+    return () => cancelAnimationFrame(id);
+  }, [shownN, sections.length]);
   return (
     <>
-      {sections.map((s) => (
+      {sections.slice(0, shownN).map((s) => (
         <section class="psection">
           <h3 class="psection__head">{s.from}<span aria-hidden="true"> – </span><span class="sr-only">{l === "fr" ? " à " : " to "}</span>{s.to}</h3>
           <div class="rows">{s.items.map((p) => <PlaceRow p={p} />)}</div>
