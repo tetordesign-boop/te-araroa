@@ -160,6 +160,16 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "p-d-shelf-open", ctx: desktop(false), url: "#/journal", plain: 14000, act: seq(toShelf, wait(1500), tap(".gf-hit"), wait(2600)) },
   { id: "p-m-about", ctx: mobile(false), url: "#/apropos", plain: 14000, act: seq((p) => p.evaluate(() => { const b = document.querySelector(".sheet__body"); if (b) b.scrollTop = b.scrollHeight; }), wait(1200)), probe: "(document.querySelector('.logo-note') ? 'logo section still there' : 'no logo section') + ' | ' + document.querySelector('.brand__title')?.innerText" },
   { id: "p-m-voyage", ctx: mobile(false), url: "#/voyage", plain: 10000, probe: "document.querySelector('.tun')?.innerText" },
+  // after the security and speed work: the explorer's whole list, the sponsors' coins, sign-ups closed or not
+  { id: "p-m-explore", ctx: mobile(false), url: "#/explorer", plain: 12000, act: seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(900), (p) => p.evaluate(() => { const b = document.querySelector(".sheet__body"); if (b) b.scrollTop = b.scrollHeight; }), wait(1500)),
+    probe: "document.querySelectorAll('.psection').length + ' sections, ' + document.querySelectorAll('.psection .prow').length + ' places; sheet ' + document.documentElement.dataset.sheet" },
+  { id: "p-m-spin", ctx: mobile(false), url: "", plain: 12000,
+    probe: "JSON.stringify([...document.querySelectorAll('.spin')].map((e) => ({ cls: e.className.replace('maplibregl-marker maplibregl-marker-anchor-bottom ', ''), img: e.querySelector('img')?.naturalWidth ?? null })))" },
+  { id: "p-m-auth", ctx: mobile(false), url: "", plain: 4000, act: (p) => p.evaluate(async () => {
+      const r = await fetch("https://jmedorwtksxxnzwyjvbz.supabase.co/auth/v1/settings?apikey=sb_publishable_-XKxRnwVevyUpGjZ9HF0NQ_4B_ykHCx").then((x) => x.json()).catch((e) => ({ error: String(e) }));
+      const csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]') ? "csp on" : "NO CSP";
+      window.__qa = `${csp} | signup ${r.disable_signup ? "closed" : "OPEN"} | autoconfirm ${r.mailer_autoconfirm} | anonymous ${r.anonymous_users ?? "?"} | providers ${Object.entries(r.external || {}).filter(([, v]) => v).map(([k]) => k).join(",")}`;
+    }), probe: "window.__qa" },
   // the database as visitors reach it: each request's status, and the live feed's channel joined
   { id: "p-m-data", ctx: mobile(false), url: "", plain: 3000, act: watchData, probe: "window.__qa" },
 ];
