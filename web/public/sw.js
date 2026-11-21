@@ -183,7 +183,8 @@ self.addEventListener("fetch", (event) => {
 
 // ---------------------------------------------------------------- notifications
 // A day published: the "push" server function sends {title, body, url, tag, icon} (src/lib/push.ts signs the phone
-// up). A tap opens the day: in the site if it is already open, else in a new window.
+// up). A tap opens the day: in the site if it is already open, else in a new window. My own alerts (a sponsor, a
+// note, a question: src/admin/alerts.ts signs the Carnet up) open the Carnet, on the page they are about.
 self.addEventListener("push", (event) => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch (_) { d = { body: event.data ? event.data.text() : "" }; }
@@ -203,6 +204,17 @@ self.addEventListener("notificationclick", (event) => {
   const url = new URL((event.notification.data && event.notification.data.url) || scope, scope).href;
   event.waitUntil((async () => {
     const open = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    if (url.includes("/admin/")) {
+      // the Carnet already open: it goes to that page; else the Carnet opens there
+      const carnet = open.find((c) => c.url.includes("/admin/"));
+      if (carnet) {
+        await carnet.focus();
+        carnet.postMessage({ type: "open", url });
+        return;
+      }
+      await self.clients.openWindow(url);
+      return;
+    }
     // the site itself (not the Carnet, which lives under admin/)
     const site = open.find((c) => c.url.startsWith(scope) && !c.url.includes("/admin/"));
     if (site) {

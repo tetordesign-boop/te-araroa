@@ -7,7 +7,7 @@
 import { useEffect } from "preact/hooks";
 import { lang } from "../i18n";
 import { route } from "../lib/data";
-import { cols, ends, linkLabel, logoSrc, parcelSpots, sections, spotById, spotCoord, taken, type Spot, type Taken } from "../lib/sponsors";
+import { cols, ends, linkLabel, logoSrc, sections, spotById, spotCoord, taken, type Spot, type Taken } from "../lib/sponsors";
 import { go, mapApi } from "./state";
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
@@ -64,7 +64,7 @@ function build(spot: Spot, owner: Taken, l: "fr" | "en", close: () => void): HTM
 export function SponsorPins() {
   const m = mapApi.value, t = taken.value, l = lang.value, r = route.value;
   // the spots are worked out from the trail's data, which may still be loading
-  const known = cols.value.length + sections.value.length + parcelSpots.value.length + ends.value.length;
+  const known = cols.value.length + sections.value.length + ends.value.length;
   useEffect(() => {
     if (!m || !t.size) return;
     const els: HTMLElement[] = [];

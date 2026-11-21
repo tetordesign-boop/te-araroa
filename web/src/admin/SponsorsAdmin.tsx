@@ -1,8 +1,9 @@
-// The Carnet's "Sponsors": the requests sent from the site's "Parraine le sentier" page (who, for which ticket, the
-// price they offer, how to reach them, their site, their word), newest first, and the spots I've given. "Attribuer"
-// gives the spot: the name shown, the link (site or Instagram) and the logo, which then turns in 3D on the map at that
-// spot. Kept in supabase/migrations/20261120000100_sponsors.sql: the requests are private, the given spots public.
-// Until that script has run, this page says how to run it from the phone (copy, paste in Supabase, Run).
+// The Carnet's "Sponsors". Tickets bought on the site are given on their own once paid (the "checkout" function asks
+// Stripe): here I see them, with their amount, and the rare one paid for a spot taken just before (to refund). Tickets
+// asked for free wait for my yes: "Attribuer" gives the spot (name, link, logo, which then turns in 3D on the map).
+// Then the gifts ("coups de pouce"), and the Stripe key that opens payments: pasted once, never shown again.
+// Kept in supabase/migrations/20261120000100_sponsors.sql and 20261121000200_sponsor_checkout.sql. Until the first has
+// run, this page says how to run it from the phone (copy, paste in Supabase, Run).
 import { signal } from "@preact/signals";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { MOCK, mediaUrl } from "../config";
@@ -13,51 +14,47 @@ import { sba } from "./sb";
 
 interface Req {
   id: string; spot_id: string; spot_label: string; name: string; contact: string; link: string | null; offer: string | null; message: string | null;
-  lang: string; status: "new" | "done"; pay_url: string | null; paid_at: string | null; created_at: string;
+  lang: string; kind: "ask" | "buy"; status: "new" | "done" | "pending" | "paid" | "expired" | "conflict";
+  amount_cents: number | null; hold_until: string | null; paid_at: string | null; created_at: string;
 }
 interface Given { spot_id: string; name: string; logo: string | null; link: string | null }
+interface GiftRow { id: string; amount_cents: number; currency: string; name: string | null; message: string | null; email: string | null; created_at: string }
 
 const requests = signal<Req[] | null>(null);
-/** my Stripe payment link with a price chosen by the payer (settings.sponsor_pay_link) */
-const payLink = signal<string | null>(null);
-const PAY_LINK = /^https:\/\/(buy|donate)\.stripe\.com\/[A-Za-z0-9_]+$/;
-/** my Stripe link sells tickets of fixed amounts (1, 5, 10, 100 €) whose quantities the sponsor sets (Stripe doesn't
- * let every account leave the price to the payer): then the message says to make the total the agreed amount. Kept
- * on this phone. */
-const UNITS_KEY = "spons-pay-units";
-const payUnits = signal<boolean>((() => { try { return localStorage.getItem(UNITS_KEY) !== "off"; } catch (_) { return true; } })());
-/** the euros in what they offered ("50 €", "50", "50,00 €"), or nothing when it's another currency or no number */
-function euros(offer: string | null): string | null {
-  const v = (offer ?? "").toLowerCase();
-  if (/nzd|nz\$|\$|usd|aud|chf|£|gbp/.test(v)) return null;
-  const m = /(\d+(?:[.,]\d{1,2})?)/.exec(v.replace(/\s/g, ""));
-  if (!m) return null;
-  const n = Math.round(parseFloat(m[1].replace(",", ".")));
-  return n >= 1 ? String(n) : null;
-}
 const given = signal<Given[]>([]);
+const gifts = signal<GiftRow[]>([]);
+/** the Stripe key's ends ("rk_live_…ab12"), null when there's none, undefined until asked */
+const stripeKey = signal<string | null | undefined>(undefined);
 /** null until asked, false when the tables aren't there yet */
 const ready = signal<boolean | null>(MOCK && new URLSearchParams(location.search).has("nofeatures") ? false : null);
 
 export async function loadSponsors() {
   if (MOCK) {
     if (ready.value === false) return;
+    const ago = (h: number) => new Date(Date.now() - h * 3600e3).toISOString();
+    const base = { contact: "@keacoffee", link: null, offer: null, message: null, lang: "fr", amount_cents: null, hold_until: null, paid_at: null };
     requests.value = [
-      { id: "r1", spot_id: "col-stag-saddle", spot_label: "Stag Saddle", name: "Kea Coffee", contact: "@keacoffee", link: "@keacoffee", offer: "250 NZD", message: "On adorerait le point le plus haut !", lang: "fr", status: "new", pay_url: null, paid_at: null, created_at: new Date(Date.now() - 3600e3).toISOString() },
-      { id: "r2", spot_id: "km-120", spot_label: "Kilomètre 120", name: "Léa", contact: "lea@example.com", link: null, offer: "20 €", message: null, lang: "fr", status: "done", pay_url: null, paid_at: new Date(Date.now() - 40000e3).toISOString(), created_at: new Date(Date.now() - 86400e3).toISOString() },
-      { id: "r3", spot_id: "km-1", spot_label: "Kilomètre 1", name: "Tom", contact: "@tom", link: null, offer: "0", message: "Pour le premier pas !", lang: "fr", status: "new", pay_url: null, paid_at: null, created_at: new Date(Date.now() - 600e3).toISOString() },
+      { ...base, id: "r4", spot_id: "col-stag-saddle", spot_label: "Stag Saddle", name: "Kea Coffee", link: "@keacoffee", message: "On adorerait le point le plus haut !", kind: "buy", status: "paid", amount_cents: 25000, paid_at: ago(1), created_at: ago(1.1) },
+      { ...base, id: "r5", spot_id: "section-04", spot_label: "Boyle Village → Arthur's Pass", name: "Tūī Outdoors", contact: "hi@tui.example", kind: "buy", status: "pending", amount_cents: 8000, hold_until: new Date(Date.now() + 20 * 60e3).toISOString(), created_at: ago(0.2) },
+      { ...base, id: "r6", spot_id: "km-1", spot_label: "Kilomètre 1", name: "Lucas", contact: "lucas@example.com", kind: "buy", status: "conflict", amount_cents: 1000, paid_at: ago(30), created_at: ago(30) },
+      { ...base, id: "r3", spot_id: "km-2", spot_label: "Kilomètre 2", name: "Tom", contact: "@tom", offer: "0", message: "Pour le premier pas !", kind: "ask", status: "new", created_at: ago(0.1) },
+      { ...base, id: "r2", spot_id: "km-120", spot_label: "Kilomètre 120", name: "Léa", contact: "lea@example.com", offer: "0", kind: "ask", status: "done", created_at: ago(24) },
     ];
-    payLink.value = "https://buy.stripe.com/test_00example";
-    given.value = [{ spot_id: "km-120", name: "Léa", logo: null, link: null }];
+    given.value = [{ spot_id: "col-stag-saddle", name: "Kea Coffee", logo: null, link: "https://www.instagram.com/keacoffee" }, { spot_id: "km-120", name: "Léa", logo: null, link: null }];
+    gifts.value = [
+      { id: "g1", amount_cents: 2000, currency: "eur", name: "Mamie Jo", message: "Bonne route mon grand !", email: null, created_at: ago(3) },
+      { id: "g2", amount_cents: 500, currency: "eur", name: null, message: null, email: null, created_at: ago(50) },
+    ];
+    stripeKey.value = new URLSearchParams(location.search).has("nostripe") ? null : "rk_test_…mock";
     ready.value = true;
     return;
   }
-  const [r, g, st] = await Promise.all([
-    sba.from("sponsor_requests").select("id, spot_id, spot_label, name, contact, link, offer, message, lang, status, pay_url, paid_at, created_at").order("created_at", { ascending: false }).limit(300),
+  const [r, g, gf, k] = await Promise.all([
+    sba.from("sponsor_requests").select("id, spot_id, spot_label, name, contact, link, offer, message, lang, kind, status, amount_cents, hold_until, paid_at, created_at").order("created_at", { ascending: false }).limit(300),
     sba.from("sponsor_spots").select("spot_id, name, logo, link").order("created_at", { ascending: false }),
-    sba.from("settings").select("sponsor_pay_link").eq("id", 1).maybeSingle(),
+    sba.from("gifts").select("id, amount_cents, currency, name, message, email, created_at").order("created_at", { ascending: false }).limit(200),
+    sba.rpc("admin_stripe_key_hint"),
   ]);
-  if (!st.error) payLink.value = (st.data as { sponsor_pay_link: string | null } | null)?.sponsor_pay_link ?? null;
   if (r.error || g.error) {
     const m = `${r.error?.code ?? ""} ${r.error?.message ?? ""} ${g.error?.code ?? ""} ${g.error?.message ?? ""}`;
     if (/does not exist|schema cache|42P01|42703|PGRST20[45]/i.test(m)) ready.value = false;
@@ -66,6 +63,8 @@ export async function loadSponsors() {
   ready.value = true;
   requests.value = r.data as Req[];
   given.value = g.data as Given[];
+  gifts.value = gf.error ? [] : (gf.data as GiftRow[]);
+  stripeKey.value = k.error ? null : (k.data as string | null);
 }
 
 /** the home cell's line */
@@ -73,10 +72,13 @@ export function sponsorsLine(): string {
   if (ready.value === false) return "À activer";
   const l = requests.value;
   if (!l) return "Les demandes de sponsoring";
-  const n = l.filter((r) => r.status === "new").length;
-  const g = given.value.length;
-  if (n) return `${n} ${n > 1 ? "nouvelles demandes" : "nouvelle demande"}`;
-  return g ? `${g} ${g > 1 ? "emplacements attribués" : "emplacement attribué"}` : "Aucune demande pour l'instant";
+  const n = l.filter((r) => r.kind === "ask" && r.status === "new").length;
+  const bought = l.filter((r) => r.kind === "buy" && r.status === "paid").length;
+  const refund = l.filter((r) => r.status === "conflict").length;
+  if (refund) return `${refund} paiement${refund > 1 ? "s" : ""} à rembourser`;
+  if (n) return `${n} ${n > 1 ? "tickets gratuits demandés" : "ticket gratuit demandé"}`;
+  if (bought || gifts.value.length) return [bought ? `${bought} ticket${bought > 1 ? "s" : ""} acheté${bought > 1 ? "s" : ""}` : null, gifts.value.length ? `${gifts.value.length} coup${gifts.value.length > 1 ? "s" : ""} de pouce` : null].filter(Boolean).join(", ");
+  return stripeKey.value === null ? "Paiements à ouvrir" : "Rien pour l'instant";
 }
 
 const when = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
@@ -119,24 +121,42 @@ async function uploadLogo(file: File, spot: string): Promise<string> {
   } finally { URL.revokeObjectURL(url); }
 }
 
+const euro = (c: number | null) => `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format((c ?? 0) / 100)} €`;
+const hour = (iso: string) => new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
 export function SponsorsAdminPage() {
   useEffect(() => { loadSponsors(); }, []);
   const list = requests.value;
   const labels = new Map((list ?? []).map((r) => [r.spot_id, r.spot_label]));
-  const fresh = (list ?? []).filter((r) => r.status === "new"), done = (list ?? []).filter((r) => r.status === "done");
+  const asks = (list ?? []).filter((r) => r.kind !== "buy");
+  const fresh = asks.filter((r) => r.status === "new"), done = asks.filter((r) => r.status !== "new");
+  const buys = (list ?? []).filter((r) => r.kind === "buy" && r.status !== "expired").slice(0, 40);
+  const total = gifts.value.reduce((n, g) => n + g.amount_cents, 0);
 
   if (ready.value === false) return <Setup />;
   return (
     <div class="adm">
       <Bar title="Sponsors" />
-      <p class="adm-sub" style={{ marginTop: "12px" }}>Les demandes envoyées depuis la page « Parraine le sentier ». Toi seul les vois. Quand tu es d'accord, envoie le lien de paiement ; une fois payé, « Attribuer » réserve le ticket sur le site et fait tourner le logo sur la carte.</p>
-      <PayLinkBox />
+      <p class="adm-sub" style={{ marginTop: "12px" }}>Les tickets achetés sur le site sont attribués tout seuls dès le paiement : leur logo tourne sur la carte. Les tickets demandés gratuitement attendent ton accord ici. Toi seul vois cette page.</p>
+      <StripeBox />
 
-      <div class="group__title">Nouvelles demandes</div>
+      <div class="group__title">Tickets gratuits demandés</div>
       <div class="group">
         {list === null && <div class="cell"><span class="cell__meta">Chargement…</span></div>}
         {list && !fresh.length && <div class="cell"><span class="cell__meta">Rien de nouveau.</span></div>}
         {fresh.map((r) => <RequestCell r={r} />)}
+      </div>
+
+      <div class="group__title">Achats</div>
+      <div class="group">
+        {list && !buys.length && <div class="cell"><span class="cell__meta">Aucun achat pour l'instant.</span></div>}
+        {buys.map((r) => <BuyCell r={r} />)}
+      </div>
+
+      <div class="group__title">Coups de pouce{total ? `, ${euro(total)} en tout` : ""}</div>
+      <div class="group">
+        {!gifts.value.length && <div class="cell"><span class="cell__meta">Aucun pour l'instant.</span></div>}
+        {gifts.value.map((g) => <GiftCell g={g} />)}
       </div>
 
       <div class="group__title">Emplacements attribués</div>
@@ -153,63 +173,125 @@ export function SponsorsAdminPage() {
   );
 }
 
-/** My Stripe link, made once in Stripe ("customers choose what to pay"); each request adds its reference to it. */
-function PayLinkBox() {
+/** The key that opens payments: a Stripe restricted key, pasted once (kept in the database, never shown again). */
+function StripeBox() {
   const [editing, setEditing] = useState(false);
-  const [v, setV] = useState(payLink.value ?? "");
+  const [v, setV] = useState("");
   const [busy, setBusy] = useState(false);
-  const save = async () => {
-    const link = v.trim();
-    if (link && !PAY_LINK.test(link)) { say("Ce n'est pas un lien de paiement Stripe : il commence par https://buy.stripe.com/", 3600); return; }
+  const check = async () => {
     setBusy(true);
-    const { error } = MOCK ? { error: null } : await sba.from("settings").update({ sponsor_pay_link: link || null }).eq("id", 1);
+    const { data, error } = MOCK ? { data: { ok: true }, error: null } : await sba.functions.invoke("checkout", { body: { action: "check" } });
     setBusy(false);
-    if (error) { say("Pas enregistré : vérifie le réseau et réessaie."); return; }
-    payLink.value = link || null;
-    setEditing(false);
-    say(link ? "Lien de paiement enregistré." : "Lien de paiement retiré.");
+    if (!error && (data as { ok?: boolean })?.ok) { say("La clé marche : les achats et les dons sont ouverts.", 3200); return; }
+    const ctx = (error as { context?: Response } | null)?.context;
+    const body = ctx ? await ctx.json().catch(() => ({})) : {};
+    say(body?.detail === "key" ? "Stripe refuse cette clé : vérifie qu'elle a « Checkout Sessions : Écriture »." : body?.error === "not_configured" ? "Pas encore de clé." : "Pas pu vérifier : réessaie avec du réseau.", 4200);
   };
+  const save = async () => {
+    const key = v.trim();
+    if (!/^(rk|sk)_(live|test)_[A-Za-z0-9]{20,250}$/.test(key)) { say("Ce n'est pas une clé Stripe : elle commence par rk_live_…", 3600); return; }
+    setBusy(true);
+    const { data, error } = MOCK ? { data: `${key.slice(0, 8)}…${key.slice(-4)}`, error: null } : await sba.rpc("admin_set_stripe_key", { p_key: key });
+    setBusy(false);
+    if (error) { say("Pas enregistrée : vérifie le réseau et réessaie."); return; }
+    stripeKey.value = data as string;
+    setV("");
+    setEditing(false);
+    say(key.startsWith("sk_") ? "Clé enregistrée. Une clé restreinte (rk_) serait plus sûre." : "Clé enregistrée : je vérifie qu'elle marche…", 3000);
+    void check();
+  };
+  const sweep = async () => {
+    setBusy(true);
+    const { data, error } = MOCK ? { data: { given: 0, expired: 0 }, error: null } : await sba.functions.invoke("checkout", { body: { action: "sweep" } });
+    setBusy(false);
+    if (error) { say("Pas pu vérifier : réessaie avec du réseau."); return; }
+    const d = data as { given: number; expired: number };
+    say(d.given ? `${d.given} ticket${d.given > 1 ? "s" : ""} payé${d.given > 1 ? "s" : ""} attribué${d.given > 1 ? "s" : ""}.` : "Rien en attente.", 3000);
+    await loadSponsors();
+  };
+  const k = stripeKey.value;
   return (
     <>
-      <div class="group__title">Paiement</div>
+      <div class="group__title">Paiements</div>
       <div class="group">
         {!editing ? (
           <div class="cell">
             <span class="cell__main">
-              <span class="cell__title">Lien de paiement Stripe</span>
-              <span class="cell__meta">{payLink.value ? payLink.value.replace(/^https:\/\//, "") : "Pas encore de lien : crée-le dans Stripe, puis colle-le ici."}</span>
+              <span class="cell__title">Clé Stripe</span>
+              <span class="cell__meta">{k === undefined ? "…" : k ? `${k} · achats et dons ouverts` : "Pas encore de clé : les achats et les dons sont fermés sur le site."}</span>
             </span>
-            <button class="textbtn" type="button" onClick={() => { setV(payLink.value ?? ""); setEditing(true); }}>{payLink.value ? "Changer" : "Ajouter"}</button>
+            <button class="textbtn" type="button" onClick={() => setEditing(true)}>{k ? "Changer" : "Ajouter"}</button>
           </div>
         ) : (
           <div class="cell cell--stack spons">
-            <label class="cell"><span>Lien</span><input value={v} inputMode="url" autoCapitalize="none" placeholder="https://buy.stripe.com/…" onInput={(e) => setV((e.target as HTMLInputElement).value)} /></label>
+            <label class="cell"><span>Clé</span><input type="password" value={v} autoComplete="off" autoCapitalize="none" spellcheck={false} placeholder="rk_live_…" onInput={(e) => setV((e.target as HTMLInputElement).value)} /></label>
+            <p class="cell__meta" style={{ margin: "2px 0 0" }}>Elle reste dans ta base, protégée : personne ne peut la relire, même ici.</p>
             <div class="spons__actions">
-              <button class="textbtn" type="button" disabled={busy} onClick={() => setEditing(false)}>Annuler</button>
+              <button class="textbtn" type="button" disabled={busy} onClick={() => { setEditing(false); setV(""); }}>Annuler</button>
               <span style={{ flex: 1 }} />
-              <button class="textbtn textbtn--strong" type="button" disabled={busy} onClick={save}>{busy ? "…" : "Enregistrer"}</button>
+              <button class="textbtn textbtn--strong" type="button" disabled={busy || !v.trim()} onClick={save}>{busy ? "…" : "Enregistrer"}</button>
             </div>
           </div>
         )}
-        <label class="switchrow">
-          <span class="switchrow__text">Lien à quantités<small>{payUnits.value ? "Le message dit au sponsor d'ajuster les quantités pour arriver au montant convenu." : "Le sponsor choisit lui-même le montant sur la page Stripe."}</small></span>
-          <input type="checkbox" role="switch" checked={payUnits.value} onChange={(e) => {
-            const on = (e.target as HTMLInputElement).checked;
-            payUnits.value = on;
-            try { localStorage.setItem(UNITS_KEY, on ? "on" : "off"); } catch (_) { /* ignore */ }
-          }} />
-        </label>
+        {k && !editing && (
+          <div class="cell">
+            <span class="cell__main"><span class="cell__title">Vérifier</span><span class="cell__meta">La clé, et les tickets payés par quelqu'un qui a fermé la page trop vite</span></span>
+            <button class="textbtn" type="button" disabled={busy} onClick={check}>La clé</button>
+            <button class="textbtn" type="button" disabled={busy} onClick={sweep}>Les paiements</button>
+          </div>
+        )}
       </div>
     </>
   );
 }
 
-/** the payment link for one request: my Stripe link, with the request as its reference (and their email when given) */
-function payUrlFor(r: Req): string | null {
-  if (!payLink.value || isFreeOffer(r.offer)) return null;
-  const q = new URLSearchParams({ client_reference_id: r.id });
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.contact)) q.set("prefilled_email", r.contact);
-  return `${payLink.value}?${q}`;
+/** A ticket bought on the site: given on its own once paid; the rare one paid for a spot just taken is mine to refund. */
+function BuyCell({ r }: { r: Req }) {
+  const [busy, setBusy] = useState(false);
+  const remove = async () => {
+    if (!window.confirm(`Effacer l'achat de ${r.name} de la liste ? (ça ne touche ni Stripe, ni le ticket)`)) return;
+    setBusy(true);
+    const { error } = MOCK ? { error: null } : await sba.from("sponsor_requests").delete().eq("id", r.id);
+    setBusy(false);
+    if (error) { say("Pas effacé : vérifie le réseau et réessaie."); return; }
+    requests.value = (requests.value ?? []).filter((x) => x.id !== r.id);
+  };
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(r.contact); say("Contact copié"); } catch { say("Copie impossible : sélectionne le texte et copie-le."); }
+  };
+  const line = r.status === "paid" ? <span class="spons__paid">Payé {euro(r.amount_cents)}{r.paid_at ? ` le ${when(r.paid_at)}` : ""} · attribué tout seul</span>
+    : r.status === "conflict" ? <span class="spons__refund">Payé {euro(r.amount_cents)}, mais le ticket venait d'être pris : rembourse-le dans l'app Stripe (Paiements, ce paiement, Rembourser), puis efface-le ici.</span>
+    : <span class="cell__meta">Sur la page de paiement ({euro(r.amount_cents)}){r.hold_until ? `, réservé jusqu'à ${hour(r.hold_until)}` : ""}</span>;
+  return (
+    <div class="cell cell--stack spons">
+      <div class="spons__head">
+        <span class="cell__title">{r.spot_label}</span>
+        <span class="cell__meta">{when(r.created_at)}{r.lang === "en" ? " · en anglais" : ""}</span>
+      </div>
+      <p class="spons__who"><b>{r.name}</b> · <button class="textbtn" type="button" onClick={copy}>{r.contact}</button></p>
+      {r.message && <p class="spons__msg">{r.message}</p>}
+      <div class="spons__pay">{line}</div>
+      {r.status !== "paid" && (
+        <div class="spons__actions">
+          <span style={{ flex: 1 }} />
+          <button class="textbtn danger" type="button" disabled={busy} onClick={remove}>Effacer</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GiftCell({ g }: { g: GiftRow }) {
+  return (
+    <div class="cell cell--stack spons">
+      <div class="spons__head">
+        <span class="cell__title">{euro(g.amount_cents)}{g.name ? `, ${g.name}` : ""}</span>
+        <span class="cell__meta">{when(g.created_at)}</span>
+      </div>
+      {g.message && <p class="spons__msg">{g.message}</p>}
+      {g.email && <p class="cell__meta">{g.email}</p>}
+    </div>
+  );
 }
 
 /** The tables aren't there yet: how to create them from the phone. */
@@ -315,33 +397,6 @@ function RequestCell({ r }: { r: Req }) {
     requests.value = (requests.value ?? []).filter((x) => x.id !== r.id);
   };
   const site = normLink(r.link);
-  const free = isFreeOffer(r.offer);
-  const sendPay = async () => {
-    const url = payUrlFor(r);
-    if (!url) { say("Ajoute d'abord ton lien Stripe, en haut de la page.", 3200); return; }
-    const n = euros(r.offer);
-    const units = !payUnits.value ? ""
-      : r.lang === "en" ? `\nOn the payment page, adjust the quantities so the total comes to the agreed amount${n ? ` (€${n})` : ""}.`
-      : `\nSur la page de paiement, ajuste les quantités pour que le total fasse le montant convenu${n ? ` (${n} €)` : ""}.`;
-    const text = (r.lang === "en"
-      ? `Hi ${r.name}! It's a yes for the "${r.spot_label}" ticket, thank you! Here's the secure payment link (Stripe): ${url}`
-      : `Salut ${r.name} ! C'est d'accord pour le ticket « ${r.spot_label} », merci ! Voici le lien de paiement sécurisé (Stripe) : ${url}`) + units;
-    try { await navigator.clipboard.writeText(text); say("Message avec le lien copié : colle-le dans ta réponse.", 3200); }
-    catch { say("Copie impossible sur cet appareil."); return; }
-    if (r.pay_url === url) return;
-    const { error } = MOCK ? { error: null } : await sba.from("sponsor_requests").update({ pay_url: url }).eq("id", r.id);
-    if (!error) requests.value = (requests.value ?? []).map((x) => (x.id === r.id ? { ...x, pay_url: url } : x));
-  };
-  const setPaid = async (paid: boolean) => {
-    if (!paid && !window.confirm("Retirer le paiement de cette demande ?")) return;
-    setBusy(true);
-    const paid_at = paid ? new Date().toISOString() : null;
-    const { error } = MOCK ? { error: null } : await sba.from("sponsor_requests").update({ paid_at }).eq("id", r.id);
-    setBusy(false);
-    if (error) { say("Pas enregistré : vérifie le réseau et réessaie."); return; }
-    requests.value = (requests.value ?? []).map((x) => (x.id === r.id ? { ...x, paid_at } : x));
-    if (paid) say(isGiven ? "Payé." : "Payé. Tu peux attribuer le ticket.", 2600);
-  };
 
   return (
     <div class="cell cell--stack spons">
@@ -350,21 +405,9 @@ function RequestCell({ r }: { r: Req }) {
         <span class="cell__meta">{when(r.created_at)}{r.lang === "en" ? " · en anglais" : ""}</span>
       </div>
       <p class="spons__who"><b>{r.name}</b> · <button class="textbtn" type="button" onClick={copy}>{r.contact}</button></p>
-      {r.offer && <p class="spons__offer">Prix proposé : <b>{r.offer}</b>{free ? " (gratuit)" : ""}</p>}
+      <p class="spons__offer">{isFreeOffer(r.offer) ? "Ticket demandé gratuitement" : <>Prix proposé : <b>{r.offer}</b></>}</p>
       {r.link && <p class="spons__who">{site ? <a href={site} target="_blank" rel="noopener">{r.link}</a> : r.link}</p>}
       {r.message && <p class="spons__msg">{r.message}</p>}
-      <div class="spons__pay">
-        {free && !r.paid_at
-          ? <span class="cell__meta">Gratuit : pas de paiement à demander. Tu peux attribuer le ticket directement.</span>
-          : r.paid_at
-          ? <><span class="spons__paid">Payé le {when(r.paid_at)}</span><span style={{ flex: 1 }} /><button class="textbtn" type="button" disabled={busy} onClick={() => setPaid(false)}>Retirer</button></>
-          : <>
-              <span class="cell__meta">{r.pay_url ? "Lien de paiement envoyé" : "Pas encore payé"}</span>
-              <span style={{ flex: 1 }} />
-              <button class="textbtn" type="button" onClick={sendPay}>{r.pay_url ? "Recopier le lien" : "Lien de paiement"}</button>
-              <button class="textbtn" type="button" disabled={busy} onClick={() => setPaid(true)}>Payé</button>
-            </>}
-      </div>
       {isGiven && !giving && <p class="cell__meta">Ce ticket est attribué.</p>}
       {giving ? (
         <GiveForm spot={r.spot_id} initial={{ spot_id: r.spot_id, name: r.name, link: r.link ?? (/^@/.test(r.contact) ? r.contact : null), logo: null }}

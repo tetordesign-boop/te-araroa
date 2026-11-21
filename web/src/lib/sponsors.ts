@@ -1,19 +1,19 @@
 // "Les tickets du sentier": every spot of my Te Araroa that a brand, or someone close to me, can sponsor. On the trail
 // you pay the huts with tickets, so each spot is a ticket: a kilometre, a pass, a section between two stops, the
-// start or the finish, a food parcel where no shop is near, a "galère" (blisters, sandflies…), a place on my gear.
-// The spots are worked out here from the trail's own data (its stops, the passes of the map data, the elevation
-// profile), so nothing is typed twice; which ones are taken comes from `sponsor_spots`, and a request goes through
-// `request_sponsor` (rate limited, private until I read it in the Carnet).
+// start or the finish. The spots are worked out here from the trail's own data (its stops, the passes of the map
+// data, the elevation profile), so nothing is typed twice; which ones are taken comes from `sponsor_spots`.
+// Buying one is direct: `start_purchase` holds the spot a little while (rate limited), the "checkout" server function
+// opens a Stripe payment at that price, and once paid the spot is given automatically (the function checks the
+// payment with Stripe itself). A ticket asked for free goes through `request_sponsor` and waits for my yes in the
+// Carnet. A gift ("un coup de pouce") is a Stripe payment of the amount chosen, with nothing to give back.
 import { computed, signal } from "@preact/signals";
-import { MOCK, mediaUrl } from "../config";
+import { MOCK, SUPABASE_KEY, SUPABASE_URL, mediaUrl } from "../config";
 import type { Lang } from "../types";
 import { deviceId, route, sb } from "./data";
 import type { LngLat } from "./geo";
-import { haversine } from "./geo";
 import { pois, profile, shortStation } from "./places";
-export { isFreeOffer } from "./offer";
 
-export type SpotKind = "km" | "col" | "section" | "end" | "colis" | "galere" | "gear";
+export type SpotKind = "km" | "col" | "section" | "end";
 export interface Spot {
   id: string;
   kind: SpotKind;
@@ -29,24 +29,10 @@ export interface Spot {
 /** a spot given to someone: their name, and for a brand its logo (a file in the media bucket) and its link */
 export interface Taken { spot_id: string; name: string; logo: string | null; link: string | null }
 
-// ------------------------------------------------------------------ the fixed ones
+// ------------------------------------------------------------------ the spots
 const both = (s: string): Record<Lang, string> => ({ fr: s, en: s });
-const GALERES: [string, string, string][] = [
-  ["ampoules", "Les ampoules", "Blisters"],
-  ["sandflies", "Les sandflies", "Sandflies"],
-  ["pluie", "La pluie", "Rain"],
-  ["gues", "Les gués", "River crossings"],
-  ["faim", "La faim", "Hunger"],
-];
-const GEAR: [string, string, string][] = [
-  ["sac", "Le dos de mon sac", "The back of my pack"],
-  ["bretelles", "Les bretelles de mon sac", "My pack's shoulder straps"],
-  ["batons", "Mes bâtons", "My trekking poles"],
-  ["gourde", "Ma gourde filtrante", "My filter bottle"],
-];
 // passes the map data names twice over: the pass, then its Māori name in a smaller line
 const ALT_NAMES: Record<string, string> = { "Poukirikiri / Travers Saddle": "Travers Saddle", "Noti Taramakau / Harper Pass": "Harper Pass" };
-const FOOD = new Set(["super", "general", "conv"]);
 const slug = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 /** The trail's stops, short-named: "Arthur's Pass", "Bluff". */
@@ -64,26 +50,6 @@ export const sections = computed<Spot[]>(() => {
   return s.slice(1).map((b, i) => ({ id: `section-${String(i + 1).padStart(2, "0")}`, kind: "section" as const, name: both(`${s[i].n} → ${b.n}`), km: s[i].km, km2: b.km }));
 });
 
-/** The stretches of 100 km or more with no food shop on the trail: where a parcel saves carrying everything. */
-export const parcelSpots = computed<Spot[]>(() => {
-  const st = stops.value;
-  if (!st.length || !pois.value.length) return [];
-  const label = (p: { c: [number, number]; km: number; n: string; town?: string }) => {
-    const near = st.map((s) => ({ s, m: haversine(p.c, s.c) })).sort((a, b) => a.m - b.m)[0];
-    if (near && near.m < 3000) return near.s.n;
-    if (p.town) return p.town.replace(/ National Park$/, "");
-    return near && near.m < 10000 ? near.s.n : p.n;
-  };
-  const shops = pois.value.filter((p) => p.t === "shop" && FOOD.has(p.sub ?? "")).sort((a, b) => a.km - b.km);
-  const marks = [{ n: st[0].n, km: 0 }, ...shops.map((p) => ({ n: label(p), km: p.km })), { n: st[st.length - 1].n, km: st[st.length - 1].km }];
-  const out: Spot[] = [];
-  for (let i = 1; i < marks.length; i++) {
-    const a = marks[i - 1], b = marks[i];
-    if (b.km - a.km >= 100) out.push({ id: `colis-${slug(a.n)}-${slug(b.n)}`, kind: "colis", name: both(`${a.n} → ${b.n}`), km: a.km, km2: b.km });
-  }
-  return out;
-});
-
 export const ends = computed<Spot[]>(() => {
   const st = stops.value;
   if (!st.length) return [];
@@ -92,8 +58,6 @@ export const ends = computed<Spot[]>(() => {
     { id: "arrivee", kind: "end", name: both(st[st.length - 1].n), km: st[st.length - 1].km },
   ];
 });
-export const galeres: Spot[] = GALERES.map(([id, fr, en]) => ({ id: `galere-${id}`, kind: "galere", name: { fr, en } }));
-export const gearSpots: Spot[] = GEAR.map(([id, fr, en]) => ({ id: `materiel-${id}`, kind: "gear", name: { fr, en } }));
 
 export const totalKm = computed(() => Math.round(stops.value[stops.value.length - 1]?.km ?? 1334));
 
@@ -124,7 +88,7 @@ export function heightAt(km: number): number | null {
 export function spotById(id: string): Spot | null {
   const m = /^km-(\d+)$/.exec(id);
   if (m) { const k = +m[1]; return k >= 1 && k <= totalKm.value ? kmSpot(k) : null; }
-  return [...cols.value, ...sections.value, ...ends.value, ...parcelSpots.value, ...galeres, ...gearSpots].find((s) => s.id === id) ?? null;
+  return [...cols.value, ...sections.value, ...ends.value].find((s) => s.id === id) ?? null;
 }
 
 // ------------------------------------------------------------------ taken, and asking for one
@@ -140,7 +104,7 @@ export function loadTaken(force = false): Promise<void> {
       taken.value = new Map([
         t("col-goat-pass", "Kea Coffee", mockLogo("K", "#1F7A5C", "#F5E9C8"), "https://www.instagram.com/keacoffee"),
         t("depart", "Tūī Outdoors", mockLogo("T", "#FF6B12", "#1A0A00"), "https://example.com"),
-        t("section-02", "Mamie Jo"), t("km-120", "Léa"), t("km-121", "Léa"), t("galere-sandflies", "Bzzz Off"),
+        t("section-02", "Mamie Jo"), t("km-120", "Léa"), t("km-121", "Léa"),
       ]);
       return;
     }
@@ -170,6 +134,90 @@ export async function requestSpot(spot: Spot, a: Ask, lang: Lang): Promise<AskRe
   if (m.includes("too_many_links")) return "links";
   if (/PGRST202|Could not find the function|does not exist/i.test(m)) return "closed";
   return "error";
+}
+
+// ------------------------------------------------------------------ buying a ticket, giving a hand
+/** the least a ticket costs (a small price would let anyone put anything on the map for nothing), and the most */
+export const MIN_EUR = 5;
+export const MAX_EUR = 10000;
+/** the amounts offered for a gift (any other can be typed) */
+export const GIFT_EUR = [5, 10, 20, 50];
+const CHECKOUT = `${SUPABASE_URL}/functions/v1/checkout`;
+
+export type BuyResult = { ok: true; url: string } | { ok: false; why: "rate" | "links" | "taken" | "held" | "closed" | "error" };
+export interface Buy { who: string; contact: string; link: string; message: string; euros: number; logo: Blob | null }
+
+async function checkout(body: Record<string, unknown>): Promise<{ status: number; data: Record<string, unknown> }> {
+  const res = await fetch(CHECKOUT, { method: "POST", headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  return { status: res.status, data };
+}
+const b64 = async (blob: Blob) => {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+
+/** Holds the spot, then opens the Stripe payment for it: the url to go to, or why not. */
+export async function buySpot(spot: Spot, a: Buy, lang: Lang): Promise<BuyResult> {
+  if (MOCK) { await new Promise((r) => setTimeout(r, 500)); return { ok: true, url: `${location.pathname}?mock&merci&cs=cs_test_mock_${spot.id}` }; }
+  const { data: id, error } = await sb.rpc("start_purchase", {
+    p_spot: spot.id, p_label: spot.name.fr, p_name: a.who, p_contact: a.contact, p_link: a.link || null,
+    p_message: a.message || null, p_amount_cents: Math.round(a.euros * 100), p_lang: lang, p_device: deviceId,
+  });
+  if (error) {
+    const m = `${error.code} ${error.message}`;
+    if (m.includes("rate_limited")) return { ok: false, why: "rate" };
+    if (m.includes("too_many_links")) return { ok: false, why: "links" };
+    if (m.includes("spot_taken")) return { ok: false, why: "taken" };
+    if (m.includes("spot_held")) return { ok: false, why: "held" };
+    if (/PGRST202|Could not find the function|does not exist/i.test(m)) return { ok: false, why: "closed" };
+    return { ok: false, why: "error" };
+  }
+  try {
+    const r = await checkout({ action: "ticket", request: id, logo: a.logo ? await b64(a.logo) : null });
+    if (r.status === 200 && typeof r.data.url === "string") return { ok: true, url: r.data.url };
+    if (r.data.error === "taken") return { ok: false, why: "taken" };
+    if (r.data.error === "not_configured" || r.status === 404) return { ok: false, why: "closed" };
+    return { ok: false, why: "error" };
+  } catch (_) { return { ok: false, why: "error" }; }
+}
+
+/** A gift of `euros`: the url of its Stripe payment, or null. */
+export async function giveGift(euros: number, name: string, message: string, lang: Lang): Promise<string | "closed" | null> {
+  if (MOCK) { await new Promise((r) => setTimeout(r, 500)); return `${location.pathname}?mock&merci&cs=cs_test_mock_gift_${Math.round(euros * 100)}`; }
+  try {
+    const r = await checkout({ action: "gift", amount: Math.round(euros * 100), name: name || null, message: message || null, lang });
+    if (r.status === 200 && typeof r.data.url === "string") return r.data.url;
+    if (r.data.error === "not_configured" || r.status === 404) return "closed";
+    return null;
+  } catch (_) { return null; }
+}
+
+/** Tickets paid by someone who closed the page before coming back are given here too (the server asks Stripe), then
+ * the map is refreshed: asked when the page of tickets opens. */
+export async function sweepPayments() {
+  if (MOCK) return;
+  try {
+    const r = await checkout({ action: "sweep" });
+    if (r.status === 200 && Number(r.data.given) > 0) await loadTaken(true);
+  } catch (_) { /* next time */ }
+}
+
+/** Back from Stripe: what was paid (the function asks Stripe itself, and gives the ticket if it was one). */
+export type Paid = { kind: "ticket"; status: "paid" | "conflict" | "unpaid"; spot?: string; label?: string; amount?: number } | { kind: "gift"; status: "paid" | "unpaid"; amount?: number } | null;
+export async function confirmPayment(session: string): Promise<Paid> {
+  if (MOCK) {
+    const g = /^cs_test_mock_gift_(\d+)$/.exec(session);
+    if (g) return { kind: "gift", status: "paid", amount: +g[1] };
+    const t = /^cs_test_mock_(.+)$/.exec(session);
+    return t ? { kind: "ticket", status: "paid", spot: t[1], label: spotById(t[1])?.name.fr ?? t[1], amount: 2000 } : null;
+  }
+  try {
+    const r = await checkout({ action: "confirm", session });
+    return r.status === 200 ? (r.data as unknown as Paid) : null;
+  } catch (_) { return null; }
 }
 
 // ------------------------------------------------------------------ logos and where they go on the map

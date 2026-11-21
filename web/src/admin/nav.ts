@@ -10,6 +10,7 @@ export type Page =
   | { name: "gear" }
   | { name: "parcels" }
   | { name: "sponsors" }
+  | { name: "alerts" }
   | { name: "tracking" }
   | { name: "help" }
   | { name: "questions" }
@@ -35,6 +36,23 @@ export function home() {
 }
 window.addEventListener("popstate", (e) => {
   page.value = (e.state?.p as Page) ?? { name: "home" };
+});
+
+// An alert on the phone opens the page it's about (admin/#sponsors, #messages, #questions): at start, or, the Carnet
+// being open already, when the service worker passes the tap on.
+const LINKED: Record<string, Page["name"]> = { sponsors: "sponsors", messages: "messages", questions: "questions", alerts: "alerts" };
+function openLinked(hash: string) {
+  const name = LINKED[hash.replace(/^#\/?/, "")];
+  if (!name) return;
+  page.value = { name } as Page;
+  history.replaceState({ p: page.value }, "", location.pathname + location.search);
+  window.scrollTo(0, 0);
+}
+openLinked(location.hash);
+window.addEventListener("hashchange", () => openLinked(location.hash));
+navigator.serviceWorker?.addEventListener("message", (e: MessageEvent) => {
+  if (e.data?.type !== "open" || typeof e.data.url !== "string") return;
+  try { openLinked(new URL(e.data.url).hash); } catch (_) { /* not a link */ }
 });
 
 let t: number | undefined;

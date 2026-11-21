@@ -4,8 +4,14 @@
 //   POST { action: "notify", days: [id, …] }   → from the Carnet, signed in: one notification for the days just
 //                                                published (each day announced once, only if recent, and only from
 //                                                the start date on)
+//   POST { action: "ewan", kind, title, body, url } + header x-push-secret
+//                                              → my alerts (a ticket bought or asked for, a gift, a note, a question,
+//                                                a new follower),
+//                                                sent by the database itself (private.tell_ewan, through pg_net) to
+//                                                the phones I signed up in the Carnet for that kind (public.admin_push)
+//   POST { action: "ewan-test", endpoint }     → from the Carnet, signed in: a first alert to the phone just signed up
 // The phones' addresses are only ever read here (public.push_subs: no access from the site).
-import { adminClient, cors, isAdminRequest, json } from "../_shared/util.ts";
+import { adminClient, cors, getSecret, isAdminRequest, json, safeEqual } from "../_shared/util.ts";
 import { generateVapidKeys, sendPush, type PushSubscriptionRow, type VapidKeys } from "../_shared/webpush.ts";
 
 const SITE = "https://tetordesign-boop.github.io/te-araroa/";
@@ -144,18 +150,59 @@ async function hello(endpoint: string) {
   return json({ ok: r.status >= 200 && r.status < 300, status: r.status }, 200, cors);
 }
 
+// ---------------------------------------------------------------- my alerts
+const CARNET_ICON = `${SITE}icons/carnet-192.png`;
+const KINDS = new Set(["sponsor", "gift", "message", "question", "follower"]);
+interface AdminSub extends PushSubscriptionRow { kinds: string[]; fails: number }
+
+/** to my phones that asked for this kind (or to one phone, for the test); forgets the ones that are gone */
+async function tellEwan(kind: string, title: string, text: string, url: string, only?: string) {
+  const db = adminClient(), k = await keys();
+  let q = db.from("admin_push").select("endpoint,p256dh,auth,kinds,fails");
+  q = only ? q.eq("endpoint", only) : q.contains("kinds", [kind]);
+  const { data, error } = await q;
+  if (error) throw error;
+  let ok = 0;
+  for (const s of (data ?? []) as AdminSub[]) {
+    let r = { status: 0, gone: false };
+    try {
+      r = await sendPush(s, { title, body: text, url: new URL(url, SITE).href, tag: `carnet-${kind}`, icon: CARNET_ICON }, k,
+        { subject: SITE, topic: `carnet-${kind}`, ttl: 2 * 86400, urgency: "high" });
+    } catch (_) { /* counted as a failure below */ }
+    if (r.status >= 200 && r.status < 300) { ok++; if (s.fails) await db.from("admin_push").update({ fails: 0 }).eq("endpoint", s.endpoint); }
+    else if (r.gone || s.fails >= 9) await db.from("admin_push").delete().eq("endpoint", s.endpoint);
+    else await db.from("admin_push").update({ fails: s.fails + 1 }).eq("endpoint", s.endpoint);
+  }
+  return { phones: data?.length ?? 0, ok };
+}
+const clip = (v: unknown, n: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, n) : "");
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     if (req.method === "GET") return json({ key: (await keys()).publicKey }, 200, { ...cors, "Cache-Control": "public, max-age=3600" });
     if (req.method !== "POST") return json({ error: "method" }, 405, cors);
-    const body = await req.json().catch(() => ({})) as { action?: string; endpoint?: unknown; days?: unknown };
+    const body = await req.json().catch(() => ({})) as { action?: string; endpoint?: unknown; days?: unknown; kind?: unknown; title?: unknown; body?: unknown; url?: unknown };
     if (body.action === "hello" && typeof body.endpoint === "string" && body.endpoint.length < 1000) return await hello(body.endpoint);
     if (body.action === "notify") {
       if (!(await isAdminRequest(req))) return json({ error: "unauthorized" }, 401, cors);
       const ids = Array.isArray(body.days) ? body.days.filter((x): x is string => typeof x === "string" && /^[0-9a-f-]{36}$/i.test(x)).slice(0, 30) : [];
       if (!ids.length) return json({ error: "no days" }, 400, cors);
       return json(await notify(ids), 200, cors);
+    }
+    if (body.action === "ewan") {
+      // only the database knows this secret: nobody else can send me alerts
+      const secret = await getSecret("admin_push_secret");
+      if (!secret || !safeEqual(req.headers.get("x-push-secret") ?? "", secret)) return json({ error: "unauthorized" }, 401, cors);
+      const kind = typeof body.kind === "string" && KINDS.has(body.kind) ? body.kind : null;
+      if (!kind) return json({ error: "kind" }, 400, cors);
+      const url = typeof body.url === "string" && /^admin\/(#[a-z]{1,20})?$/.test(body.url) ? body.url : "admin/";
+      return json(await tellEwan(kind, clip(body.title, 80) || "Carnet", clip(body.body, 160), url), 200, cors);
+    }
+    if (body.action === "ewan-test") {
+      if (!(await isAdminRequest(req))) return json({ error: "unauthorized" }, 401, cors);
+      if (typeof body.endpoint !== "string" || body.endpoint.length > 1000) return json({ error: "endpoint" }, 400, cors);
+      return json(await tellEwan("test", "Alertes activées", "C'est réglé : ce téléphone sera prévenu des tickets, des coups de pouce, des mots et des questions.", "admin/", body.endpoint), 200, cors);
     }
     return json({ error: "unknown action" }, 400, cors);
   } catch (e) {
