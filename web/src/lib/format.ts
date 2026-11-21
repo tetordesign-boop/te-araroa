@@ -3,15 +3,37 @@ import type { Lang } from "../types";
 
 const locale = (lang: Lang) => (lang === "fr" ? "fr-FR" : "en-NZ");
 
+// Making a formatter costs far more than using one (on a phone, a long list of places would spend most of its drawing
+// time making them): each one is made once, for its language and options, and kept.
+const kept = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat | Intl.RelativeTimeFormat>();
+export function numberFormat(loc: string, o: Intl.NumberFormatOptions): Intl.NumberFormat {
+  const k = `n|${loc}|${JSON.stringify(o)}`;
+  let f = kept.get(k) as Intl.NumberFormat | undefined;
+  if (!f) { f = new Intl.NumberFormat(loc, o); kept.set(k, f); }
+  return f;
+}
+export function dateFormat(loc: string, o: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const k = `d|${loc}|${JSON.stringify(o)}`;
+  let f = kept.get(k) as Intl.DateTimeFormat | undefined;
+  if (!f) { f = new Intl.DateTimeFormat(loc, o); kept.set(k, f); }
+  return f;
+}
+function relativeFormat(loc: string): Intl.RelativeTimeFormat {
+  const k = `r|${loc}`;
+  let f = kept.get(k) as Intl.RelativeTimeFormat | undefined;
+  if (!f) { f = new Intl.RelativeTimeFormat(loc, { numeric: "auto" }); kept.set(k, f); }
+  return f;
+}
+
 export function fmtKm(km: number | null | undefined, lang: Lang, digits?: number): string {
   if (km === null || km === undefined || !Number.isFinite(km)) return "–";
   const d = digits ?? (km < 10 ? 1 : 0);
-  return new Intl.NumberFormat(locale(lang), { maximumFractionDigits: d, minimumFractionDigits: 0 }).format(km);
+  return numberFormat(locale(lang), { maximumFractionDigits: d, minimumFractionDigits: 0 }).format(km);
 }
 
 export function fmtInt(n: number | null | undefined, lang: Lang): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return "–";
-  return new Intl.NumberFormat(locale(lang), { maximumFractionDigits: 0 }).format(n);
+  return numberFormat(locale(lang), { maximumFractionDigits: 0 }).format(n);
 }
 
 /** "2026-12-09" → Date at local noon (avoids TZ drift for pure dates). */
@@ -21,7 +43,7 @@ export function dateOnly(s: string): Date {
 }
 
 export function fmtDate(s: string, lang: Lang, opts: Intl.DateTimeFormatOptions = { weekday: "long", day: "numeric", month: "long" }): string {
-  return new Intl.DateTimeFormat(locale(lang), { ...opts, timeZone: "UTC" }).format(dateOnly(s));
+  return dateFormat(locale(lang), { ...opts, timeZone: "UTC" }).format(dateOnly(s));
 }
 
 export function fmtShortDate(s: string, lang: Lang): string {
@@ -30,17 +52,17 @@ export function fmtShortDate(s: string, lang: Lang): string {
 
 /** Today's date in New Zealand, as YYYY-MM-DD. */
 export function nzToday(now = new Date()): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: NZ_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+  const parts = dateFormat("en-CA", { timeZone: NZ_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 export function nzTime(lang: Lang, now = new Date()): string {
-  return new Intl.DateTimeFormat(locale(lang), { timeZone: NZ_TZ, hour: "2-digit", minute: "2-digit" }).format(now);
+  return dateFormat(locale(lang), { timeZone: NZ_TZ, hour: "2-digit", minute: "2-digit" }).format(now);
 }
 
 export function nzHour(now = new Date()): number {
-  return parseInt(new Intl.DateTimeFormat("en-GB", { timeZone: NZ_TZ, hour: "2-digit", hour12: false }).format(now), 10) % 24;
+  return parseInt(dateFormat("en-GB", { timeZone: NZ_TZ, hour: "2-digit", hour12: false }).format(now), 10) % 24;
 }
 
 export function daysBetween(a: string, b: string): number {
@@ -56,7 +78,7 @@ export function addDays(s: string, n: number): string {
 export function relTime(iso: string, lang: Lang, now = Date.now()): string {
   const diff = Math.max(0, now - new Date(iso).getTime());
   const min = Math.round(diff / 60000);
-  const rtf = new Intl.RelativeTimeFormat(locale(lang), { numeric: "auto" });
+  const rtf = relativeFormat(locale(lang));
   if (min < 1) return lang === "fr" ? "à l'instant" : "just now";
   if (min < 60) return rtf.format(-min, "minute");
   const h = Math.round(min / 60);

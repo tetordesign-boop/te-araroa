@@ -79,6 +79,12 @@ function air(at: number, dur: number, f0: number, f1: number, gain: number, q = 
   src.stop(at + dur + 0.02);
 }
 
+// The sound engine is made at the first touch on the page (making it can take a few tens of milliseconds on a phone),
+// so the first sound, often the sheet settling after a swipe, doesn't hold up its own animation.
+if (typeof window !== "undefined") {
+  window.addEventListener("pointerdown", () => { if (soundOn.peek()) audio(); }, { capture: true, once: true, passive: true });
+}
+
 let last = 0;
 
 /** Play an interface sound (nothing if turned off, hidden, or another just played). `pitch` shifts it (1 = as is). */

@@ -85,6 +85,13 @@ function kindLook(kind: string | undefined): { img: string; color: string } {
   return { img: k === "peak" ? "poi-peak" : `poi-${k}`, color: KIND_COLOR[k]?.dark ?? "#5CD6E6" };
 }
 
+/** a photo's thumbnail for a pin (set as a property, never written into HTML) */
+function thumbImg(src: string): HTMLImageElement {
+  const img = document.createElement("img");
+  img.alt = ""; img.loading = "lazy"; img.decoding = "async"; img.src = src;
+  return img;
+}
+
 export class TrailMap {
   map: MLMap;
   private base: BaseStyle = "explore";
@@ -262,6 +269,7 @@ export class TrailMap {
 
   destroy() {
     clearInterval(this.sunTimer);
+    clearTimeout(this.padTimer);
     clearTimeout(this.arrivalTimer);
     this.drawGen++;
     const cc = this.map.getCanvasContainer();
@@ -542,6 +550,7 @@ export class TrailMap {
 
   /** The ring around the place whose card is open (or none). */
   selectAt(c: LngLat | null) {
+    if (!c && !this.selectedAt) return; // (nothing to clear)
     this.selectedAt = c;
     this.src("poi-selected")?.setData(c ? { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: c } } : empty);
   }
@@ -814,17 +823,19 @@ export class TrailMap {
         try {
           const leaves = await src.getClusterLeaves(Number(p.cluster_id), 1, 0);
           const thumb = leaves[0]?.properties?.thumb;
-          if (thumb) el.insertAdjacentHTML("afterbegin", `<img alt="" loading="lazy" decoding="async" src="${thumb}">`);
+          if (thumb) el.prepend(thumbImg(String(thumb)));
         } catch (_) { /* cluster vanished */ }
         if (gen !== this.photoGen) return;
         if (this.photoMarkers.has(key)) continue;
         el.addEventListener("click", async (e) => {
           e.stopPropagation();
           const zoom = await src.getClusterExpansionZoom(Number(p.cluster_id));
+          this.flushPadding();
           m.easeTo({ center: coords, zoom: Math.min(zoom + 0.3, 16), duration: reduceMotion() ? 0 : 700 });
         });
       } else {
-        el.innerHTML = `<img alt="" loading="lazy" decoding="async" src="${p.thumb}">${p.video ? '<span class="photo-pin__play" aria-hidden="true"></span>' : ""}`;
+        el.append(thumbImg(String(p.thumb)));
+        if (p.video) el.insertAdjacentHTML("beforeend", '<span class="photo-pin__play" aria-hidden="true"></span>');
         el.setAttribute("aria-label", "Photo");
         el.addEventListener("click", (e) => { e.stopPropagation(); this.cb.onPhoto(Number(p.n), String(p.id)); });
       }
@@ -900,10 +911,22 @@ export class TrailMap {
   setPadding(p: Partial<Padding>) {
     this.padding = { ...this.padding, ...p };
     if (this.replaying) return;
+    // The picture stays where it is, so nothing on screen shows the change: it waits until the sheet has settled
+    // instead of redrawing the whole map on the frames where the sheet springs (a framing before then takes it at once).
+    clearTimeout(this.padTimer);
+    this.padTimer = window.setTimeout(() => this.applyPadding(), 560);
+  }
+  private padTimer = 0;
+  private applyPadding() {
+    clearTimeout(this.padTimer);
+    this.padTimer = 0;
+    if (this.replaying) return;
     // in someone's hand or on a flight: apply it, still in place, once the map is free again
     if (this.gesturing || this.map.isEasing()) { this.pendingPadding = this.padding; return; }
     this.paddingInPlace(this.padding);
   }
+  /** before working out a framing from the map's own padding: the waiting padding, now */
+  private flushPadding() { if (this.padTimer) this.applyPadding(); }
   get viewPadding() { return this.padding; }
 
   /** New padding, same picture: the point at the new padded centre becomes the centre. */
@@ -915,6 +938,7 @@ export class TrailMap {
   }
 
   select(day: Day | null) {
+    if (!day && !this.selected && !this.stretch) return; // nothing to clear (every change of view asks)
     const fresh = !!day && day.id !== this.selected?.id;
     this.selected = day;
     this.stretch = null;
@@ -939,6 +963,7 @@ export class TrailMap {
     const brg = bearingDeg(a, z);
     // the transform already carries the UI padding (sheet/panel); only add a small margin here
     let cam: maplibregl.CameraOptions | undefined;
+    this.flushPadding();
     try { cam = this.map.cameraForBounds(b, { padding: 36, bearing: brg, maxZoom: 13.5 }); } catch (_) { cam = undefined; }
     this.map.flyTo({
       center: cam?.center ?? z, zoom: Math.max(5, (cam?.zoom ?? 12) - 0.35), bearing: brg, pitch: 58,

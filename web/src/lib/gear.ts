@@ -2,6 +2,7 @@
 // Thru-hikers' convention: the base weight is everything carried, minus what is worn and what gets eaten or drunk.
 
 import type { Lang } from "../types";
+import { numberFormat } from "./format";
 
 export type GearCat = "pack" | "sleep" | "kitchen" | "water" | "clothes" | "tech" | "care" | "misc" | "food";
 /** in the order the page shows them: the big three first, what gets eaten last */
@@ -65,8 +66,8 @@ const loc = (l: Lang) => (l === "fr" ? "fr-FR" : "en-NZ");
 /** 980 g, 1,4 kg (one decimal: what a scale says) */
 export function fmtWeight(g: number, l: Lang, digits = 1): string {
   if (!Number.isFinite(g)) return "–";
-  if (Math.abs(g) < 1000) return `${new Intl.NumberFormat(loc(l), { maximumFractionDigits: 0 }).format(g)} g`;
-  return `${new Intl.NumberFormat(loc(l), { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(g / 1000)} kg`;
+  if (Math.abs(g) < 1000) return `${numberFormat(loc(l), { maximumFractionDigits: 0 }).format(g)} g`;
+  return `${numberFormat(loc(l), { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(g / 1000)} kg`;
 }
 
 export const newId = () => Math.random().toString(36).slice(2, 10);
