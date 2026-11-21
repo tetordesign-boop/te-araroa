@@ -1,0 +1,4 @@
+p-m-pay-form 29171ms ok [waited 12.2s, acted 19.3s]
+  SAYS Ship Cove | Ton nom ou ta marque / Pour te joindre (e-mail ou Instagram) / Ton site ou ton Insta (pour le lien sous ton logo) / Ton logo (facultatif, carré de préférence) / Choisir une image / Ton prix (à partir de 5 €) / € / Un mot (facultatif) / Pas de budget : je demande ce ticket gratuitement / sur accord, je te réponds / Annuler / Payer 50 € / Paiement sécurisé par Stripe : carte, Apple Pay ou Google Pay. Le ticket est à toi dès que c'est payé.
+p-m-pay-free 28340ms ok [waited 12.2s, acted 20.3s]
+  SAYS Ton nom ou ta marque / Pour te joindre (e-mail ou Instagram) / Ton site ou ton Insta (pour le lien sous ton logo) / Un mot (facultatif) / Pas de budget : je demande ce ticket gratuitement / sur accord, je te réponds / Annuler / Envoyer la demande
