@@ -1,2 +1,1 @@
 c-m-after-pins
-c-m-home-peek
