@@ -84,14 +84,14 @@ export function SponsorPins() {
     const place = () => {
       const pad = m.viewPadding, box = m.map.getContainer().getBoundingClientRect();
       const ctl = document.querySelector(".controls")?.getBoundingClientRect();
-      // with the whole island in view, a coin is half its size and sits on its spot: it never hides a town's name
+      // with the whole island in view, a coin is half its size and sits right on its spot: it never hides a town's name
       const far = m.map.getZoom() < 7.6;
       for (const p of pins) {
         if (far !== p.far) { p.far = far; p.el.classList.toggle("spin--far", far); }
         const pt = m.map.project(p.c);
-        // (the small coin of the far view stands only some 45 px above its spot: it rarely needs to hang below)
-        const h = far && p.h > 40 ? 46 : p.h;
-        const down = pt.y - h < pad.top && pt.y + p.h < box.height - pad.bottom;
+        // (the small coin of the far view sits on its spot: it never needs to hang below)
+        const h = far && p.h > 40 ? 16 : p.h;
+        const down = !(far && p.h > 40) && pt.y - h < pad.top && pt.y + p.h < box.height - pad.bottom;
         const x = box.left + pt.x, top = box.top + pt.y - (down ? 0 : h), half = p.el.offsetWidth / 2;
         let dx = 0;
         if (ctl?.width && top < ctl.bottom && top + h > ctl.top && x + half > ctl.left - 6 && x - half < ctl.right) {
