@@ -1967,10 +1967,9 @@ input, textarea { caret-color: var(--marker); }
 .spin__link, .spin__more { position: relative; }
 .spin__link::before, .spin__more::before { content: ""; position: absolute; inset: -7px -4px; }
 /* the whole island in view: a coin half the size, sitting on its spot, so it never hides a town's name */
-.spin--far .spin__float { scale: 0.55; translate: 0 30px; }
-.spin--far:not(.spin--name) .spin__stem { opacity: 0; }
-.spin--far.spin--down .spin__float { translate: 0 -12px; }
-.spin__float, .spin__stem { transition: scale var(--dur-2) var(--ease-out), translate var(--dur-2) var(--ease-out), opacity var(--dur-2); }
+.spin--far .spin__float { scale: 0.55; translate: 0 58px; }
+.spin--far:not(.spin--name) .spin__stem, .spin--far .spin__shadow { opacity: 0; }
+.spin__float, .spin__stem, .spin__shadow { transition: scale var(--dur-2) var(--ease-out), translate var(--dur-2) var(--ease-out), opacity var(--dur-2); }
 .spin__cardlogo { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #fff; box-shadow: 0 0 0 2px var(--marker); }
 .spin__cardtext { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; color: var(--ink-2); }
 .spin__cardtext b { font-size: 15px; color: var(--ink); font-weight: 800; font-stretch: 112%; }
