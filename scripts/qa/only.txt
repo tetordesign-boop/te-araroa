@@ -1,2 +1,2 @@
-c-m-after
-c-s-after
+c-m-after-pins
+c-m-home-peek
