@@ -89,10 +89,12 @@ export function SponsorPins() {
       for (const p of pins) {
         if (far !== p.far) { p.far = far; p.el.classList.toggle("spin--far", far); }
         const pt = m.map.project(p.c);
-        const down = pt.y - p.h < pad.top && pt.y + p.h < box.height - pad.bottom;
-        const x = box.left + pt.x, top = box.top + pt.y - (down ? 0 : p.h), half = p.el.offsetWidth / 2;
+        // (the small coin of the far view stands only some 45 px above its spot: it rarely needs to hang below)
+        const h = far && p.h > 40 ? 46 : p.h;
+        const down = pt.y - h < pad.top && pt.y + p.h < box.height - pad.bottom;
+        const x = box.left + pt.x, top = box.top + pt.y - (down ? 0 : h), half = p.el.offsetWidth / 2;
         let dx = 0;
-        if (ctl?.width && top < ctl.bottom && top + p.h > ctl.top && x + half > ctl.left - 6 && x - half < ctl.right) {
+        if (ctl?.width && top < ctl.bottom && top + h > ctl.top && x + half > ctl.left - 6 && x - half < ctl.right) {
           dx = Math.round(Math.max(-(half - 10), ctl.left - 6 - (x + half)));
         }
         if (down === p.down && dx === p.dx) continue;
