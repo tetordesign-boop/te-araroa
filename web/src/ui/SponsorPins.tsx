@@ -92,7 +92,7 @@ export function SponsorPins() {
         // (the small coin of the far view sits on its spot: it never needs to hang below)
         const h = far && p.h > 40 ? 16 : p.h;
         const down = !(far && p.h > 40) && pt.y - h < pad.top && pt.y + p.h < box.height - pad.bottom;
-        const x = box.left + pt.x, top = box.top + pt.y - (down ? 0 : h), half = p.el.offsetWidth / 2;
+        const x = box.left + pt.x, top = box.top + pt.y - (down ? 0 : h), half = far && p.h > 40 ? 16 : p.el.offsetWidth / 2;
         let dx = 0;
         if (ctl?.width && top < ctl.bottom && top + h > ctl.top && x + half > ctl.left - 6 && x - half < ctl.right) {
           dx = Math.round(Math.max(-(half - 10), ctl.left - 6 - (x + half)));
