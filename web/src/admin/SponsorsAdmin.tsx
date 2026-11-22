@@ -34,13 +34,13 @@ export async function loadSponsors() {
     const ago = (h: number) => new Date(Date.now() - h * 3600e3).toISOString();
     const base = { contact: "@keacoffee", link: null, offer: null, message: null, lang: "fr", amount_cents: null, hold_until: null, paid_at: null };
     requests.value = [
-      { ...base, id: "r4", spot_id: "col-stag-saddle", spot_label: "Stag Saddle", name: "Kea Coffee", link: "@keacoffee", message: "On adorerait le point le plus haut !", kind: "buy", status: "paid", amount_cents: 25000, paid_at: ago(1), created_at: ago(1.1) },
-      { ...base, id: "r5", spot_id: "section-04", spot_label: "Boyle Village → Arthur's Pass", name: "Tūī Outdoors", contact: "hi@tui.example", kind: "buy", status: "pending", amount_cents: 8000, hold_until: new Date(Date.now() + 20 * 60e3).toISOString(), created_at: ago(0.2) },
+      { ...base, id: "r4", spot_id: "km-812", spot_label: "Kilomètre 812", name: "Kea Coffee", link: "@keacoffee", message: "On adorerait le point le plus haut !", kind: "buy", status: "paid", amount_cents: 25000, paid_at: ago(1), created_at: ago(1.1) },
+      { ...base, id: "r5", spot_id: "km-640", spot_label: "Kilomètre 640", name: "Tūī Outdoors", contact: "hi@tui.example", kind: "buy", status: "pending", amount_cents: 8000, hold_until: new Date(Date.now() + 20 * 60e3).toISOString(), created_at: ago(0.2) },
       { ...base, id: "r6", spot_id: "km-1", spot_label: "Kilomètre 1", name: "Lucas", contact: "lucas@example.com", kind: "buy", status: "conflict", amount_cents: 1000, paid_at: ago(30), created_at: ago(30) },
       { ...base, id: "r3", spot_id: "km-2", spot_label: "Kilomètre 2", name: "Tom", contact: "@tom", offer: "0", message: "Pour le premier pas !", kind: "ask", status: "new", created_at: ago(0.1) },
       { ...base, id: "r2", spot_id: "km-120", spot_label: "Kilomètre 120", name: "Léa", contact: "lea@example.com", offer: "0", kind: "ask", status: "done", created_at: ago(24) },
     ];
-    given.value = [{ spot_id: "col-stag-saddle", name: "Kea Coffee", logo: null, link: "https://www.instagram.com/keacoffee" }, { spot_id: "km-120", name: "Léa", logo: null, link: null }];
+    given.value = [{ spot_id: "km-812", name: "Kea Coffee", logo: null, link: "https://www.instagram.com/keacoffee" }, { spot_id: "km-120", name: "Léa", logo: null, link: null }];
     gifts.value = [
       { id: "g1", amount_cents: 2000, currency: "eur", name: "Mamie Jo", message: "Bonne route mon grand !", email: null, created_at: ago(3) },
       { id: "g2", amount_cents: 500, currency: "eur", name: null, message: null, email: null, created_at: ago(50) },

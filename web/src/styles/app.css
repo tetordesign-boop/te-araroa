@@ -1864,14 +1864,6 @@ input, textarea { caret-color: var(--marker); }
 .ridge__cursor { position: absolute; top: -4px; bottom: 0; width: 2px; margin-left: -1px; background: var(--marker); box-shadow: 0 0 12px var(--marker-glow); pointer-events: none; }
 .ridge__cursor::before { content: ""; position: absolute; left: 50%; top: -5px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--marker); box-shadow: 0 0 0 4px var(--marker-tint); }
 .ridge__plot:not(.is-drag) .ridge__cursor { transition: left var(--dur-2) var(--ease-out); }
-.ridge__bands { display: flex; gap: 2px; height: 18px; margin-top: 8px; }
-.ridge__band { flex: 1 1 0; min-width: 3px; padding: 0; border: 0; border-radius: 3px; background: rgba(140, 170, 222, 0.24); cursor: pointer;
-  transition: background var(--dur-1), transform var(--dur-1); }
-.ridge__band.is-odd { background: rgba(140, 170, 222, 0.13); }
-.ridge__band.is-taken { background: rgba(92, 214, 230, 0.7); }
-.ridge__band.is-sel { background: var(--marker); }
-.ridge__band:focus-visible { outline: 2px solid var(--marker-ring); outline-offset: 2px; }
-@media (hover: hover) { .ridge__band:hover { background: var(--marker-hot); transform: scaleY(1.2); } }
 .ridge__ends { display: flex; justify-content: space-between; gap: 8px; margin: 7px 0 0; color: var(--ink-3); font-size: 12px; }
 
 /* the slot, and the paper coming out of it */
@@ -1931,31 +1923,6 @@ input, textarea { caret-color: var(--marker); }
 .tk__hint { color: var(--ink-3); font-weight: 500; }
 .spage__count { margin: 18px 0 0; }
 
-/* the rows of small tickets */
-.tk-deck { margin-top: 30px; }
-.tk-deck__head .fine { margin: 4px 0 0; }
-.tk-deck__row { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
-  margin: 0 calc(-1 * var(--gutter)); padding: 12px var(--gutter) 8px; scroll-padding-inline: var(--gutter); }
-.tk-deck__row::-webkit-scrollbar { display: none; }
-.tk-mini { position: relative; flex: none; width: 168px; min-height: 126px; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px 11px;
-  scroll-snap-align: start; text-align: left; color: var(--ink); font: inherit; border: 0; border-radius: 16px; cursor: pointer;
-  background-color: #12203A;
-  background-image: linear-gradient(90deg, rgba(150, 180, 228, 0.28) 55%, transparent 0), linear-gradient(160deg, #172947, #0F1B32);
-  background-size: 9px 1.5px, 100% 100%; background-repeat: repeat-x, no-repeat; background-position: 10px calc(100% - 34px), 0 0;
-  box-shadow: inset 0 0 0 1px var(--line);
-  -webkit-mask: radial-gradient(circle at 0 calc(100% - 34px), #0000 7px, #000 7.5px), radial-gradient(circle at 100% calc(100% - 34px), #0000 7px, #000 7.5px);
-  -webkit-mask-composite: source-in; mask-composite: intersect;
-  transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-1); }
-.tk-mini__kind { font-size: 11.5px; font-weight: 700; font-stretch: 110%; color: var(--marker-hot); }
-.tk-mini__name { font-size: 15.5px; line-height: 1.15; font-weight: 800; font-stretch: 112%; letter-spacing: -0.01em;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.tk-mini__meta { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tk-mini__state { margin-top: auto; padding-top: 12px; font-size: 12px; font-weight: 700; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tk-mini.is-taken .tk-mini__state { color: var(--glacier); }
-.tk-mini.is-on { box-shadow: inset 0 0 0 2px var(--marker); }
-.tk-mini:active { transform: translateY(1px) scale(0.98); }
-.tk-mini:focus-visible { outline: 2px solid var(--marker-ring); outline-offset: 2px; }
-@media (hover: hover) { .tk-mini:hover { transform: translateY(-3px) rotate(-1deg); } }
 .tk-steps { counter-reset: tk; list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 12px; }
 .tk-steps li { counter-increment: tk; display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; font-size: 15.5px; line-height: 1.45; color: var(--story); }
 .tk-steps li::before { content: counter(tk); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;

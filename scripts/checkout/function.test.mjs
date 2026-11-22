@@ -152,17 +152,17 @@ console.log("ok  paid: the ticket is given, with its logo on the map and its lin
 
 r = await call({ action: "ticket", request: held("km-1") });
 assert.equal(r.status, 409); assert.equal(r.data.error, "taken");
-const b = held("col-stag-saddle"), c = held("col-stag-saddle", { name: "Tūī Outdoors", device_id: "x" });
+const b = held("km-812"), c = held("km-812", { name: "Tūī Outdoors", device_id: "x" });
 const sb1 = (await call({ action: "ticket", request: b })).data.url.split("/").pop();
 const sc1 = (await call({ action: "ticket", request: c })).data.url.split("/").pop();
 pay(sb1); pay(sc1);
 assert.equal((await call({ action: "confirm", session: sb1 })).data.status, "paid");
 assert.equal((await call({ action: "confirm", session: sc1 })).data.status, "conflict");
-assert.equal(db.sponsor_spots.find((x) => x.spot_id === "col-stag-saddle").name, "Kea Coffee");
+assert.equal(db.sponsor_spots.find((x) => x.spot_id === "km-812").name, "Kea Coffee");
 console.log("ok  a spot taken in between: the second payment is marked to refund");
 
 // a buyer who paid and closed the page, and one who never paid
-const d = held("section-02"), e = held("section-03");
+const d = held("km-300"), e = held("km-301");
 const sd = (await call({ action: "ticket", request: d, logo: PNG })).data.url.split("/").pop();
 await call({ action: "ticket", request: e, logo: PNG });
 sessions.get(sd).amount_total = 3500; // changed on Stripe's page: 35 units instead of 20
@@ -171,7 +171,7 @@ db.sponsor_requests.find((x) => x.id === e).hold_until = new Date(Date.now() - 6
 sessions.get(db.sponsor_requests.find((x) => x.id === e).checkout_id).status = "expired";
 r = await call({ action: "sweep" });
 assert.deepEqual(r.data, { given: 1, expired: 1 });
-assert.ok(db.sponsor_spots.some((x) => x.spot_id === "section-02"));
+assert.ok(db.sponsor_spots.some((x) => x.spot_id === "km-300"));
 assert.equal(db.sponsor_requests.find((x) => x.id === d).amount_cents, 3500, "what was really paid is kept");
 assert.equal(db.sponsor_requests.find((x) => x.id === e).status, "expired"); assert.ok(!files.pending.has(`${e}.png`));
 console.log("ok  the sweep gives a ticket paid by someone who never came back, and lets the unpaid ones go");
