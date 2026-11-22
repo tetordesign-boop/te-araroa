@@ -478,7 +478,11 @@ export class TrailMap {
       layout: {
         "icon-image": "station", "icon-size": zi([[5, 0.75], [10, 1]]), "icon-allow-overlap": tier === 1,
         "text-field": ["get", "n"], "text-font": F.bold, "text-size": zi([[5, 12], [10, 13.5]]),
-        "text-anchor": "left", "text-offset": [0.8, 0], "text-optional": tier !== 1, "text-max-width": 9,
+        // (Ship Cove, the start, is the island's north-east tip: on a phone a name to its right ran under the map's
+        // buttons, so it reads on its left)
+        "text-anchor": ["case", ["==", ["get", "i"], 0], "right", "left"],
+        "text-offset": ["case", ["==", ["get", "i"], 0], ["literal", [-0.8, 0]], ["literal", [0.8, 0]]],
+        "text-optional": tier !== 1, "text-max-width": 9,
       },
       paint: { "text-color": sat || dark ? "#F3F6FB" : "#16191d", "text-halo-color": halo, "text-halo-width": 1.6 },
     });
