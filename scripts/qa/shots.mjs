@@ -170,6 +170,36 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
       const csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]') ? "csp on" : "NO CSP";
       window.__qa = `${csp} | signup ${r.disable_signup ? "closed" : "OPEN"} | autoconfirm ${r.mailer_autoconfirm} | anonymous ${r.anonymous_users ?? "?"} | providers ${Object.entries(r.external || {}).filter(([, v]) => v).map(([k]) => k).join(",")}`;
     }), probe: "window.__qa" },
+  // Impeccable critique and audit (November 2026): every surface online, as a phone and a computer see it
+  ...(() => {
+    const open = seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(1200));
+    const down = (y) => (p) => p.evaluate((y) => { const b = document.querySelector(".sheet__body"); if (b) b.scrollTop = y; }, y);
+    const A = "(() => { const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden' && r.bottom > 0 && r.top < innerHeight; }; const nm = (e) => ((e.getAttribute('aria-label') || '') + (e.innerText || '') + (e.getAttribute('title') || '') + ([...(e.labels || [])].map((l) => l.innerText).join('')) + (e.querySelector('img[alt]')?.alt || '')).trim(); const c = [...document.querySelectorAll('button, a[href], [role=button], [role=slider], input:not([type=hidden]), textarea, select')].filter(vis); const un = c.filter((e) => !nm(e) && e.name !== 'website').map((e) => (e.className || e.tagName).toString().split(' ')[0]); const sm = c.filter((e) => { const r = e.getBoundingClientRect(); return r.width < 24 || r.height < 24; }).map((e) => (e.className || e.tagName).toString().split(' ')[0] + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height)); const hs = [...document.querySelectorAll('h1,h2,h3,h4')].filter((h) => h.getBoundingClientRect().height > 0).map((h) => h.tagName[1]).join(''); const fs = [...document.querySelectorAll('.sheet *, .panel *')].filter((e) => [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && vis(e)).map((e) => parseFloat(getComputedStyle(e).fontSize)); return 'controls ' + c.length + ' | unnamed ' + un.length + ' [' + [...new Set(un)].slice(0, 8).join(', ') + '] | under24 ' + sm.length + ' [' + [...new Set(sm)].slice(0, 10).join(', ') + '] | img-no-alt ' + document.querySelectorAll('img:not([alt])').length + ' | headings ' + hs + ' | min-font ' + Math.min(...fs) + ' | hscroll ' + (document.documentElement.scrollWidth > innerWidth) + ' | lang ' + document.documentElement.lang; })()";
+    const small = () => ({ ...mobile(false), viewport: { width: 320, height: 640 } });
+    return [
+      { id: "c-m-home-peek", ctx: mobile(false), url: "", plain: 16000, probe: A },
+      { id: "c-m-home-1", ctx: mobile(false), url: "", plain: 14000, act: open, probe: A },
+      { id: "c-m-home-2", ctx: mobile(false), url: "", plain: 14000, act: seq(open, down(760), wait(900)), probe: A },
+      { id: "c-m-home-3", ctx: mobile(false), url: "", plain: 14000, act: seq(open, down(1560), wait(900)), probe: A },
+      { id: "c-m-home-4", ctx: mobile(false), url: "", plain: 14000, act: seq(open, down(99999), wait(900)), probe: A },
+      { id: "c-m-journal-1", ctx: mobile(false), url: "#/journal", plain: 14000, act: open, probe: A },
+      { id: "c-m-journal-2", ctx: mobile(false), url: "#/journal", plain: 14000, act: seq(open, down(800), wait(1500)), probe: A },
+      { id: "c-m-journal-3", ctx: mobile(false), url: "#/journal", plain: 14000, act: seq(open, down(99999), wait(1500)), probe: A },
+      { id: "c-m-explore-1", ctx: mobile(false), url: "#/explorer", plain: 14000, act: open, probe: A },
+      { id: "c-m-stats-1", ctx: mobile(false), url: "#/stats", plain: 14000, act: open, probe: A },
+      { id: "c-m-stats-2", ctx: mobile(false), url: "#/stats", plain: 14000, act: seq(open, down(800), wait(1200)), probe: A },
+      { id: "c-m-about-1", ctx: mobile(false), url: "#/apropos", plain: 14000, act: open, probe: A },
+      { id: "c-m-about-2", ctx: mobile(false), url: "#/apropos", plain: 14000, act: seq(open, down(800), wait(1200)), probe: A },
+      { id: "c-m-questions", ctx: mobile(false), url: "#/questions", plain: 14000, act: open, probe: A },
+      { id: "c-m-place", ctx: mobile(false), url: "#/lieu/n527531217", plain: 16000, probe: A },
+      { id: "c-m-search", ctx: mobile(false), url: "#/explorer", plain: 14000, act: seq(open, (p) => p.fill(".search input", "hut").catch(() => {}), wait(1800)), probe: A },
+      { id: "c-s-home-1", ctx: small(), url: "", plain: 14000, act: open, probe: A },
+      { id: "c-s-parrainer", ctx: small(), url: "#/parrainer", plain: 14000, act: open, probe: A },
+      { id: "c-d-home", ctx: desktop(false), url: "", plain: 16000, probe: A },
+      { id: "c-d-journal", ctx: desktop(false), url: "#/journal", plain: 14000, probe: A },
+      { id: "c-d-parrainer", ctx: desktop(false), url: "#/parrainer", plain: 14000, probe: A },
+    ];
+  })(),
   // the purchase and the gift, online: the page, the gift, a ticket's form, back from Stripe, and the server functions
   { id: "p-m-pay-page", ctx: mobile(false), url: "#/parrainer", plain: 12000, act: seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(1200)),
     probe: "[...document.querySelectorAll('.tk-deck')].map((d) => d.querySelector('h2').innerText + ' ' + d.querySelectorAll('.tk-mini').length).join(', ') + ' | gift ' + !!document.querySelector('.gift') + ' | ' + (/galère|colis|mon sac/i.test(document.body.innerText) ? 'OLD KINDS STILL THERE' : 'no old kinds')" },
