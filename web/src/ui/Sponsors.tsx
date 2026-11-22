@@ -42,7 +42,7 @@ const W = {
     price: "Ton prix", priceHint: `à partir de ${MIN_EUR} €`,
     askFree: "Pas de budget : je demande ce ticket gratuitement", askFreeHint: "sur accord, je te réponds",
     pay: (n: string) => `Payer ${n} €`, send: "Envoyer la demande", sending: "Un instant…", cancel: "Annuler",
-    secure: "Paiement sécurisé par Stripe : carte, Apple Pay ou Google Pay. Le ticket est à toi dès que c'est payé.",
+    secure: "Paiement sécurisé par Stripe : carte, Apple Pay ou Google Pay. Tu peux encore changer le montant sur la page de paiement. Le ticket est à toi dès que c'est payé.",
     needWho: "Écris ton nom ou celui de ta marque.", needContact: "Laisse-moi un moyen de te joindre.", needPrice: `Le prix commence à ${MIN_EUR} €.`, badLogo: "Ce fichier n'est pas une image.",
     err: {
       rate: "Trop de demandes d'un coup : réessaie dans quelques minutes.", links: "Un seul lien par message, s'il te plaît.",
@@ -88,7 +88,7 @@ const W = {
     price: "Your price", priceHint: `from €${MIN_EUR}`,
     askFree: "No budget: I'm asking for this ticket for free", askFreeHint: "if I agree, I'll get back to you",
     pay: (n: string) => `Pay €${n}`, send: "Send the request", sending: "One moment…", cancel: "Cancel",
-    secure: "Secure payment by Stripe: card, Apple Pay or Google Pay. The ticket is yours as soon as it's paid.",
+    secure: "Secure payment by Stripe: card, Apple Pay or Google Pay. You can still change the amount on the payment page. The ticket is yours as soon as it's paid.",
     needWho: "Write your name or your brand's.", needContact: "Leave me a way to reach you.", needPrice: `The price starts at €${MIN_EUR}.`, badLogo: "That file isn't an image.",
     err: {
       rate: "Too many requests at once: try again in a few minutes.", links: "One link per message, please.",

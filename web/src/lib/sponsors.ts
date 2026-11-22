@@ -138,7 +138,7 @@ export async function requestSpot(spot: Spot, a: Ask, lang: Lang): Promise<AskRe
 
 // ------------------------------------------------------------------ buying a ticket, giving a hand
 /** the least a ticket costs (a small price would let anyone put anything on the map for nothing), and the most */
-export const MIN_EUR = 5;
+export const MIN_EUR = 1;
 export const MAX_EUR = 10000;
 /** the amounts offered for a gift (any other can be typed) */
 export const GIFT_EUR = [5, 10, 20, 50];
