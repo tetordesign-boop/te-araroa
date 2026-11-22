@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-22T06:42:42+00:00",
+  "title": "Design System: Te Araroa avec moi",
+  "extensions": {
+    "colorMeta": {
+      "marker": {
+        "role": "primary",
+        "displayName": "Track-Marker Orange",
+        "canonical": "#FF6B12",
+        "tonalRamp": [
+          "#3D1400",
+          "#6B2300",
+          "#9C3500",
+          "#CC4A05",
+          "#FF6B12",
+          "#FF8B3D",
+          "#FFB27F",
+          "#FFD9BD"
+        ]
+      },
+      "glacier": {
+        "role": "secondary",
+        "displayName": "Tekapo Turquoise",
+        "canonical": "#5CD6E6",
+        "tonalRamp": [
+          "#04232A",
+          "#0A3F48",
+          "#0D7487",
+          "#2AA9BE",
+          "#5CD6E6",
+          "#8BE3EE",
+          "#B9EFF5",
+          "#E2F9FB"
+        ]
+      },
+      "night": {
+        "role": "neutral",
+        "displayName": "Mackenzie Night",
+        "canonical": "#0C1526",
+        "tonalRamp": [
+          "#070E1B",
+          "#0C1526",
+          "#111C30",
+          "#1A2A47",
+          "#26365A",
+          "#3C4E73",
+          "#8292AD",
+          "#A9B6CC"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Starlight",
+        "canonical": "#F3F6FB"
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Mist",
+        "canonical": "#A9B6CC"
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Dusk",
+        "canonical": "#8292AD"
+      },
+      "story": {
+        "role": "neutral",
+        "displayName": "Page White",
+        "canonical": "#E6ECF5"
+      },
+      "marker-hot": {
+        "role": "primary",
+        "displayName": "Ember",
+        "canonical": "#FF8B3D"
+      },
+      "on-marker": {
+        "role": "primary",
+        "displayName": "Ash Brown",
+        "canonical": "#1A0A00"
+      },
+      "on-glacier": {
+        "role": "secondary",
+        "displayName": "Deep Lake",
+        "canonical": "#04232A"
+      }
+    },
+    "typographyMeta": {
+      "hero-number": {
+        "displayName": "Hero number",
+        "purpose": "The kilometres I walked; the stats' big figures."
+      },
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles; place titles at 28 px."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "A day's title, in my words."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section titles inside a page."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "The interface."
+      },
+      "story": {
+        "displayName": "Story",
+        "purpose": "My days, captions and introductions; the notes people write me."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Fine print, captions, axis and figure labels."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float",
+        "value": "0 10px 30px -10px rgba(0, 0, 0, 0.75), 0 1px 2px rgba(0, 0, 0, 0.4)",
+        "purpose": "Floating controls, pills and cards over the map."
+      },
+      {
+        "name": "sheet",
+        "value": "0 -2px 40px -8px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4)",
+        "purpose": "The sheet's lift off the map."
+      },
+      {
+        "name": "lit",
+        "value": "inset 0 1px 0 rgba(255, 255, 255, 0.075)",
+        "purpose": "The top edge of solid surfaces; 0.14 under a mouse."
+      },
+      {
+        "name": "drop-of-light",
+        "value": "inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 0 rgba(90, 20, 0, 0.28), 0 10px 24px -10px rgba(255, 107, 18, 0.5)",
+        "purpose": "The orange buttons."
+      }
+    ],
+    "motion": [
+      {
+        "name": "spring",
+        "value": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "purpose": "Anything let go: back, with a little bounce."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Arrivals."
+      },
+      {
+        "name": "ease-sheet",
+        "value": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "purpose": "The sheet when it is not following a finger."
+      },
+      {
+        "name": "dur-1",
+        "value": "160ms",
+        "purpose": "Feedback."
+      },
+      {
+        "name": "dur-2",
+        "value": "320ms",
+        "purpose": "A change of state."
+      },
+      {
+        "name": "dur-3",
+        "value": "600ms",
+        "purpose": "An entrance."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "small-phone",
+        "value": "360px"
+      },
+      {
+        "name": "tablet-card",
+        "value": "600px"
+      },
+      {
+        "name": "panel",
+        "value": "900px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one action about me on a screen: subscribe, write to me, take a ticket.",
+      "html": "<button class=\"ds-btn-primary\">Je veux ce ticket</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 50px; padding: 0 22px; border: 0; border-radius: 999px; font: 700 16.5px/1 'Archivo Variable', Archivo, system-ui, sans-serif; font-stretch: 106%; color: #1A0A00; background: #FF6B12 linear-gradient(180deg, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 52%, rgba(90,20,0,.14) 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(90,20,0,.28), 0 10px 24px -10px rgba(255,107,18,.5); transition: transform .32s cubic-bezier(.34,1.56,.64,1); } .ds-btn-primary:active { transform: scale(.96); background-color: #E85D08; } .ds-btn-primary:focus-visible { outline: 2.5px solid #5CD6E6; outline-offset: 2px; }"
+    },
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Every other action.",
+      "html": "<button class=\"ds-btn\">Annuler</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 50px; padding: 0 22px; border: 0; border-radius: 999px; font: 700 16.5px/1 'Archivo Variable', Archivo, system-ui, sans-serif; color: #F3F6FB; background: rgba(140,170,222,.11); box-shadow: inset 0 1px 0 rgba(255,255,255,.075); transition: transform .32s cubic-bezier(.34,1.56,.64,1), background .16s; } .ds-btn:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,.14); } .ds-btn:active { transform: scale(.96); background: rgba(140,170,222,.2); } .ds-btn:focus-visible { outline: 2.5px solid #5CD6E6; outline-offset: 2px; }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Text a visitor types: a name, a note, a price.",
+      "html": "<input class=\"ds-field\" placeholder=\"Ton prénom\">",
+      "css": ".ds-field { width: 100%; border: 0; border-radius: 14px; padding: 14px 15px; font: 450 17px/1.35 'Archivo Variable', Archivo, system-ui, sans-serif; color: #F3F6FB; caret-color: #FF6B12; background: rgba(140,170,222,.11); box-shadow: inset 0 0 0 1px rgba(150,180,228,.14); outline: none; transition: box-shadow .2s ease; } .ds-field::placeholder { color: #6F7F99; } .ds-field:focus { box-shadow: inset 0 0 0 2px #FF6B12, 0 0 0 4px rgba(255,107,18,.15); }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "A filter of the kinds of places; turquoise when on.",
+      "html": "<button class=\"ds-chip ds-chip--on\"><i></i>Refuges</button>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 13px 0 8px; border: 0; border-radius: 999px; font: 650 14.5px/1 'Archivo Variable', Archivo, system-ui, sans-serif; color: #A9B6CC; background: rgba(140,170,222,.11); } .ds-chip i { width: 20px; height: 20px; border-radius: 50%; background: #8B80FF; box-shadow: 0 0 10px rgba(139,128,255,.6); } .ds-chip--on { color: #F3F6FB; background: rgba(92,214,230,.14); box-shadow: inset 0 0 0 1.5px rgba(92,214,230,.55); } .ds-chip:focus-visible { outline: 2.5px solid #5CD6E6; outline-offset: 2px; }"
+    },
+    {
+      "name": "List Row",
+      "kind": "card",
+      "refersTo": "list-row",
+      "description": "A day, a place or a page in a list on a platter.",
+      "html": "<div class=\"ds-list\"><a class=\"ds-row\" href=\"#\"><span class=\"ds-thumb\"></span><span><b>Jour 12 : Stag Saddle</b><small>24,6 km, 1 120 m de montée</small></span></a></div>",
+      "css": ".ds-list { border-radius: 20px; background: rgba(140,170,222,.085); box-shadow: inset 0 1px 0 rgba(255,255,255,.075); overflow: hidden; } .ds-row { display: flex; align-items: center; gap: 14px; min-height: 72px; padding: 10px 14px 10px 10px; color: #F3F6FB; text-decoration: none; font-family: 'Archivo Variable', Archivo, system-ui, sans-serif; } .ds-row b { display: block; font-size: 17px; font-weight: 550; } .ds-row small { color: #A9B6CC; font-size: 14px; } .ds-thumb { width: 52px; height: 52px; border-radius: 12px; background: rgba(140,170,222,.2); flex: none; } .ds-row:active { background: rgba(140,170,222,.17); } .ds-row:focus-visible { outline: 2.5px solid #5CD6E6; outline-offset: -3px; }"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Moi, Journal, Explorer, Stats in a pill of night glass; the current tab holds a drop of lake water.",
+      "html": "<nav class=\"ds-nav\"><a aria-current=\"page\">Moi</a><a>Journal</a><a>Explorer</a><a>Stats</a></nav>",
+      "css": ".ds-nav { display: flex; gap: 2px; padding: 5px; border-radius: 999px; background: rgba(17,28,50,.6); backdrop-filter: blur(18px) saturate(1.8); box-shadow: 0 10px 30px -10px rgba(0,0,0,.75), inset 0 1px 1px rgba(255,255,255,.1); font: 700 12.5px/1 'Archivo Variable', Archivo, system-ui, sans-serif; } .ds-nav a { flex: 1; display: grid; place-items: center; height: 52px; border-radius: 999px; color: #A9B6CC; text-decoration: none; } .ds-nav a[aria-current] { color: #F3F6FB; background: radial-gradient(120% 120% at 50% 30%, rgba(92,214,230,.35), rgba(13,116,135,.25)); box-shadow: inset 0 1px 0 rgba(226,236,255,.4); } .ds-nav a:focus-visible { outline: 2.5px solid #5CD6E6; outline-offset: -3px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La nuit du Mackenzie",
+    "overview": "The site is the Mackenzie basin at night, under the dark-sky reserve over Tekapo: a navy map with relief lit as if by the moon and glacier lakes glowing turquoise, and one warm light in it, mine. The walked trail is a lit tube of track-marker orange (the orange triangles nailed to every post of the Te Araroa), my point glows, the day you open lights up its stretch. Everything else stays in the cold of the night.\n\nThe structure is Apple Plans': the map full screen, a glass sheet with heights on a phone, a floating panel beside the map on a computer. Glass is the chrome; what sits inside the sheet is solid and calm. Two voices share the page: the site measures and labels in Archivo, stretched wide like a race bib, and my own words (days, stories, captions) and the notes people send me are set in Literata. Motion answers touch; one orchestrated moment on arrival, nothing else moves on its own.\n\nThe level of craft is the one I set with five web components I chose (a liquid-glass navigation with WebGL water, glass folder cards, a curved band of images, a perspective tunnel of cards, links whose letters ripple): each rewritten for this site, given a job, drawn in the night palette, and clear before clever. No stock photos: a picture means I took it.",
+    "keyCharacteristics": [
+      "Night map, lit trail; the only warm colour is mine.",
+      "Orange means me, turquoise means the map.",
+      "Glass for the chrome, solid surfaces for the content, both catching the same light on their top edge.",
+      "Wide, heavy numbers for what I walked; a book face for what I wrote.",
+      "Every touch answers; nothing moves unasked."
+    ],
+    "rules": [
+      {
+        "name": "The One Warm Light Rule",
+        "body": "Orange belongs to me alone: my trail, my point, my days, the actions about me. Nothing decorative is orange, and no other warm colour enters the night.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Lights Rule",
+        "body": "Turquoise is the map's; orange is mine. A control is turquoise when it acts on the map, orange when it is about me. Nothing else gets colour, except the kinds of places.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Voices Rule",
+        "body": "If I wrote it, it's Literata; if the site says or measures it, it's Archivo. Never the other way round.",
+        "section": "typography"
+      },
+      {
+        "name": "The Bib Rule",
+        "body": "Figures are wide and heavy, with tabular numerals where they line up. Past 1,000 km the hero number narrows by its final figure so it never jumps while counting up.",
+        "section": "typography"
+      },
+      {
+        "name": "The French Typography Rule",
+        "body": "Narrow no-break spaces before `? ! : ;`, inside « », between a number and its unit, before →, applied by `typo()` and `t()`. Archivo and Literata lack the narrow no-break space, so a one-character font (\"Te Araroa Fine\", 0.15 em, `unicode-range` limited) comes first in both stacks. No ALL-CAPS labels, no middle-dot meta strings: details are joined with commas and a km figure comes last (\"Refuge, 1 310 m, km 280\"); ranges use an en dash (\"Havelock – St Arnaud\"). Elevations read from the profile rather than the map data are marked \"≈\".",
+        "section": "typography"
+      },
+      {
+        "name": "The Free Map Rule",
+        "body": "Whatever the sheet does, the part of the map left visible stays the map's: no control parks there that the sheet already offers.",
+        "section": "layout"
+      },
+      {
+        "name": "The Glass Is Chrome Rule",
+        "body": "Glass is for what floats over the map (the sheet, the panel, the floating buttons, the cards and pills on the map, the navigation, the toast, the photo viewer's buttons). Content inside the sheet is solid. Glass never decorates.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Blur Budget Rule",
+        "body": "Each blur is redrawn whenever what lies under it changes, and under the sheet the map moves constantly: the chrome blurs 16 px, the sheet 22 px; on a phone, glass lying on the already frosted sheet (the navigation, the folders) uses a denser tint instead of a second blur. Reduced transparency: solid surfaces, no blur, the same rims.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep orange for me (my trail, point, days and the actions about me) and turquoise for the map.",
+      "Do make every control a 44 × 44 px target, even when drawn smaller (an invisible `::before` margin).",
+      "Do let VoiceOver read what is written on a control first, then what it does.",
+      "Do use the spring (`cubic-bezier(0.34, 1.56, 0.64, 1)`) for anything let go and `--ease-out` (`cubic-bezier(0.22, 1, 0.36, 1)`) for arrivals, at 160 ms for feedback, 320 ms for a change, 600 ms for an entrance; exits faster than entrances.",
+      "Do keep one orchestrated moment: on arrival the trail draws itself from Ship Cove while my kilometres count up, I land with a ping and the camera dives to me. The presentation on a first visit runs once. Camera shows start only when asked, and touching the map always wins.",
+      "Do give an empty screen something true to show and one thing to do (before the first day, Stats shows what lies ahead from the trail's own data, and Journal and Stats offer to be told of each new day).",
+      "Do give every state an answer: a missing field shakes and takes the focus, a note sent draws its tick and comes back as a receipt, the parts nobody draws (caret, selection, underline offset) take the palette.",
+      "Do honour reduced motion (no scenes, no squash, the band stands still) and reduced transparency (solid surfaces, no blur).",
+      "Do speak in the first person, to \"vous\" / \"you\", in plain words a grandmother understands."
+    ],
+    "donts": [
+      "Don't use stock photos or illustrations standing in for mine; an empty state says what will come.",
+      "Don't put ALL-CAPS labels, eyebrows above headings, or middle-dot meta strings anywhere.",
+      "Don't blur twice: glass on frosted glass takes a denser tint instead.",
+      "Don't animate at rest: my point pulses four times on a new position, then stops; the navigation's water calms within seconds.",
+      "Don't let anything decorative be orange.",
+      "Don't explain the logo, and don't bring back an illustrated one.",
+      "Don't add an emoji or a typed glyph where an icon belongs."
+    ]
+  }
+}

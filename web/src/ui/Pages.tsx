@@ -4,6 +4,7 @@ import { mediaUrl } from "../config";
 import { lang, t } from "../i18n";
 import { clock, coverOf, dayOnTrail, days, media, mediaByDay, progressKm, route, settings, walked, walkedKm } from "../lib/data";
 import { addDays, fmtDate, fmtInt, fmtKm, nzToday, typo } from "../lib/format";
+import { places, profile } from "../lib/places";
 import type { Day } from "../types";
 import { dayKm, excerpt, LangSwitch, titleOf } from "./Home";
 import { AddSquare, ArrowRight, Ask, Close, Pencil, Play, Trail } from "./icons";
@@ -209,6 +210,7 @@ export function Journal() {
       ) : (
         <>
           <p class="empty" style={{ marginTop: "14px" }}>{t("journalEmpty")}</p>
+          <NotifyCard block />
           <TrailSections />
         </>
       )}
@@ -360,7 +362,7 @@ export function Stats() {
   return (
     <div class="page">
       <PageHead title={t("stats")} tab />
-      {!ds.length ? <p class="empty" style={{ marginTop: "14px" }}>{t("statsSoon")}</p> : (
+      {!ds.length ? <TrailAhead /> : (
         <>
           <div class="bigline">
             <span class="num bigline__v">{fmtKm(prog, l, 0)}</span>
@@ -398,6 +400,39 @@ export function Stats() {
         </>
       )}
     </div>
+  );
+}
+
+/** Before the first day, the stats are the trail's own: what lies ahead, from its data (the climbing and the
+ * highest point read from the elevation profile, so marked ≈), and the way to be told when it starts. */
+function TrailAhead() {
+  const l = lang.value, p = profile.value, all = places.value;
+  const n = useMemo(() => {
+    const c = { hut: 0, camp: 0, pass: 0, town: 0 };
+    for (const x of all) if (x.t === "hut" || x.t === "camp" || x.t === "pass" || x.t === "town") c[x.t]++;
+    return c;
+  }, [all]);
+  const fig = (label: string, value: string, unit?: string) => <div><dt>{label}</dt><dd class="num">{value}{unit && <small>{unit}</small>}</dd></div>;
+  return (
+    <>
+      <p class="empty" style={{ marginTop: "14px" }}>{t("statsSoon")}</p>
+      <div class="bigline" style={{ marginTop: "22px" }}>
+        <span class="num bigline__v">{fmtKm(route.value.total, l, 0)}</span>
+        <span class="bigline__u">{t("aheadKm")}</span>
+      </div>
+      <div style={{ marginTop: "10px" }}>
+        <TrailStrip route={route.value} walked={[]} here={null} large />
+      </div>
+      <dl class="figs">
+        {p && fig(t("aheadUp"), `≈\u202f${fmtInt(Math.round(p.up / 100) * 100, l)}`, "m")}
+        {p && fig(t("aheadMax"), `≈\u202f${fmtInt(p.max, l)}`, "m")}
+        {n.hut > 0 && fig(t("aheadHuts"), fmtInt(n.hut, l))}
+        {n.camp > 0 && fig(t("aheadCamps"), fmtInt(n.camp, l))}
+        {n.pass > 0 && fig(t("aheadPasses"), fmtInt(n.pass, l))}
+        {n.town > 0 && fig(t("aheadTowns"), fmtInt(n.town, l))}
+      </dl>
+      <NotifyCard block />
+    </>
   );
 }
 

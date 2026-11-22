@@ -34,7 +34,7 @@
   --line-strong: rgba(150, 180, 228, 0.26);
   --ink: #F3F6FB;
   --ink-2: #A9B6CC;
-  --ink-3: #6F7F99;
+  --ink-3: #8292AD;                       /* 4.5:1 and more on every night surface, raised fields included */
   --story: #E6ECF5;                       /* long reading: a touch softer than white */
 
   /* the track marker: Ewan */
@@ -618,7 +618,7 @@ html.is-intro .lnav-fade, html.is-trail-mode .lnav-fade { opacity: 0; }
 .row__thumb--empty svg { width: 18px; height: 18px; }
 .row__main { flex: 1; min-width: 0; }
 .row__title { display: block; font-size: 17px; line-height: 1.3; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.row__meta { display: block; font-size: 14px; color: var(--ink-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row__meta { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; line-height: 1.35; color: var(--ink-2); margin-top: 2px; text-wrap: pretty; }
 .row__chev { color: var(--ink-3); flex: none; width: 17px; height: 17px; }
 
 .foot { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
@@ -1349,7 +1349,8 @@ html.is-tunnel .pband__tile { animation-play-state: paused !important; }
 .search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; font-size: 17px; color: var(--ink); -webkit-appearance: none; appearance: none; }
 .search input::placeholder { color: var(--ink-3); }
 .search input::-webkit-search-cancel-button { display: none; }
-.search__clear { width: 22px; height: 22px; border-radius: 50%; background: var(--ink-3); color: var(--night); display: grid; place-items: center; flex: none; animation: pop-in 0.25s var(--spring) both; }
+.search__clear { position: relative; width: 22px; height: 22px; border-radius: 50%; background: var(--ink-3); color: var(--night); display: grid; place-items: center; flex: none; animation: pop-in 0.25s var(--spring) both; }
+.search__clear::before { content: ""; position: absolute; inset: -11px; border-radius: 50%; }
 .search__clear svg { width: 11px; height: 11px; }
 .searchbtn {
   width: 100%; display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 13px; margin: 0 0 24px;
@@ -1959,8 +1960,17 @@ input, textarea { caret-color: var(--marker); }
 .spin__stem, .spin__shadow { margin-left: var(--sx, 0px); }
 .spin__card { position: absolute; left: 50%; bottom: calc(100% + 6px); display: flex; align-items: flex-start; gap: 10px; width: max-content; max-width: 230px;
   padding: 10px 12px 11px; border-radius: 16px; background: var(--surface-solid); box-shadow: var(--shadow-float), inset 0 0 0 1px var(--line-strong);
-  opacity: 0; pointer-events: none; transform: translate(calc(-50% + var(--dx, 0px)), 6px) scale(0.96); transform-origin: 50% 100%; transition: opacity var(--dur-1), transform var(--dur-2) var(--ease-out); cursor: default; }
-.spin.is-open .spin__card { opacity: 1; pointer-events: auto; transform: translate(calc(-50% + var(--dx, 0px)), 0) scale(1); }
+  opacity: 0; visibility: hidden; pointer-events: none; transform: translate(calc(-50% + var(--dx, 0px)), 6px) scale(0.96); transform-origin: 50% 100%;
+  transition: opacity var(--dur-1), transform var(--dur-2) var(--ease-out), visibility 0s linear var(--dur-2); cursor: default; }
+.spin.is-open .spin__card { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(calc(-50% + var(--dx, 0px)), 0) scale(1); transition-delay: 0s; }
+/* the card's link and button take a taller tap than their line */
+.spin__link, .spin__more { position: relative; }
+.spin__link::before, .spin__more::before { content: ""; position: absolute; inset: -7px -4px; }
+/* the whole island in view: a coin half the size, sitting on its spot, so it never hides a town's name */
+.spin--far .spin__float { scale: 0.55; translate: 0 30px; }
+.spin--far:not(.spin--name) .spin__stem { opacity: 0; }
+.spin--far.spin--down .spin__float { translate: 0 -12px; }
+.spin__float, .spin__stem { transition: scale var(--dur-2) var(--ease-out), translate var(--dur-2) var(--ease-out), opacity var(--dur-2); }
 .spin__cardlogo { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #fff; box-shadow: 0 0 0 2px var(--marker); }
 .spin__cardtext { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; color: var(--ink-2); }
 .spin__cardtext b { font-size: 15px; color: var(--ink); font-weight: 800; font-stretch: 112%; }
