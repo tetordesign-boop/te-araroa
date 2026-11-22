@@ -69,7 +69,7 @@ export function SponsorPins() {
     if (!m || !t.size) return;
     const els: HTMLElement[] = [];
     const close = () => els.forEach((e) => { e.classList.remove("is-open"); e.setAttribute("aria-expanded", "false"); e.style.zIndex = ""; });
-    type Pin = { el: HTMLElement; mk: ReturnType<typeof m.marker>; c: [number, number]; h: number; down: boolean; dx: number };
+    type Pin = { el: HTMLElement; mk: ReturnType<typeof m.marker>; c: [number, number]; h: number; down: boolean; dx: number; far: boolean };
     const pins: Pin[] = [];
     for (const [id, owner] of t) {
       const spot = spotById(id);
@@ -78,13 +78,16 @@ export function SponsorPins() {
       const el = build(spot, owner, l, close);
       els.push(el);
       const mk = m.marker({ element: el, anchor: "bottom" }).setLngLat(c).addTo(m.map);
-      pins.push({ el, mk, c: c as [number, number], h: el.classList.contains("spin--name") ? 40 : 86, down: false, dx: 0 });
+      pins.push({ el, mk, c: c as [number, number], h: el.classList.contains("spin--name") ? 40 : 86, down: false, dx: 0, far: false });
     }
     // and where the map's buttons are level with it, it leans left, its stem still on the spot
     const place = () => {
       const pad = m.viewPadding, box = m.map.getContainer().getBoundingClientRect();
       const ctl = document.querySelector(".controls")?.getBoundingClientRect();
+      // with the whole island in view, a coin is half its size and sits on its spot: it never hides a town's name
+      const far = m.map.getZoom() < 7.6;
       for (const p of pins) {
+        if (far !== p.far) { p.far = far; p.el.classList.toggle("spin--far", far); }
         const pt = m.map.project(p.c);
         const down = pt.y - p.h < pad.top && pt.y + p.h < box.height - pad.bottom;
         const x = box.left + pt.x, top = box.top + pt.y - (down ? 0 : p.h), half = p.el.offsetWidth / 2;

@@ -43,7 +43,7 @@ function euros(cents: number, desc: string): Form {
     "line_items[0][adjustable_quantity][maximum]": String(MAX_UNITS),
   };
 }
-const adjust = (en: boolean) => en ? "€1 a unit: change the quantity to change your amount." : "1 € l'unité : change la quantité pour changer ton montant.";
+const adjust = (en: boolean) => en ? "€1 a unit: change the quantity to change your amount." : "1 € l'unité : changez la quantité pour changer votre montant.";
 async function stripe(path: string, form?: Form): Promise<Record<string, any>> {
   const key = await getSecret("stripe_key");
   if (!key) throw new NotConfigured("no key");
@@ -128,7 +128,7 @@ async function ticket(body: Record<string, unknown>) {
     mode: "payment",
     ...euros(r.amount_cents ?? 100, en
       ? `Te Araroa, the South Island on foot: your name on the trail's map. ${adjust(en)}`
-      : `Te Araroa, l'île du Sud à pied : ton nom sur la carte du sentier. ${adjust(en)}`),
+      : `Te Araroa, l'île du Sud à pied : votre nom sur la carte du sentier. ${adjust(en)}`),
     "line_items[0][price_data][product_data][name]": label,
     client_reference_id: r.id,
     "metadata[kind]": "ticket",
