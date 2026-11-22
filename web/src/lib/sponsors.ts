@@ -1,11 +1,10 @@
-// "Les tickets du sentier": every spot of my Te Araroa that a brand, or someone close to me, can sponsor. On the trail
-// you pay the huts with tickets, so each spot is a ticket: a kilometre, a pass, a section between two stops, the
-// start or the finish. The spots are worked out here from the trail's own data (its stops, the passes of the map
-// data, the elevation profile), so nothing is typed twice; which ones are taken comes from `sponsor_spots`.
-// Buying one is direct: `start_purchase` holds the spot a little while (rate limited), the "checkout" server function
-// opens a Stripe payment at that price, and once paid the spot is given automatically (the function checks the
-// payment with Stripe itself). A ticket asked for free goes through `request_sponsor` and waits for my yes in the
-// Carnet. A gift ("un coup de pouce") is a Stripe payment of the amount chosen, with nothing to give back.
+// "Les tickets du sentier": the kilometres of my Te Araroa, each one a ticket a brand or someone close to me can
+// sponsor (on the trail you pay the huts with tickets). Only kilometres: they're worked out from the trail's own data
+// (its stops, the passes of the map data, the elevation profile), and which ones are taken comes from `sponsor_spots`.
+// Buying one is direct: `start_purchase` holds the kilometre a little while (rate limited), the "checkout" server
+// function opens a Stripe payment at that price, and once paid it's given automatically (the function checks the
+// payment with Stripe itself). One asked for free goes through `request_sponsor` and waits for my yes in the Carnet.
+// A gift ("un coup de pouce") is a Stripe payment of the amount chosen, with nothing to give back.
 import { computed, signal } from "@preact/signals";
 import { MOCK, SUPABASE_KEY, SUPABASE_URL, mediaUrl } from "../config";
 import type { Lang } from "../types";
@@ -13,51 +12,34 @@ import { deviceId, route, sb } from "./data";
 import type { LngLat } from "./geo";
 import { pois, profile, shortStation } from "./places";
 
-export type SpotKind = "km" | "col" | "section" | "end";
+/** a kilometre of the trail: km k runs from k-1 to k */
 export interface Spot {
   id: string;
-  kind: SpotKind;
-  /** what it's called, in each language (place names stay as they are) */
+  kind: "km";
+  /** what it's called, in each language */
   name: Record<Lang, string>;
-  /** where it is on the trail: a point (km), or from km to km2 */
-  km?: number;
-  km2?: number;
-  /** metres, for a pass */
-  alt?: number;
+  km: number;
 }
 
 /** a spot given to someone: their name, and for a brand its logo (a file in the media bucket) and its link */
 export interface Taken { spot_id: string; name: string; logo: string | null; link: string | null }
 
 // ------------------------------------------------------------------ the spots
-const both = (s: string): Record<Lang, string> => ({ fr: s, en: s });
 // passes the map data names twice over: the pass, then its Māori name in a smaller line
 const ALT_NAMES: Record<string, string> = { "Poukirikiri / Travers Saddle": "Travers Saddle", "Noti Taramakau / Harper Pass": "Harper Pass" };
-const slug = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 /** The trail's stops, short-named: "Arthur's Pass", "Bluff". */
 const stops = computed(() => route.value.places().map((s) => ({ n: shortStation(s.n).replace(/\s*\(.*\)$/, ""), km: s.km, c: s.c })));
 
-/** The high passes and summits on the trail (the same as the video kit's), west to east of the profile. */
-export const cols = computed<Spot[]>(() => pois.value
+/** The high passes and summits on the trail (the same as the video kit's), west to east of the profile: landmarks on
+ * the skyline that the cursor holds on to, the ticket being the kilometre the pass is on. */
+export interface Pass { name: string; km: number; alt?: number }
+export const passes = computed<Pass[]>(() => pois.value
   .filter((p) => (p.t === "pass" || p.t === "icon") && (p.e ?? 0) >= 900 && p.d < 600)
   .sort((a, b) => a.km - b.km)
-  .map((p) => { const n = ALT_NAMES[p.n] ?? p.n; return { id: `col-${slug(n)}`, kind: "col" as const, name: both(n), km: p.km, alt: p.e ?? undefined }; }));
-
-/** One section per stretch between two stops. */
-export const sections = computed<Spot[]>(() => {
-  const s = stops.value;
-  return s.slice(1).map((b, i) => ({ id: `section-${String(i + 1).padStart(2, "0")}`, kind: "section" as const, name: both(`${s[i].n} → ${b.n}`), km: s[i].km, km2: b.km }));
-});
-
-export const ends = computed<Spot[]>(() => {
-  const st = stops.value;
-  if (!st.length) return [];
-  return [
-    { id: "depart", kind: "end", name: both(st[0].n), km: 0 },
-    { id: "arrivee", kind: "end", name: both(st[st.length - 1].n), km: st[st.length - 1].km },
-  ];
-});
+  .map((p) => ({ name: ALT_NAMES[p.n] ?? p.n, km: p.km, alt: p.e ?? undefined })));
+/** the kilometre a point of the trail is on */
+export const kmOf = (x: number) => Math.min(totalKm.value, Math.max(1, Math.ceil(x)));
 
 export const totalKm = computed(() => Math.round(stops.value[stops.value.length - 1]?.km ?? 1334));
 
@@ -84,11 +66,12 @@ export function heightAt(km: number): number | null {
   return p.e[Math.max(0, Math.min(p.e.length - 1, Math.round(km / p.step)))];
 }
 
-/** Any spot by its id (a kilometre is made on the fly). */
+/** A kilometre by its id ("km-512"), or null for anything else. */
 export function spotById(id: string): Spot | null {
   const m = /^km-(\d+)$/.exec(id);
-  if (m) { const k = +m[1]; return k >= 1 && k <= totalKm.value ? kmSpot(k) : null; }
-  return [...cols.value, ...sections.value, ...ends.value].find((s) => s.id === id) ?? null;
+  if (!m) return null;
+  const k = +m[1];
+  return k >= 1 && k <= totalKm.value ? kmSpot(k) : null;
 }
 
 // ------------------------------------------------------------------ taken, and asking for one
@@ -102,9 +85,9 @@ export function loadTaken(force = false): Promise<void> {
     if (MOCK) {
       const t = (spot_id: string, name: string, logo: string | null = null, link: string | null = null): [string, Taken] => [spot_id, { spot_id, name, logo, link }];
       taken.value = new Map([
-        t("col-goat-pass", "Kea Coffee", mockLogo("K", "#1F7A5C", "#F5E9C8"), "https://www.instagram.com/keacoffee"),
-        t("depart", "Tūī Outdoors", mockLogo("T", "#FF6B12", "#1A0A00"), "https://example.com"),
-        t("section-02", "Mamie Jo"), t("km-120", "Léa"), t("km-121", "Léa"),
+        t("km-640", "Kea Coffee", mockLogo("K", "#1F7A5C", "#F5E9C8"), "https://www.instagram.com/keacoffee"),
+        t("km-1", "Tūī Outdoors", mockLogo("T", "#FF6B12", "#1A0A00"), "https://example.com"),
+        t("km-300", "Mamie Jo"), t("km-120", "Léa"), t("km-121", "Léa"),
       ]);
       return;
     }
@@ -137,8 +120,8 @@ export async function requestSpot(spot: Spot, a: Ask, lang: Lang): Promise<AskRe
 }
 
 // ------------------------------------------------------------------ buying a ticket, giving a hand
-/** the least a ticket costs (a small price would let anyone put anything on the map for nothing), and the most */
-export const MIN_EUR = 5;
+/** the least a kilometre costs (for nothing, it's a request I answer: nobody fills the map for free), and the most */
+export const MIN_EUR = 1;
 export const MAX_EUR = 10000;
 /** the amounts offered for a gift (any other can be typed) */
 export const GIFT_EUR = [5, 10, 20, 50];
@@ -224,11 +207,9 @@ export async function confirmPayment(session: string): Promise<Paid> {
 /** the logo's address (a file in the media bucket; the made-up ones of ?mock are drawn inline) */
 export const logoSrc = (t: Taken | undefined | null) => (!t?.logo ? null : t.logo.startsWith("data:") ? t.logo : mediaUrl(t.logo));
 
-/** where a spot stands on the map: a point, or the middle of a stretch; the hardships and my gear stand nowhere */
-export function spotCoord(s: Spot): LngLat | null {
-  if (s.km === undefined) return null;
-  const k = s.km2 !== undefined ? (s.km + s.km2) / 2 : s.km;
-  return route.value.pointAt(Math.max(0, k - (s.kind === "km" ? 0.5 : 0)));
+/** where a kilometre stands on the map: its middle */
+export function spotCoord(s: Spot): LngLat {
+  return route.value.pointAt(Math.max(0, s.km - 0.5));
 }
 
 /** How a link reads on a button: Instagram, or the site's address without its "https://www." */

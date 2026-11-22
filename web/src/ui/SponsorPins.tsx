@@ -1,13 +1,13 @@
 // The sponsors on the map: at each spot given to a brand, its logo turns in 3D like a coin, floating above the
 // trail, its shadow narrowing as it turns edge-on. A tap opens a small card under it: the name, the place, the link
 // to its site or Instagram, and the way to the trail's tickets. A spot given to someone without a logo (a friend's
-// kilometre) is a small name tag instead. Spots with no place (the hardships, my gear) aren't on the map.
+// kilometre) is a small name tag instead.
 // Near the top of the map (Ship Cove and the first kilometres, at the top of the whole island), a coin standing over
 // its spot would sit under the header: there it hangs below its spot instead, and goes back up when there's room.
 import { useEffect } from "preact/hooks";
 import { lang } from "../i18n";
 import { route } from "../lib/data";
-import { cols, ends, linkLabel, logoSrc, sections, spotById, spotCoord, taken, type Spot, type Taken } from "../lib/sponsors";
+import { linkLabel, logoSrc, spotById, spotCoord, taken, totalKm, type Spot, type Taken } from "../lib/sponsors";
 import { go, mapApi } from "./state";
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
@@ -63,8 +63,8 @@ function build(spot: Spot, owner: Taken, l: "fr" | "en", close: () => void): HTM
 /** Keeps the map's sponsor pins in step with the given spots (rendered once, beside the map; draws nothing itself). */
 export function SponsorPins() {
   const m = mapApi.value, t = taken.value, l = lang.value, r = route.value;
-  // the spots are worked out from the trail's data, which may still be loading
-  const known = cols.value.length + sections.value.length + ends.value.length;
+  // the kilometres are worked out from the trail's data, which may still be loading
+  const known = totalKm.value;
   useEffect(() => {
     if (!m || !t.size) return;
     const els: HTMLElement[] = [];
@@ -73,8 +73,8 @@ export function SponsorPins() {
     const pins: Pin[] = [];
     for (const [id, owner] of t) {
       const spot = spotById(id);
-      const c = spot && spotCoord(spot);
-      if (!spot || !c) continue;
+      if (!spot) continue;
+      const c = spotCoord(spot);
       const el = build(spot, owner, l, close);
       els.push(el);
       const mk = m.marker({ element: el, anchor: "bottom" }).setLngLat(c).addTo(m.map);

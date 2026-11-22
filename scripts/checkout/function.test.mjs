@@ -81,7 +81,7 @@ const stripe = createServer(async (req, res) => {
     const id = `cs_test_${String(++made).padStart(8, "0")}`;
     const metadata = Object.fromEntries(Object.entries(f).filter(([k]) => k.startsWith("metadata[")).map(([k, v]) => [k.slice(9, -1), v]));
     const s = { id, url: `https://checkout.stripe.com/c/pay/${id}`, status: "open", payment_status: "unpaid", client_reference_id: f.client_reference_id ?? null, metadata, form: f,
-      amount_total: Number(f["line_items[0][price_data][unit_amount]"]), currency: f["line_items[0][price_data][currency]"], customer_details: { email: "buyer@example.org" } };
+      amount_total: Number(f["line_items[0][price_data][unit_amount]"]) * Number(f["line_items[0][quantity]"] ?? 1), currency: f["line_items[0][price_data][currency]"], customer_details: { email: "buyer@example.org" } };
     sessions.set(id, s);
     return send(200, s);
   }
@@ -121,7 +121,11 @@ secrets.set("stripe_key", "rk_test_" + "a".repeat(24));
 r = await call({ action: "ticket", request: a, logo: PNG, amount: 1 });
 assert.equal(r.status, 200); assert.match(r.data.url, /^https:\/\/checkout\.stripe\.com\/c\/pay\/cs_test_/);
 const s1 = [...sessions.values()].at(-1);
-assert.equal(s1.form["line_items[0][price_data][unit_amount]"], "2000", "the price is the request's, not the browser's");
+assert.equal(s1.form["line_items[0][quantity]"], "20", "the price is the request's, not the browser's");
+assert.equal(s1.form["line_items[0][price_data][unit_amount]"], "100", "1 € a unit");
+assert.equal(s1.form["line_items[0][adjustable_quantity][enabled]"], "true", "the amount can still change on Stripe's page");
+assert.equal(s1.form["line_items[0][adjustable_quantity][minimum]"], "1");
+assert.equal(s1.amount_total, 2000);
 assert.equal(s1.form["line_items[0][price_data][product_data][name]"], "Ticket du sentier : Kilomètre 1");
 assert.equal(s1.client_reference_id, a);
 assert.equal(s1.form.customer_email, "hello@kea.example");
@@ -148,33 +152,37 @@ console.log("ok  paid: the ticket is given, with its logo on the map and its lin
 
 r = await call({ action: "ticket", request: held("km-1") });
 assert.equal(r.status, 409); assert.equal(r.data.error, "taken");
-const b = held("col-stag-saddle"), c = held("col-stag-saddle", { name: "Tūī Outdoors", device_id: "x" });
+const b = held("km-812"), c = held("km-812", { name: "Tūī Outdoors", device_id: "x" });
 const sb1 = (await call({ action: "ticket", request: b })).data.url.split("/").pop();
 const sc1 = (await call({ action: "ticket", request: c })).data.url.split("/").pop();
 pay(sb1); pay(sc1);
 assert.equal((await call({ action: "confirm", session: sb1 })).data.status, "paid");
 assert.equal((await call({ action: "confirm", session: sc1 })).data.status, "conflict");
-assert.equal(db.sponsor_spots.find((x) => x.spot_id === "col-stag-saddle").name, "Kea Coffee");
+assert.equal(db.sponsor_spots.find((x) => x.spot_id === "km-812").name, "Kea Coffee");
 console.log("ok  a spot taken in between: the second payment is marked to refund");
 
 // a buyer who paid and closed the page, and one who never paid
-const d = held("section-02"), e = held("section-03");
+const d = held("km-300"), e = held("km-301");
 const sd = (await call({ action: "ticket", request: d, logo: PNG })).data.url.split("/").pop();
 await call({ action: "ticket", request: e, logo: PNG });
+sessions.get(sd).amount_total = 3500; // changed on Stripe's page: 35 units instead of 20
 pay(sd);
 db.sponsor_requests.find((x) => x.id === e).hold_until = new Date(Date.now() - 60e3).toISOString();
 sessions.get(db.sponsor_requests.find((x) => x.id === e).checkout_id).status = "expired";
 r = await call({ action: "sweep" });
 assert.deepEqual(r.data, { given: 1, expired: 1 });
-assert.ok(db.sponsor_spots.some((x) => x.spot_id === "section-02"));
+assert.ok(db.sponsor_spots.some((x) => x.spot_id === "km-300"));
+assert.equal(db.sponsor_requests.find((x) => x.id === d).amount_cents, 3500, "what was really paid is kept");
 assert.equal(db.sponsor_requests.find((x) => x.id === e).status, "expired"); assert.ok(!files.pending.has(`${e}.png`));
 console.log("ok  the sweep gives a ticket paid by someone who never came back, and lets the unpaid ones go");
 
+r = await call({ action: "gift", amount: 100 });
+assert.equal(r.status, 200, "a gift of 1 €"); assert.equal([...sessions.values()].at(-1).form["line_items[0][quantity]"], "1");
 r = await call({ action: "gift", amount: 50 });
 assert.equal(r.status, 400, "a gift is at least 1 €");
 r = await call({ action: "gift", amount: 2000, name: "Mamie Jo", message: "Bonne route  mon grand !", lang: "fr" });
 const g = [...sessions.values()].at(-1);
-assert.equal(g.form.submit_type, "donate"); assert.equal(g.form["line_items[0][price_data][unit_amount]"], "2000");
+assert.equal(g.form.submit_type, "donate"); assert.equal(g.form["line_items[0][quantity]"], "20"); assert.equal(g.form["line_items[0][adjustable_quantity][enabled]"], "true");
 assert.equal(g.metadata.name, "Mamie Jo"); assert.equal(g.metadata.message, "Bonne route mon grand !");
 assert.deepEqual((await call({ action: "confirm", session: g.id })).data, { kind: "gift", status: "unpaid" });
 pay(g.id);

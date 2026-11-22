@@ -1,18 +1,18 @@
-// "Les tickets du sentier": sponsor a piece of my Te Araroa. On the trail you pay the huts with tickets, so here each
-// spot is one. The whole trail is drawn as its skyline (the elevation profile): a finger slides along it, an orange
-// cursor follows with the km, the place and the height, and snaps to a pass when near one; let go and a ticket comes
-// out of the slot below, foil catching the light. "Je veux ce ticket" opens a small form inside it: a price, and the
-// payment goes straight to Stripe (the ticket is given as soon as it's paid); or, with no budget, a request I answer.
-// Below the skyline, the tickets that aren't a point on it: start and finish, the passes and sections in a row each.
-// At the foot, "un coup de pouce": a gift of the amount chosen, for those who just want to help.
+// "Les tickets du sentier": sponsor a kilometre of my Te Araroa. On the trail you pay the huts with tickets, so here
+// each kilometre is one. The whole trail is drawn as its skyline (the elevation profile): a finger slides along it, an
+// orange cursor follows with the km, the place and the height, and holds on to a pass when near one; let go and the
+// kilometre's ticket comes out of the slot below, foil catching the light. "Je veux ce ticket" opens a small form
+// inside it: a price, and the payment goes straight to Stripe (the ticket is given as soon as it's paid); or, with no
+// budget, a request I answer. At the foot, "un coup de pouce": a gift of the amount chosen, for those who just want
+// to help.
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { lang, t } from "../i18n";
 import { fmtInt } from "../lib/format";
 import { profile } from "../lib/places";
 import { play } from "../lib/sound";
 import {
-  buySpot, cols, confirmPayment, ends, giveGift, GIFT_EUR, heightAt, kmSpot, linkLabel, loadTaken, logoSrc, MAX_EUR, MIN_EUR, nearKm,
-  requestSpot, sections, sweepPayments, taken, totalKm, type Paid, type Spot, type SpotKind } from "../lib/sponsors";
+  buySpot, confirmPayment, giveGift, GIFT_EUR, heightAt, kmOf, kmSpot, linkLabel, loadTaken, logoSrc, MAX_EUR, MIN_EUR, nearKm,
+  passes, requestSpot, sweepPayments, taken, totalKm, type Paid, type Spot } from "../lib/sponsors";
 import type { Lang } from "../types";
 import { ChevronRight } from "./icons";
 import { PageHead } from "./Pages";
@@ -22,18 +22,12 @@ import { go, hrefFor, isDesktop, mapApi } from "./state";
 // ------------------------------------------------------------------ words (first person; place names stay as they are)
 const W = {
   fr: {
-    lead: "Je marche 1 334 km, de Ship Cove à Bluff. Chaque kilomètre, chaque col, chaque section peut porter ton nom ou celui de ta marque, au prix que tu choisis. Sur le sentier, on paie les refuges avec des tickets : ici, chaque emplacement en est un.",
+    lead: "Je marche 1 334 km, de Ship Cove à Bluff. Chaque kilomètre peut porter ton nom ou celui de ta marque, au prix que tu choisis. Sur le sentier, on paie les refuges avec des tickets : ici, chaque kilomètre en est un.",
     hint: "Fais glisser ton doigt sur le sentier",
     hintKeys: "Flèches pour avancer, Entrée pour prendre le ticket",
-    kind: { km: "Kilomètre", col: "Col", section: "Section", end: "Départ et arrivée" } as Record<SpotKind, string>,
-    decks: { end: "Le départ et l'arrivée", col: "Les cols", section: "Les sections" } as Record<string, string>,
-    gets: {
-      km: "Ton nom ou ton logo sur la carte à ce kilomètre. Et quand j'y passe, je t'envoie une photo de l'endroit.",
-      col: "Ton logo en 3D sur la carte interactive, au col, avec le lien vers ton site ou ton Insta. Et dans l'épisode où je le passe : « ce col vous est présenté par… ».",
-      section: "Ton logo en 3D sur la carte au milieu de la section, avec ton lien, et sur l'écran titre de son épisode.",
-      end: "Ton logo en 3D sur la carte à cet endroit, avec ton lien, dans le teaser et dans le film de la fin.",
-    } as Record<SpotKind, string>,
-    near: "près de", highest: "le point le plus haut du sentier", from: (a: string, b: string) => `du km ${a} au km ${b}`,
+    kind: "Ticket du sentier",
+    gets: "Ton nom ou ton logo sur la carte à ce kilomètre, avec ton lien. Et quand j'y passe, je t'envoie une photo de l'endroit.",
+    near: "près de",
     free: "Libre", takenBy: "Réservé", asked: "Demandé",
     want: "Je veux ce ticket", gone: "Déjà réservé",
     who: "Ton nom ou ta marque", contact: "Pour te joindre", contactHint: "e-mail ou Instagram", msg: "Un mot", msgHint: "facultatif",
@@ -42,7 +36,7 @@ const W = {
     price: "Ton prix", priceHint: `à partir de ${MIN_EUR} €`,
     askFree: "Pas de budget : je demande ce ticket gratuitement", askFreeHint: "sur accord, je te réponds",
     pay: (n: string) => `Payer ${n} €`, send: "Envoyer la demande", sending: "Un instant…", cancel: "Annuler",
-    secure: "Paiement sécurisé par Stripe : carte, Apple Pay ou Google Pay. Le ticket est à toi dès que c'est payé.",
+    secure: "Paiement sécurisé par Stripe : carte, Apple Pay ou Google Pay. Tu peux encore changer le montant sur la page de paiement. Le ticket est à toi dès que c'est payé.",
     needWho: "Écris ton nom ou celui de ta marque.", needContact: "Laisse-moi un moyen de te joindre.", needPrice: `Le prix commence à ${MIN_EUR} €.`, badLogo: "Ce fichier n'est pas une image.",
     err: {
       rate: "Trop de demandes d'un coup : réessaie dans quelques minutes.", links: "Un seul lien par message, s'il te plaît.",
@@ -57,9 +51,9 @@ const W = {
     paidUnpaid: "Le paiement n'est pas encore confirmé. Si tu as payé, ton ticket arrive dans quelques minutes.",
     paidGift: (n: string) => `Merci pour ce coup de pouce de ${n} € ! Ça m'aide vraiment sur le sentier.`,
     how: "Comment ça marche",
-    steps: [`Tu choisis ton ticket et ton prix, à partir de ${MIN_EUR} €.`, "Tu paies en sécurité avec Stripe : carte, Apple Pay ou Google Pay.", "Le ticket est à toi tout de suite : ton logo tourne en 3D sur la carte avec ton lien, puis tu passes dans les vidéos quand j'y arrive."],
-    freeNote: "Pas de budget ? Tu peux aussi demander un ticket gratuitement : je te réponds.",
-    counts: (free: number) => `${free} tickets libres, sans compter les kilomètres`,
+    steps: [`Tu choisis ton kilomètre sur le sentier et ton prix, à partir de ${MIN_EUR} €.`, "Tu paies en sécurité avec Stripe : carte, Apple Pay ou Google Pay.", "Le kilomètre est à toi tout de suite : ton nom ou ton logo sur la carte, avec ton lien. Et quand j'y passe, je t'envoie une photo de l'endroit."],
+    freeNote: "Pas de budget ? Tu peux aussi demander un kilomètre gratuitement : je te réponds.",
+    counts: (free: string, total: string) => `${free} kilomètres libres sur ${total}`,
     gift: {
       title: "Un coup de pouce",
       lead: "Pas besoin de ticket pour m'aider : si tu veux juste me soutenir, choisis un montant. Ça m'aide pour les repas, les refuges et le matériel en route.",
@@ -68,18 +62,12 @@ const W = {
     },
   },
   en: {
-    lead: "I'm walking 1,334 km, from Ship Cove to Bluff. Every kilometre, every pass, every section can carry your name or your brand's, at the price you choose. On the trail you pay for huts with tickets: here, every spot is one.",
+    lead: "I'm walking 1,334 km, from Ship Cove to Bluff. Every kilometre can carry your name or your brand's, at the price you choose. On the trail you pay for huts with tickets: here, every kilometre is one.",
     hint: "Slide your finger along the trail",
     hintKeys: "Arrow keys to move, Enter to take the ticket",
-    kind: { km: "Kilometre", col: "Pass", section: "Section", end: "Start and finish" } as Record<SpotKind, string>,
-    decks: { end: "The start and the finish", col: "The passes", section: "The sections" } as Record<string, string>,
-    gets: {
-      km: "Your name or logo on the map at this kilometre. And when I walk through it, I send you a photo of the spot.",
-      col: "Your logo in 3D on the interactive map, at the pass, with a link to your site or Instagram. And in the episode where I cross it: “this pass is brought to you by…”.",
-      section: "Your logo in 3D on the map in the middle of the section, with your link, and on its episode's title card.",
-      end: "Your logo in 3D on the map at this spot, with your link, in the teaser and in the final film.",
-    } as Record<SpotKind, string>,
-    near: "near", highest: "the highest point of the trail", from: (a: string, b: string) => `from km ${a} to km ${b}`,
+    kind: "Trail ticket",
+    gets: "Your name or logo on the map at this kilometre, with your link. And when I walk through it, I send you a photo of the spot.",
+    near: "near",
     free: "Free", takenBy: "Taken", asked: "Requested",
     want: "I want this ticket", gone: "Already taken",
     who: "Your name or your brand", contact: "How to reach you", contactHint: "email or Instagram", msg: "A word", msgHint: "optional",
@@ -88,7 +76,7 @@ const W = {
     price: "Your price", priceHint: `from €${MIN_EUR}`,
     askFree: "No budget: I'm asking for this ticket for free", askFreeHint: "if I agree, I'll get back to you",
     pay: (n: string) => `Pay €${n}`, send: "Send the request", sending: "One moment…", cancel: "Cancel",
-    secure: "Secure payment by Stripe: card, Apple Pay or Google Pay. The ticket is yours as soon as it's paid.",
+    secure: "Secure payment by Stripe: card, Apple Pay or Google Pay. You can still change the amount on the payment page. The ticket is yours as soon as it's paid.",
     needWho: "Write your name or your brand's.", needContact: "Leave me a way to reach you.", needPrice: `The price starts at €${MIN_EUR}.`, badLogo: "That file isn't an image.",
     err: {
       rate: "Too many requests at once: try again in a few minutes.", links: "One link per message, please.",
@@ -103,9 +91,9 @@ const W = {
     paidUnpaid: "The payment isn't confirmed yet. If you paid, your ticket arrives in a few minutes.",
     paidGift: (n: string) => `Thank you for this €${n} boost! It really helps on the trail.`,
     how: "How it works",
-    steps: [`You pick your ticket and your price, from €${MIN_EUR}.`, "You pay securely with Stripe: card, Apple Pay or Google Pay.", "The ticket is yours at once: your logo spins in 3D on the map with your link, then you're in the videos when I get there."],
-    freeNote: "No budget? You can also ask for a ticket for free: I'll get back to you.",
-    counts: (free: number) => `${free} free tickets, not counting the kilometres`,
+    steps: [`You pick your kilometre on the trail and your price, from €${MIN_EUR}.`, "You pay securely with Stripe: card, Apple Pay or Google Pay.", "The kilometre is yours at once: your name or logo on the map, with your link. And when I walk through it, I send you a photo of the spot."],
+    freeNote: "No budget? You can also ask for a kilometre for free: I'll get back to you.",
+    counts: (free: string, total: string) => `${free} of ${total} kilometres still free`,
     gift: {
       title: "A helping hand",
       lead: "No ticket needed to help: if you'd just like to support me, pick an amount. It goes to meals, huts and gear along the way.",
@@ -115,8 +103,6 @@ const W = {
   },
 };
 const words = () => W[lang.value];
-/** the label at the top of a ticket: for the two ends, which end it is */
-const kindOf = (s: Spot, l: Lang) => s.kind !== "end" ? W[l].kind[s.kind] : s.id === "depart" ? (l === "fr" ? "Départ" : "Start") : (l === "fr" ? "Arrivée" : "Finish");
 
 // ------------------------------------------------------------------ the way in
 export function SponsorsRow({ block }: { block?: boolean }) {
@@ -159,15 +145,12 @@ export function SponsorsPage({ paid }: { paid?: boolean }) {
     play("open");
     // beside the panel, the map goes there too (on a phone it's under the page)
     const m = mapApi.value, r = route.value;
-    if (m && isDesktop.value && s.km !== undefined) {
-      if (s.km2 !== undefined) { m.showStretch(s.km, s.km2); m.fitPlaces([r.pointAt(s.km), r.pointAt((s.km + s.km2) / 2), r.pointAt(s.km2)]); }
-      else m.flyToPlace(r.pointAt(s.km), r, s.km, s.kind === "col" ? "pass" : undefined);
-    }
+    if (m && isDesktop.value) m.flyToPlace(r.pointAt(s.km), r, s.km);
     if (scroll) requestAnimationFrame(() => slot.current?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }));
   };
 
-  const decks: [string, Spot[]][] = [["end", ends.value], ["col", cols.value], ["section", sections.value]];
-  const freeCount = decks.reduce((n, [, list]) => n + list.filter((s) => !taken.value.has(s.id)).length, 0);
+  const total = totalKm.value;
+  const takenKms = [...taken.value.keys()].filter((id) => /^km-\d+$/.test(id)).length;
 
   return (
     <div class="page spage">
@@ -182,17 +165,7 @@ export function SponsorsPage({ paid }: { paid?: boolean }) {
         <div class="tk-slot__paper">{sel && <Ticket key={`${sel.id}-${printed}`} spot={sel} />}</div>
       </div>
 
-      <p class="fine spage__count">{w.counts(freeCount)}</p>
-      {decks.map(([key, list]) => list.length > 0 && (
-        <section class="tk-deck" aria-labelledby={`deck-${key}`}>
-          <div class="tk-deck__head">
-            <h2 class="h-section" id={`deck-${key}`}>{w.decks[key]}</h2>
-          </div>
-          <div class="tk-deck__row">
-            {list.map((s) => <MiniTicket s={s} on={sel?.id === s.id} onPick={() => pick(s, true)} />)}
-          </div>
-        </section>
-      ))}
+      <p class="fine spage__count">{w.counts(fmtInt(Math.max(0, total - takenKms), l), fmtInt(total, l))}</p>
 
       <section class="block" aria-labelledby="tk-how">
         <h2 class="h-section" id="tk-how">{w.how}</h2>
@@ -306,7 +279,7 @@ function Ridge({ onPick, selected }: { onPick: (s: Spot) => void; selected: Spot
   const [cur, setCur] = useState<number | null>(null); // km under the finger
   const dragging = useRef(false);
   const [isDrag, setIsDrag] = useState(false);
-  const lastSection = useRef(-1);
+  const lastTick = useRef(-1);
   const maxE = 2000;
   const y = (e: number) => TOP + (VH - TOP) * (1 - Math.max(0, e) / maxE);
 
@@ -324,20 +297,21 @@ function Ridge({ onPick, selected }: { onPick: (s: Spot) => void; selected: Spot
     return { line, area: `${line}L${VW},${VH}L0,${VH}Z` };
   }, [prof]);
 
-  const colList = cols.value, secList = sections.value, highest = Math.max(...colList.map((c) => c.alt ?? 0));
+  const passList = passes.value, highest = Math.max(0, ...passList.map((c) => c.alt ?? 0));
   const xOf = (km: number) => (km / total) * 100;
   const kmAt = (clientX: number) => {
     const r = plot.current!.getBoundingClientRect();
     return Math.min(total, Math.max(1, Math.ceil(((clientX - r.left) / r.width) * total)));
   };
-  // near a pass, the cursor holds on to it
-  const colNear = (k: number) => colList.find((c) => Math.abs((c.km ?? 0) - k) <= Math.max(3, total * 0.004)) ?? null;
-  const spotAt = (k: number): Spot => colNear(k) ?? kmSpot(k);
+  // near a pass, the cursor holds on to it: the ticket is the kilometre the pass is on
+  const passNear = (k: number) => passList.find((c) => Math.abs(c.km - k) <= Math.max(3, total * 0.004)) ?? null;
+  const spotAt = (k: number): Spot => kmSpot(kmOf(passNear(k)?.km ?? k));
 
   const move = (k: number) => {
     setCur(k);
-    const si = secList.findIndex((s) => k > (s.km ?? 0) && k <= (s.km2 ?? 0));
-    if (si !== lastSection.current) { if (lastSection.current !== -1) play("tap", 0.9 + (si % 5) * 0.06); lastSection.current = si; }
+    // a soft tick under the finger every hundred kilometres
+    const si = Math.floor(k / 100);
+    if (si !== lastTick.current) { if (lastTick.current !== -1) play("tap", 0.9 + (si % 5) * 0.06); lastTick.current = si; }
   };
   const down = (e: PointerEvent) => {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -367,15 +341,15 @@ function Ridge({ onPick, selected }: { onPick: (s: Spot) => void; selected: Spot
   };
 
   // what the readout says: the pass it holds on to, or the km and what it's near
-  const shown = cur ?? (selected?.kind === "km" || selected?.kind === "col" ? selected.km ?? null : null);
+  const shown = cur ?? selected?.km ?? null;
   let readout = w.hint;
   if (shown !== null) {
-    const c = colNear(shown);
+    const c = passNear(shown);
     const h = c?.alt ?? heightAt(shown);
-    if (c) readout = `${c.name[l]} · km ${fmtK(c.km ?? 0, l)}${h ? ` · ${fmtInt(h, l)} m` : ""}`;
+    if (c) readout = `${c.name} · km ${fmtK(kmOf(c.km), l)}${h ? ` · ${fmtInt(h, l)} m` : ""}`;
     else { const n = nearKm(shown); readout = `km ${fmtK(shown, l)}${n ? ` · ${w.near} ${n}` : ""}${h !== null ? ` · ${fmtInt(h, l)} m` : ""}`; }
   }
-  const cursorKm = shown !== null ? (colNear(shown)?.km ?? shown) : null;
+  const cursorKm = shown !== null ? (passNear(shown)?.km ?? shown) : null;
   const tk = taken.value;
   const takenKms = [...tk.keys()].map((id) => /^km-(\d+)$/.exec(id)).filter(Boolean).map((m) => +m![1]);
 
@@ -399,17 +373,12 @@ function Ridge({ onPick, selected }: { onPick: (s: Spot) => void; selected: Spot
           {shape && <path class="ridge__line" d={shape.line} />}
         </svg>
         {takenKms.map((k) => <span class="ridge__tick" style={{ left: `${xOf(k)}%` }} />)}
-        {colList.map((c) => (
-          <span class={`ridge__col${tk.has(c.id) ? " is-taken" : ""}${c.alt === highest ? " is-top" : ""}${selected?.id === c.id ? " is-sel" : ""}`}
-            style={{ left: `${xOf(c.km ?? 0)}%`, top: `${(y(c.alt ?? 0) / VH) * 100}%` }} />
-        ))}
+        {passList.map((c) => {
+          const id = `km-${kmOf(c.km)}`;
+          return <span class={`ridge__col${tk.has(id) ? " is-taken" : ""}${c.alt === highest ? " is-top" : ""}${selected?.id === id ? " is-sel" : ""}`}
+            style={{ left: `${xOf(c.km)}%`, top: `${(y(c.alt ?? 0) / VH) * 100}%` }} />;
+        })}
         {cursorKm !== null && <span class="ridge__cursor" style={{ left: `${xOf(cursorKm)}%` }} />}
-      </div>
-      <div class="ridge__bands" role="group" aria-label={w.decks.section}>
-        {secList.map((s, i) => (
-          <button type="button" class={`ridge__band${i % 2 ? " is-odd" : ""}${tk.has(s.id) ? " is-taken" : ""}${selected?.id === s.id ? " is-sel" : ""}`}
-            style={{ flexGrow: (s.km2 ?? 0) - (s.km ?? 0) }} aria-label={s.name[l]} data-sfx="none" onClick={() => onPick(s)} />
-        ))}
       </div>
       <div class="ridge__ends fine" aria-hidden="true"><span>Ship Cove · km 0</span><span>Bluff · km {fmtInt(total, l)}</span></div>
       <p class="sr-only" id="ridge-keys">{w.hintKeys}</p>
@@ -418,38 +387,13 @@ function Ridge({ onPick, selected }: { onPick: (s: Spot) => void; selected: Spot
 }
 
 // ------------------------------------------------------------------ tickets
-/** a ticket number: the km for a kilometre, else a steady number made from its name */
-function serial(s: Spot): string {
-  if (s.kind === "km") return String(s.km).padStart(4, "0");
-  let h = 7;
-  for (const c of s.id) h = (h * 31 + c.charCodeAt(0)) % 9973;
-  return String(h).padStart(4, "0");
-}
+/** a ticket number: the km */
+const serial = (s: Spot) => String(s.km).padStart(4, "0");
 
+/** what a kilometre is near, and its height */
 function metaOf(s: Spot, l: Lang): string {
-  const w = W[l];
-  const len = (s.km2 ?? 0) - (s.km ?? 0);
-  switch (s.kind) {
-    case "km": { const n = nearKm(s.km ?? 0), h = heightAt(s.km ?? 0); return [n ? `${w.near} ${n}` : null, h !== null ? `${fmtInt(h, l)} m` : null].filter(Boolean).join(" · "); }
-    case "col": { const top = (s.alt ?? 0) >= Math.max(...cols.value.map((c) => c.alt ?? 0)); return [`km ${fmtK(s.km ?? 0, l)}`, s.alt ? `${fmtInt(s.alt, l)} m` : null, top ? w.highest : null].filter(Boolean).join(" · "); }
-    case "section": return `${fmtK(len, l)} km · ${w.from(fmtK(s.km ?? 0, l), fmtK(s.km2 ?? 0, l))}`;
-    case "end": return `km ${fmtK(s.km ?? 0, l)}`;
-    default: return "";
-  }
-}
-
-function MiniTicket({ s, on, onPick }: { s: Spot; on: boolean; onPick: () => void }) {
-  const l = lang.value, w = words();
-  const by = taken.value.get(s.id)?.name;
-  return (
-    <button type="button" class={`tk-mini${by ? " is-taken" : ""}${on ? " is-on" : ""}`} data-sfx="none" onClick={onPick}
-      aria-label={`${kindOf(s, l)} : ${s.name[l]}${by ? `, ${w.takenBy}` : ""}`}>
-      <span class="tk-mini__kind">{kindOf(s, l)}</span>
-      <span class="tk-mini__name">{s.name[l]}</span>
-      <span class="tk-mini__meta num">{metaOf(s, l) || " "}</span>
-      <span class="tk-mini__state">{by ? `${w.takenBy} · ${by}` : w.free}</span>
-    </button>
-  );
+  const n = nearKm(s.km), h = heightAt(s.km);
+  return [n ? `${W[l].near} ${n}` : null, h !== null ? `${fmtInt(h, l)} m` : null].filter(Boolean).join(" · ");
 }
 
 /** A logo chosen by the buyer, made small and square-safe here (at most 320 px, PNG on white): a few tens of kB. */
@@ -482,7 +426,7 @@ function Ticket({ spot }: { spot: Spot }) {
   const [contact, setContact] = useState("");
   const [msg, setMsg] = useState("");
   const [link, setLink] = useState("");
-  const [euros, setEuros] = useState(spot.kind === "km" ? "10" : "50");
+  const [euros, setEuros] = useState("10");
   const [askFree, setAskFree] = useState(false);
   const [mine, setMine] = useState<{ blob: Blob; url: string } | null>(null);
   const [trap, setTrap] = useState("");
@@ -555,14 +499,14 @@ function Ticket({ spot }: { spot: Spot }) {
   return (
     <article ref={el} class={`tk${by ? " is-taken" : ""}${sent ? " is-asked" : ""}`} onPointerMove={tilt} onPointerLeave={untilt}
       onClick={(e) => { if (!(e.target as HTMLElement).closest("button, input, textarea, label, form")) shine(); }}
-      aria-label={`${kindOf(spot, l)} : ${spot.name[l]}`}>
+      aria-label={spot.name[l]}>
       <div class="tk__card">
         <div class="tk__body">
           <span class="tk__foil" aria-hidden="true" />
-          <p class="tk__top"><span>{kindOf(spot, l)}</span><span class="num">N° {serial(spot)}</span></p>
+          <p class="tk__top"><span>{w.kind}</span><span class="num">N° {serial(spot)}</span></p>
           <h3 class="tk__name">{spot.name[l]}</h3>
           {metaOf(spot, l) && <p class="tk__meta num">{metaOf(spot, l)}</p>}
-          <p class="tk__gets">{w.gets[spot.kind]}</p>
+          <p class="tk__gets">{w.gets}</p>
           {owner && (logo || owner.link) && (
             <p class="tk__owner">
               {logo && <img class="tk__logo" src={logo} alt="" width={40} height={40} loading="lazy" />}

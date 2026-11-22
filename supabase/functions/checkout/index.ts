@@ -25,6 +25,25 @@ class StripeError extends Error {
 }
 
 type Form = Record<string, string>;
+
+/**
+ * The amount, changeable on Stripe's own page: 1 € a unit and as many units as euros, the quantity adjustable
+ * (Stripe's "the customer chooses the price" isn't open to every account). What's kept is what was really paid.
+ */
+const MAX_UNITS = 10_000;
+function euros(cents: number, desc: string): Form {
+  const n = Math.min(MAX_UNITS, Math.max(1, Math.round(cents / 100)));
+  return {
+    "line_items[0][quantity]": String(n),
+    "line_items[0][price_data][currency]": "eur",
+    "line_items[0][price_data][unit_amount]": "100",
+    "line_items[0][price_data][product_data][description]": desc,
+    "line_items[0][adjustable_quantity][enabled]": "true",
+    "line_items[0][adjustable_quantity][minimum]": "1",
+    "line_items[0][adjustable_quantity][maximum]": String(MAX_UNITS),
+  };
+}
+const adjust = (en: boolean) => en ? "€1 a unit: change the quantity to change your amount." : "1 € l'unité : change la quantité pour changer ton montant.";
 async function stripe(path: string, form?: Form): Promise<Record<string, any>> {
   const key = await getSecret("stripe_key");
   if (!key) throw new NotConfigured("no key");
@@ -107,12 +126,10 @@ async function ticket(body: Record<string, unknown>) {
   const label = en ? `Trail ticket: ${r.spot_label}` : `Ticket du sentier : ${r.spot_label}`;
   const form: Form = {
     mode: "payment",
-    "line_items[0][quantity]": "1",
-    "line_items[0][price_data][currency]": "eur",
-    "line_items[0][price_data][unit_amount]": String(r.amount_cents),
+    ...euros(r.amount_cents ?? 100, en
+      ? `Te Araroa, the South Island on foot: your name on the trail's map. ${adjust(en)}`
+      : `Te Araroa, l'île du Sud à pied : ton nom sur la carte du sentier. ${adjust(en)}`),
     "line_items[0][price_data][product_data][name]": label,
-    "line_items[0][price_data][product_data][description]": en
-      ? "Te Araroa, the South Island on foot: your name on the trail's map." : "Te Araroa, l'île du Sud à pied : ton nom sur la carte du sentier.",
     client_reference_id: r.id,
     "metadata[kind]": "ticket",
     "metadata[request]": r.id,
@@ -183,9 +200,7 @@ async function gift(body: Record<string, unknown>, ip: string) {
   const form: Form = {
     mode: "payment",
     submit_type: "donate",
-    "line_items[0][quantity]": "1",
-    "line_items[0][price_data][currency]": "eur",
-    "line_items[0][price_data][unit_amount]": String(amount),
+    ...euros(amount, adjust(en)),
     "line_items[0][price_data][product_data][name]": label,
     "metadata[kind]": "gift",
     "metadata[lang]": en ? "en" : "fr",
