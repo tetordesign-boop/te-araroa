@@ -69,7 +69,7 @@ export function SponsorPins() {
     if (!m || !t.size) return;
     const els: HTMLElement[] = [];
     const close = () => els.forEach((e) => { e.classList.remove("is-open"); e.setAttribute("aria-expanded", "false"); e.style.zIndex = ""; });
-    type Pin = { el: HTMLElement; mk: ReturnType<typeof m.marker>; c: [number, number]; h: number; down: boolean; dx: number; far: boolean };
+    type Pin = { el: HTMLElement; mk: ReturnType<typeof m.marker>; c: [number, number]; h: number; down: boolean; dx: number; far: boolean; tucked: boolean };
     const pins: Pin[] = [];
     for (const [id, owner] of t) {
       const spot = spotById(id);
@@ -78,7 +78,7 @@ export function SponsorPins() {
       const el = build(spot, owner, l, close);
       els.push(el);
       const mk = m.marker({ element: el, anchor: "bottom" }).setLngLat(c).addTo(m.map);
-      pins.push({ el, mk, c: c as [number, number], h: el.classList.contains("spin--name") ? 40 : 86, down: false, dx: 0, far: false });
+      pins.push({ el, mk, c: c as [number, number], h: el.classList.contains("spin--name") ? 40 : 86, down: false, dx: 0, far: false, tucked: false });
     }
     // and where the map's buttons are level with it, it leans left, its stem still on the spot
     const place = () => {
@@ -97,6 +97,9 @@ export function SponsorPins() {
         if (ctl?.width && top < ctl.bottom && top + h > ctl.top && x + half > ctl.left - 6 && x - half < ctl.right) {
           dx = Math.round(Math.max(-(half - 10), ctl.left - 6 - (x + half)));
         }
+        // (a small coin whose spot is under the top bar, the page open over the map, waits out of sight)
+        const tucked = far && p.h > 40 && pt.y < pad.top;
+        if (tucked !== p.tucked) { p.tucked = tucked; p.el.classList.toggle("spin--tucked", tucked); }
         if (down === p.down && dx === p.dx) continue;
         p.down = down; p.dx = dx;
         p.el.classList.toggle("spin--down", down);

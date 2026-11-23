@@ -1969,6 +1969,7 @@ input, textarea { caret-color: var(--marker); }
 /* the whole island in view: a coin half the size, sitting on its spot, so it never hides a town's name */
 .spin--far .spin__float { scale: 0.55; translate: 0 58px; }
 .spin--far:not(.spin--name) .spin__stem, .spin--far .spin__shadow { opacity: 0; }
+.spin--tucked, .spin--tucked .spin__card { visibility: hidden; pointer-events: none; }
 .spin__float, .spin__stem, .spin__shadow { transition: scale var(--dur-2) var(--ease-out), translate var(--dur-2) var(--ease-out), opacity var(--dur-2); }
 .spin__cardlogo { flex: none; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #fff; box-shadow: 0 0 0 2px var(--marker); }
 .spin__cardtext { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; color: var(--ink-2); }
