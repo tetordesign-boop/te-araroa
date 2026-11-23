@@ -1,2 +1,9 @@
 c-m-home-peek
-c-s-home-1
+c-m-home-4
+c-m-journal-1
+c-m-after-stats
+c-s-after-parrainer
+c-d-home
+c-d-parrainer
+p-m-carnet
+c-m-place
