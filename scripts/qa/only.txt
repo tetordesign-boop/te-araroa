@@ -1,3 +1,3 @@
-c-m-journal-1
-c-s-after-parrainer
-c-m-home-peek
+r-m-films
+r-m-kiwi-open
+r-d-kiwi-open
