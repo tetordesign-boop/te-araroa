@@ -14,7 +14,7 @@ import { bandSupported, PhotoBand } from "./PhotoBand";
 import { go, goBack, hrefFor, openTunnel, tunnelOpen } from "./state";
 import { TrailStrip } from "./TrailStrip";
 import { PackRow } from "./Pack";
-import { FilmCard } from "./Film";
+import { Films } from "./Film";
 import { NotifyCard } from "./Notify";
 import { QuestionsRow } from "./Questions";
 import { SponsorsRow } from "./Sponsors";
@@ -445,7 +445,7 @@ export function About() {
     <div class="page">
       <PageHead title={t("about")} />
       {intro && <div class="prose voice" style={{ marginTop: "16px" }}>{intro.split(/\n{2,}/).map((p) => <p>{typo(p)}</p>)}</div>}
-      <FilmCard />
+      <Films />
       <PackRow block />
       <QuestionsRow block />
       <SponsorsRow block />

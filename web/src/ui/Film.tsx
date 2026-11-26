@@ -1,8 +1,9 @@
-// "Le Te Araroa en 30 secondes": the little film that says what the trail is, in the reader's language.
+// The films: "Le Te Araroa en 30 secondes" (what the trail is) and "Le kiwi et l'île" (a short anime film: a kiwi
+// tramper crosses the South Island unbothered, then one step lights every marker to Bluff), in the reader's language.
 // In the panel, a card; a tap opens the film over everything and plays it with its music. A phone, or a tablet held
 // upright, gets the vertical cut, filling the screen; a computer, or a tablet held sideways, the 16:9 one, large in
 // the middle of the map. Turning the tablet while it plays swaps the cut and keeps the place.
-// The four films, their stills and the card's picture live in public/film/ (made from the film's own frames): they
+// Each film's four cuts, their stills and the card's picture live in public/film/ (made from its own frames): they
 // stay out of the service worker's copies (a video is fetched in pieces, as it plays) and cost nothing until the tap.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
@@ -14,31 +15,49 @@ const DIR = `${import.meta.env.BASE_URL}film/`;
 /** a screen wide and tall enough to be a computer or a tablet held sideways (a phone held sideways stays vertical) */
 const WIDE_MQ = "(orientation: landscape) and (min-width: 900px) and (min-height: 500px)";
 const cut = (wide: boolean) => (wide ? "16x9" : "9x16");
-const filmSrc = (l: Lang, wide: boolean) => `${DIR}te-araroa-${l}-${cut(wide)}.mp4`;
-const stillSrc = (l: Lang, wide: boolean) => `${DIR}poster-${l}-${cut(wide)}.jpg`;
 
-export function FilmCard() {
+type FilmId = "trail" | "kiwi";
+const FILMS = {
+  trail: { file: "te-araroa", poster: "poster", card: "card", dur: "0:30", title: "film", sub: "filmSub", text: "filmText" },
+  kiwi: { file: "kiwi", poster: "kiwi-poster", card: "kiwi-card", dur: "0:51", title: "film2", sub: "film2Sub", text: "film2Text" },
+} as const;
+const filmSrc = (f: FilmId, l: Lang, wide: boolean) => `${DIR}${FILMS[f].file}-${l}-${cut(wide)}.mp4`;
+const stillSrc = (f: FilmId, l: Lang, wide: boolean) => `${DIR}${FILMS[f].poster}-${l}-${cut(wide)}.jpg`;
+
+/** Both films, side by side: the trail in 30 seconds, then the kiwi's short. */
+export function Films() {
+  return (
+    <div class="films block">
+      <FilmCard film="trail" />
+      <FilmCard film="kiwi" />
+    </div>
+  );
+}
+
+export function FilmCard({ film = "trail" }: { film?: FilmId }) {
   const [open, setOpen] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
+  const F = FILMS[film];
   return (
     <>
       <button ref={btn} class="feature film" type="button" aria-haspopup="dialog" onClick={() => setOpen(true)}>
         <span class="feature__img film__img">
-          <picture><source srcset={`${DIR}card.webp`} type="image/webp" /><img src={`${DIR}card.jpg`} width={960} height={540} alt="" loading="lazy" decoding="async" /></picture>
+          <picture><source srcset={`${DIR}${F.card}.webp`} type="image/webp" /><img src={`${DIR}${F.card}.jpg`} width={960} height={540} alt="" loading="lazy" decoding="async" /></picture>
           <span class="film__play glass" aria-hidden="true"><Play /></span>
-          <span class="feature__count num" aria-hidden="true">0:30</span>
+          <span class="feature__count num" aria-hidden="true">{F.dur}</span>
         </span>
         <span class="feature__body">
-          <span class="feature__title film__title">{t("film")}</span>
-          <span class="feature__meta film__sub">{t("filmSub")}</span>
+          <span class="feature__title film__title">{t(F.title)}</span>
+          <span class="feature__meta film__sub">{t(F.sub)}</span>
         </span>
       </button>
-      {open && <FilmDialog onClose={() => { setOpen(false); btn.current?.focus(); }} />}
+      {open && <FilmDialog film={film} onClose={() => { setOpen(false); btn.current?.focus(); }} />}
     </>
   );
 }
 
-function FilmDialog({ onClose }: { onClose: () => void }) {
+function FilmDialog({ film, onClose }: { film: FilmId; onClose: () => void }) {
+  const F = FILMS[film];
   const l = lang.value;
   const dialog = useRef<HTMLDialogElement>(null);
   const video = useRef<HTMLVideoElement>(null);
@@ -76,20 +95,20 @@ function FilmDialog({ onClose }: { onClose: () => void }) {
     <dialog
       ref={dialog}
       class={`film-dialog${wide ? " is-wide" : ""}`}
-      aria-labelledby="film-title"
-      aria-describedby="film-text"
+      aria-labelledby={`${film}-title`}
+      aria-describedby={`${film}-text`}
       onClose={onClose}
       // a tap on the dimmed map around the film closes it (on a phone the film fills the screen: the cross does)
       onClick={(e) => { if (wide && !(e.target as Element).closest("video, button")) dialog.current?.close(); }}
     >
-      <h2 id="film-title" class="sr-only">{t("film")}</h2>
-      <p id="film-text" class="sr-only">{t("filmText")}</p>
+      <h2 id={`${film}-title`} class="sr-only">{t(F.title)}</h2>
+      <p id={`${film}-text`} class="sr-only">{t(F.text)}</p>
       <div class="film-dialog__frame">
         <video
           ref={video}
           class="film-dialog__video"
-          src={filmSrc(l, wide)}
-          poster={stillSrc(l, wide)}
+          src={filmSrc(film, l, wide)}
+          poster={stillSrc(film, l, wide)}
           controls
           playsInline
           preload="auto"
