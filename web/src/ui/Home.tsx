@@ -15,7 +15,7 @@ import { NoteToEwan } from "./NoteToEwan";
 import { Seg } from "./Seg";
 import { ArrowRight, ChevronRight, Eye, Play, Search, Trail } from "./icons";
 import { PackRow } from "./Pack";
-import { FilmCard } from "./Film";
+import { Films } from "./Film";
 import { NotifyCard } from "./Notify";
 import { QuestionsRow } from "./Questions";
 import { SponsorsRow } from "./Sponsors";
@@ -297,8 +297,8 @@ export function Home() {
       {ph === "before" && intro && (
         <div class="prose voice block">{intro.split(/\n{2,}/).map((p) => <p>{typo(p)}</p>)}</div>
       )}
-      {/* before I leave: what the trail is, in 30 seconds (then it stays on the "About" page) */}
-      {ph === "before" && <FilmCard />}
+      {/* before I leave: the two films (the trail in 30 seconds, the kiwi's short); then they stay on the "About" page */}
+      {ph === "before" && <Films />}
       {/* (before I leave, the moment to sign up: after that it stays further down, and on the "About" page) */}
       {ph === "before" && <NotifyCard block />}
       {ph === "before" && <PackRow block />}
