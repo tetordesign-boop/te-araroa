@@ -131,6 +131,16 @@ const shots = JSON.parse(process.env.SHOTS_JSON || "null") ?? [
   { id: "r-m-home-full", ctx: mobile(false), url: "", act: seq(full, wait(800)) },
   { id: "r-m-home-full-2", ctx: mobile(false), url: "", act: seq(full, wait(800), (p) => p.evaluate(() => { const b = document.querySelector(".sheet__body"); if (b) b.scrollTop = 640; })) },
   { id: "r-m-about", ctx: mobile(false), url: "#/apropos", act: full },
+  // the real payment page for a 1 € gift (created, never paid: Stripe lets it expire)
+  { id: "r-pay-gift", ctx: mobile(false), url: "", plain: 6000, noSettle: true, act: async (p) => {
+      const r = await p.evaluate(async () => {
+        const res = await fetch("https://jmedorwtksxxnzwyjvbz.supabase.co/functions/v1/checkout", { method: "POST", headers: { apikey: "sb_publishable_-XKxRnwVevyUpGjZ9HF0NQ_4B_ykHCx", "Content-Type": "application/json" }, body: JSON.stringify({ action: "gift", amount: 100, lang: "fr" }) });
+        const j = await res.json().catch(() => ({}));
+        return { status: res.status, err: j.error ?? null, url: j.url ?? null };
+      });
+      console.log(`  GIFT ${r.status} ${r.err ?? ""} ${r.url ? r.url.slice(0, 34) + "…" : "no url"}`);
+      if (r.url) { await p.goto(r.url, { waitUntil: "domcontentloaded" }); await p.waitForTimeout(7000); }
+    }, probe: "location.host + ' | ' + document.body.innerText.replace(/\\s+/g, ' ').slice(0, 220)" },
   { id: "r-m-films", ctx: mobile(false), url: "#/apropos", plain: 14000, act: seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(1200), (p) => p.evaluate(() => document.querySelector(".films")?.scrollIntoView({ block: "center" })), wait(1500)), probe: "[...document.querySelectorAll('.films .film')].map((b) => b.innerText.replace(/\\n/g, ' / ') + ' img:' + b.querySelector('img')?.naturalWidth).join(' || ')" },
   { id: "r-m-kiwi-open", ctx: mobile(false), url: "#/apropos", plain: 14000, act: seq(tap(".sheet__grip"), wait(600), tap(".sheet__grip"), wait(1200), tap(".films .film:nth-child(2)"), wait(6000)), noSettle: true, probe: "(() => { const v = document.querySelector('.film-dialog__video'); return v ? v.currentSrc + ' ready:' + v.readyState + ' dur:' + v.duration + ' paused:' + v.paused + ' t:' + v.currentTime.toFixed(1) : 'no video'; })()" },
   { id: "r-d-kiwi-open", ctx: desktop(false), url: "#/apropos", act: seq(wait(1500), tap(".films .film:nth-child(2)"), wait(6000)), noSettle: true, probe: "(() => { const v = document.querySelector('.film-dialog__video'); return v ? v.currentSrc + ' ready:' + v.readyState + ' dur:' + v.duration + ' paused:' + v.paused + ' t:' + v.currentTime.toFixed(1) : 'no video'; })()" },
