@@ -14,6 +14,8 @@ import { Activate } from "./Activate";
 import { checkFeatures } from "./features";
 import { loadAdminQuestions, QuestionsAdmin } from "./QuestionsAdmin";
 import { Positions } from "./Positions";
+import { PlanPage } from "./Plan";
+import { loadPlanData } from "./plan";
 import { checkAdmin, isAdmin, session, signingIn, signOut } from "./sb";
 import { adminDays, adminMedia, adminRoute, adminSettings, loadRoute, loadServer, readAdminCache } from "./server";
 import { afterSync, loadDrafts, startSyncLoop } from "./store";
@@ -41,6 +43,7 @@ export function AdminApp() {
     loadRoute();
     loadParcels();
     loadSponsors();
+    void loadPlanData(); // the map points and the profile, kept by the service worker for "Mon étape" with no signal
     void refreshAlerts();
     // what is switched on yet (questions, voice notes, notifications), then the questions waiting for an answer
     checkFeatures().then(() => loadAdminQuestions());
@@ -88,6 +91,7 @@ export function AdminApp() {
         : p.name === "settings" ? <SettingsPage />
         : p.name === "gear" ? <GearPage />
         : p.name === "parcels" ? <ParcelsPage />
+        : p.name === "plan" ? <PlanPage />
         : p.name === "sponsors" ? <SponsorsAdminPage />
         : p.name === "alerts" ? <AlertsPage />
         : p.name === "tracking" ? <Tracking />

@@ -8,6 +8,7 @@ import { parcelsLine } from "./Parcels";
 import { sponsorsLine } from "./SponsorsAdmin";
 import type { Settings } from "../types";
 import { ChevronLeft, ChevronRight, Locate } from "../ui/icons";
+import { PlanCard } from "./Plan";
 import { draftForToday, draftFromDay, openDraft } from "./Editor";
 import { InstallHint } from "./InstallHint";
 import { alertsLine } from "./Alerts";
@@ -138,6 +139,7 @@ export function Dashboard() {
       <p class="adm-sub">Bonjour {name}, on est le {fmtDate(today, "fr")} en Nouvelle-Zélande.</p>
       <SyncPill />
       <InstallHint />
+      <PlanCard />
       {s && <BeforeDeparture s={s} lastOwn={lastOwn} />}
       {s?.start_date && s.start_date <= today && (features.value.db === false || (features.value.push !== true && features.value.push !== null)) && (
         <div class="group" style={{ marginTop: "18px" }}>
@@ -600,6 +602,7 @@ export function Help() {
       <p>Tes proches qui le veulent reçoivent une notification à chaque étape publiée : <span class="key">« Être prévenu de chaque étape »</span>, sur l'accueil du site avant ton départ et dans « À propos ». Sur iPhone, il faut d'abord mettre le site sur l'écran d'accueil (le site l'explique). Tu n'as rien à faire : publier suffit. Seules les étapes à partir de ta date de départ préviennent, une seule fois chacune. <strong>Notifications</strong>, sur l'accueil du carnet, dit combien de téléphones sont inscrits.</p>
 
       <h2>Ta position</h2>
+      <p><strong>Mon étape</strong> : en haut du carnet. « Me localiser » place ton GPS sur le sentier, même sans réseau, et montre les 40 km qui viennent. Choisis où dormir : distance, dénivelé, temps à ton allure, heure limite de départ avant la nuit. « Garder ce plan » remplit l'arrivée de ton étape du jour. Pour te diriger sur le terrain, garde l'appli officielle du Te Araroa.</p>
       <p><strong>Suivi automatique</strong> (OwnTracks) : ta position part en arrière-plan quand tu as du réseau, sans ouvrir le carnet. Les points enregistrés sans réseau partent ensuite.</p>
       <p><strong>Partager ma position</strong> : un point à la main, avec un petit mot si tu veux.</p>
       <p>Dans Réglages, tu peux afficher ta position avec du retard (1 h à 24 h).</p>

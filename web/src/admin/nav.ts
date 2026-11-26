@@ -9,6 +9,7 @@ export type Page =
   | { name: "settings" }
   | { name: "gear" }
   | { name: "parcels" }
+  | { name: "plan" }
   | { name: "sponsors" }
   | { name: "alerts" }
   | { name: "tracking" }
