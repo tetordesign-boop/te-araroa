@@ -3,7 +3,8 @@
 // orange cursor follows with the km, the place and the height, and holds on to a pass when near one; let go and the
 // kilometre's ticket comes out of the slot below, foil catching the light. "Je veux ce ticket" opens a small form
 // inside it: a price, and the payment goes straight to Stripe (the ticket is given as soon as it's paid); or, with no
-// budget, a request I answer. At the foot, "un coup de pouce": a gift of the amount chosen, for those who just want
+// budget, a request I answer. At the foot, "un coup de pouce": a small line that opens on one field, the amount people
+// want to give (Stripe still lets them change it), for those who just want
 // to help.
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { lang, t } from "../i18n";
@@ -11,7 +12,7 @@ import { fmtInt } from "../lib/format";
 import { profile } from "../lib/places";
 import { play } from "../lib/sound";
 import {
-  buySpot, confirmPayment, giveGift, GIFT_EUR, heightAt, kmOf, kmSpot, linkLabel, loadTaken, logoSrc, MAX_EUR, MIN_EUR, nearKm,
+  buySpot, confirmPayment, giveGift, heightAt, kmOf, kmSpot, linkLabel, loadTaken, logoSrc, MAX_EUR, MIN_EUR, nearKm,
   passes, requestSpot, sweepPayments, taken, totalKm, type Paid, type Spot } from "../lib/sponsors";
 import type { Lang } from "../types";
 import { ChevronRight } from "./icons";
@@ -56,9 +57,9 @@ const W = {
     counts: (free: string, total: string) => `${free} kilomètres libres sur ${total}`,
     gift: {
       title: "Un coup de pouce",
-      lead: "Pas besoin de ticket pour m'aider : si vous voulez juste me soutenir, choisissez un montant. Ça m'aide pour les repas, les refuges et le matériel en route.",
-      other: "Autre", otherLabel: "Autre montant, en euros", name: "Votre prénom", word: "Un mot pour moi", optional: "facultatif",
-      give: (n: string) => `Donner ${n} €`, pick: "Choisissez un montant", tooSmall: "Le montant commence à 1 €.",
+      meta: "Juste me soutenir, du montant que vous voulez",
+      amount: "Votre montant, en euros",
+      give: (n: string) => `Donner ${n} €`, pick: "Entrez un montant", tooSmall: "Le montant commence à 1 €.",
     },
   },
   en: {
@@ -96,9 +97,9 @@ const W = {
     counts: (free: string, total: string) => `${free} of ${total} kilometres still free`,
     gift: {
       title: "A helping hand",
-      lead: "No ticket needed to help: if you'd just like to support me, pick an amount. It goes to meals, huts and gear along the way.",
-      other: "Other", otherLabel: "Another amount, in euros", name: "Your first name", word: "A word for me", optional: "optional",
-      give: (n: string) => `Give €${n}`, pick: "Pick an amount", tooSmall: "The amount starts at €1.",
+      meta: "Just support me, with any amount you like",
+      amount: "Your amount, in euros",
+      give: (n: string) => `Give €${n}`, pick: "Enter an amount", tooSmall: "The amount starts at €1.",
     },
   },
 };
@@ -217,53 +218,54 @@ function PaidBanner() {
   );
 }
 
-/** "Un coup de pouce": a gift of the amount chosen, paid on Stripe. */
+/** "Un coup de pouce": one line; a tap opens it on a single field, the amount, then Stripe. */
 function Gift() {
   const l = lang.value, w = words().gift;
-  const [amount, setAmount] = useState<number | "other">(GIFT_EUR[1]);
-  const [other, setOther] = useState("");
-  const [name, setName] = useState("");
-  const [word, setWord] = useState("");
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
   const [state, setState] = useState<{ kind: "idle" | "sending" | "error"; msg?: string }>({ kind: "idle" });
-  const euros = amount === "other" ? Math.round(parseFloat(other.replace(",", ".")) || 0) : amount;
+  const input = useRef<HTMLInputElement>(null);
+  const euros = Math.round(parseFloat(value.replace(",", ".")) || 0);
+  const toggle = () => {
+    const next = !open; setOpen(next);
+    if (next) setTimeout(() => input.current?.focus({ preventScroll: true }), 280);
+  };
   const submit = async (e: Event) => {
     e.preventDefault();
     if (state.kind === "sending") return;
     if (!(euros >= 1)) { setState({ kind: "error", msg: w.tooSmall }); return; }
     setState({ kind: "sending" });
-    const url = await giveGift(Math.min(euros, MAX_EUR), name.trim(), word.trim(), l);
+    const url = await giveGift(Math.min(euros, MAX_EUR), "", "", l);
     if (typeof url === "string" && url !== "closed") { location.href = url; return; }
     setState({ kind: "error", msg: words().err[url === "closed" ? "closed" : "error"] });
   };
   return (
-    <section class="block gift" aria-labelledby="gift-title">
-      <h2 class="h-section" id="gift-title">{w.title}</h2>
-      <p class="gift__lead voice">{w.lead}</p>
-      <form class="form gift__form" onSubmit={submit} noValidate>
-        <div class="gift__amounts" role="radiogroup" aria-label={w.pick}>
-          {GIFT_EUR.map((n) => (
-            <button type="button" role="radio" aria-checked={amount === n} class={`gift__amount num${amount === n ? " is-on" : ""}`} data-sfx="tap" onClick={() => setAmount(n)}>
-              {l === "fr" ? `${n} €` : `€${n}`}
+    <section class={`block gift${open ? " is-open" : ""}`}>
+      <button class="gift__head" type="button" aria-expanded={open} aria-controls="gift-body" data-sfx="tap" onClick={toggle}>
+        <span class="gift__coin" aria-hidden="true">€</span>
+        <span class="gift__main">
+          <span class="gift__title" id="gift-title">{w.title}</span>
+          <span class="gift__meta">{w.meta}</span>
+        </span>
+        <span class="gift__plus" aria-hidden="true" />
+      </button>
+      <div class="gift__body" id="gift-body" role="region" aria-labelledby="gift-title" inert={!open}>
+        <div class="gift__inner">
+          <form class="gift__form" onSubmit={submit} noValidate>
+            <label class="sr-only" for="gift-amount">{w.amount}</label>
+            <div class={`gift__field${l === "en" ? " gift__field--pre" : ""}`}>
+              <input id="gift-amount" ref={input} class="gift__input num" type="number" inputMode="numeric" min={1} max={MAX_EUR} step={1}
+                placeholder="10" value={value} onInput={(e) => { setValue((e.target as HTMLInputElement).value); if (state.kind === "error") setState({ kind: "idle" }); }} />
+              <span class="gift__cur" aria-hidden="true">€</span>
+            </div>
+            <button class="btn btn--primary btn--block" type="submit" data-sfx="none" disabled={state.kind === "sending" || !(euros >= 1)}>
+              {state.kind === "sending" ? words().sending : euros >= 1 ? w.give(fmtInt(euros, l)) : w.pick}
             </button>
-          ))}
-          <button type="button" role="radio" aria-checked={amount === "other"} class={`gift__amount${amount === "other" ? " is-on" : ""}`} data-sfx="tap" onClick={() => setAmount("other")}>{w.other}</button>
+            <p class="fine gift__secure">{l === "fr" ? "Paiement sécurisé par Stripe : carte, Apple Pay ou Google Pay." : "Secure payment by Stripe: card, Apple Pay or Google Pay."}</p>
+            <p class={state.kind === "error" ? "form__msg is-error" : "sr-only"} role="status" aria-live="polite">{state.kind === "error" ? state.msg : ""}</p>
+          </form>
         </div>
-        {amount === "other" && (
-          <>
-            <label class="note__label" for="gift-other">{w.otherLabel}</label>
-            <input id="gift-other" class="field num" type="number" inputMode="numeric" min={1} max={MAX_EUR} step={1} value={other} onInput={(e) => setOther((e.target as HTMLInputElement).value)} />
-          </>
-        )}
-        <label class="note__label" for="gift-name">{w.name} <span class="tk__hint">({w.optional})</span></label>
-        <input id="gift-name" class="field" type="text" maxLength={60} autoComplete="given-name" value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} />
-        <label class="note__label" for="gift-word">{w.word} <span class="tk__hint">({w.optional})</span></label>
-        <textarea id="gift-word" class="field" rows={2} maxLength={300} value={word} onInput={(e) => setWord((e.target as HTMLTextAreaElement).value)} />
-        <button class="btn btn--primary btn--block" type="submit" data-sfx="none" disabled={state.kind === "sending" || !(euros >= 1)}>
-          {state.kind === "sending" ? words().sending : w.give(fmtInt(euros || 0, l))}
-        </button>
-        <p class="fine gift__secure">{l === "fr" ? "Paiement sécurisé par Stripe : carte, Apple Pay ou Google Pay." : "Secure payment by Stripe: card, Apple Pay or Google Pay."}</p>
-        <p class={state.kind === "error" ? "form__msg is-error" : "sr-only"} role="status" aria-live="polite">{state.kind === "error" ? state.msg : ""}</p>
-      </form>
+      </div>
     </section>
   );
 }

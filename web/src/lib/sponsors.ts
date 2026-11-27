@@ -124,7 +124,6 @@ export async function requestSpot(spot: Spot, a: Ask, lang: Lang): Promise<AskRe
 export const MIN_EUR = 1;
 export const MAX_EUR = 10000;
 /** the amounts offered for a gift (any other can be typed) */
-export const GIFT_EUR = [5, 10, 20, 50];
 const CHECKOUT = `${SUPABASE_URL}/functions/v1/checkout`;
 
 export type BuyResult = { ok: true; url: string } | { ok: false; why: "rate" | "links" | "taken" | "held" | "closed" | "error" };
