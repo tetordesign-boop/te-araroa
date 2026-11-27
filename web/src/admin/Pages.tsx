@@ -8,7 +8,7 @@ import { parcelsLine } from "./Parcels";
 import { sponsorsLine } from "./SponsorsAdmin";
 import type { Settings } from "../types";
 import { ChevronLeft, ChevronRight, Locate } from "../ui/icons";
-import { PlanCard } from "./Plan";
+import { GuideLink, PlanCard } from "./Plan";
 import { draftForToday, draftFromDay, openDraft } from "./Editor";
 import { InstallHint } from "./InstallHint";
 import { alertsLine } from "./Alerts";
@@ -140,6 +140,7 @@ export function Dashboard() {
       <SyncPill />
       <InstallHint />
       <PlanCard />
+      <GuideLink />
       {s && <BeforeDeparture s={s} lastOwn={lastOwn} />}
       {s?.start_date && s.start_date <= today && (features.value.db === false || (features.value.push !== true && features.value.push !== null)) && (
         <div class="group" style={{ marginTop: "18px" }}>

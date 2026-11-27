@@ -185,6 +185,8 @@ export function PlanPage() {
         </div>
       </section>
 
+      <GuideLink />
+
       {!ready && <p class="plan-note">Ouvre une fois le Carnet avec du réseau : les refuges et l'altitude seront ensuite gardés pour les jours sans signal.</p>}
 
       {ready && <>
@@ -299,6 +301,21 @@ export function PlanPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+/** « Mon carnet de route » : the PDF of all the stages (scripts/guide/build.mjs), to keep on the phone. */
+export const GUIDE_URL = `${import.meta.env.BASE_URL}guide/carnet-de-route.pdf`;
+export function GuideLink() {
+  return (
+    <a class="plan-guide" href={GUIDE_URL} target="_blank" rel="noopener" download="Carnet de route Te Araroa.pdf">
+      <span class="plan-guide__icon" aria-hidden="true">21</span>
+      <span class="plan-card__main">
+        <span class="plan-card__title">Mon carnet de route</span>
+        <span class="plan-guide__meta">Les 21 étapes en PDF : km, dénivelé, jours, nourriture, refuges. À garder dans Fichiers ou Livres.</span>
+      </span>
+      <ChevronRight class="cell__chev" />
+    </a>
   );
 }
 
