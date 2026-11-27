@@ -2039,3 +2039,27 @@ html[data-sheet="full"] .spin__float, html[data-sheet="full"] .spin__coin, html[
 .gift__amount.is-on { background: rgba(255, 107, 18, 0.18); color: var(--marker-hot); box-shadow: inset 0 0 0 2px var(--marker); }
 .gift__secure { margin: 0; text-align: center; }
 @media (max-width: 360px) { .gift__amounts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* ------------------------------------------------------------------ the weather where I am (ui/Weather.tsx): now, the
+   next three days, and the pass ahead when one is close. Same raised surface as the "on my way" cards. */
+.wx__where { margin: 0 0 10px; font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wx__card { border-radius: 20px; background: var(--raise); box-shadow: inset 0 0 0 1px var(--line); padding: 16px 16px 14px; }
+.wx__now { display: flex; align-items: center; gap: 12px; }
+.wx__icon { font-size: 36px; line-height: 1; }
+.wx__temp { font-size: 54px; line-height: 0.95; font-weight: 800; font-stretch: 116%; letter-spacing: -0.04em; }
+.wx__side { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.wx__label { font-size: 16px; font-weight: 680; }
+.wx__label::first-letter, .wx__dname::first-letter { text-transform: uppercase; }
+.wx__meta { font-size: 13.5px; color: var(--ink-2); line-height: 1.35; }
+.wx__days { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 14px; border-top: 1px solid var(--line); }
+.wx__day { display: flex; flex-direction: column; gap: 2px; padding: 12px 8px 2px; min-width: 0; }
+.wx__day + .wx__day { border-left: 1px solid var(--line); padding-left: 12px; }
+.wx__dname { font-size: 12.5px; font-weight: 650; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wx__dicon { font-size: 22px; line-height: 1.25; }
+.wx__range { font-size: 15px; color: var(--ink-3); }
+.wx__range b { color: var(--ink); font-weight: 760; }
+.wx__dmeta { font-size: 12.5px; color: var(--ink-2); line-height: 1.3; }
+.wx__pass { margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.45; color: var(--ink-2); text-wrap: pretty; }
+.wx__pass b { color: var(--ink); }
+.wx__credit { margin: 6px 4px 0; text-align: right; font-size: 11.5px; }
+.wx__credit a { color: var(--ink-3); text-decoration: none; }

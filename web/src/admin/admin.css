@@ -318,3 +318,5 @@ a.textbtn { text-decoration: none; color: var(--marker); }
 .plan-day__actions .bigbtn { margin: 0; width: 100%; }
 .plan-day__ok { color: var(--glacier); font-weight: 650; font-size: 15px; }
 .plan-hours { flex: none; width: 180px; }
+.plan-wx b { color: var(--ink); }
+.plan-wx__age { color: var(--ink-3); }

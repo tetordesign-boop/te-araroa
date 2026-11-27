@@ -4,6 +4,9 @@
 import { useEffect, useState } from "preact/hooks";
 import { fmtKm, nzToday } from "../lib/format";
 import { KIND_COLOR } from "../map/pois";
+import { weatherLabel } from "../i18n";
+import type { LngLat } from "../lib/geo";
+import { cachedForecast, dayOf, getForecast, type Forecast } from "../lib/weather";
 import { ChevronRight, Locate } from "../ui/icons";
 import { Bar } from "./Pages";
 import { open, say } from "./nav";
@@ -35,6 +38,34 @@ function details(s: Stop): string {
   if (p?.water && s.kind !== "water") out.push("eau");
   if (s.d > 300) out.push(`à ${fmtKm(s.d / 1000, "fr", 1)} km du sentier`);
   return out.filter(Boolean).join(" · ");
+}
+
+/** A forecast at a point: the last one kept on the phone right away, then a fresh one when there is signal. */
+function useWx(c: LngLat | null, elev: number | null): Forecast | null {
+  const key = c ? `${c[0].toFixed(2)},${c[1].toFixed(2)},${elev ?? ""}` : "";
+  const [f, setF] = useState<Forecast | null>(null);
+  useEffect(() => {
+    if (!c) { setF(null); return; }
+    let alive = true;
+    setF(cachedForecast(c[1], c[0], elev));
+    getForecast(c[1], c[0], elev).then((x) => alive && x && setF(x));
+    return () => { alive = false; };
+  }, [key]);
+  return f;
+}
+
+function WxLine({ f, date, label }: { f: Forecast | null; date: string; label: string }) {
+  const d = dayOf(f, date);
+  if (!f || !d) return null;
+  const w = weatherLabel(d.code, "fr");
+  const age = Date.now() - f.at;
+  return (
+    <p class="plan-day__line plan-wx">
+      <span aria-hidden="true">{w.icon}</span> {label} : {w.label}, <b class="num">{Math.round(d.min)}° à {Math.round(d.max)}°</b>
+      {d.rain >= 0.5 ? `, ${fmtKm(d.rain, "fr", 1)} mm de pluie` : ", sec"}{d.gust >= 40 ? `, rafales ${Math.round(d.gust)} km/h` : ""}.
+      {age > 3 * 3600e3 ? <span class="plan-wx__age"> Prévision {ago(f.at)}.</span> : null}
+    </p>
+  );
 }
 
 // ------------------------------------------------------------------ the next 40 km, drawn
@@ -107,6 +138,9 @@ export function PlanPage() {
     const planB = between(h.km + (s.km - h.km) * 0.5, s.km * 1 - (s.km - h.km) * 0.12, ["hut", "camp"]);
     return { s, sun, day, leave, onWay, planB };
   })() : null;
+  const hiNeeded = !!chosen && chosen.max - (chosen.s.e ?? elevAt(chosen.s.km) ?? 0) > 250;
+  const wxTo = useWx(chosen ? chosen.s.c : null, chosen ? chosen.s.e ?? elevAt(chosen.s.km) : null);
+  const wxHi = useWx(hiNeeded ? r.pointAt(chosen!.maxKm) : null, hiNeeded ? chosen!.max : null);
   const isSaved = !!(saved && chosen && saved.toId === chosen.s.id && saved.date === date && Math.abs(saved.fromKm - h.km) < 1);
   const keep = () => {
     if (!chosen) return;
@@ -180,6 +214,8 @@ export function PlanPage() {
                 <div><dt>Marche</dt><dd class="num">≈ {fmtHours(chosen!.hours)}</dd></div>
               </dl>
               <p class="plan-day__line">Point haut : {m0(chosen!.max)}, au km {km1(chosen!.maxKm)}.</p>
+              <WxLine f={wxTo} date={date} label={`Météo là-bas`} />
+              {hiNeeded && <WxLine f={wxHi} date={date} label={`Au point haut (${m0(chosen!.max)})`} />}
               {sum.sun && <p class="plan-day__line">Coucher du soleil là-bas à {nzClock(sum.sun.set)}{sum.leave ? <> : pars avant <b>{nzClock(sum.leave)}</b> pour arriver une heure avant la nuit, pauses comprises.</> : "."}</p>}
               {sum.onWay.length > 0 && <p class="plan-day__line">En chemin : {sum.onWay.slice(0, 8).map((s) => `${s.name} (${km1(s.km - h.km)} km)`).join(", ")}{sum.onWay.length > 8 ? "…" : ""}.</p>}
               {sum.planB.length > 0 && <p class="plan-day__line">Si c'est dur : {sum.planB.slice(0, 3).map((s) => `${s.name} à ${km1(s.km - h.km)} km`).join(", ")}.</p>}
