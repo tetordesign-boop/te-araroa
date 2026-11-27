@@ -15,6 +15,7 @@ import { dropBlob, dropDraft, dropMediaBlobs, drafts, getBlob, kick, liveDays, o
 import { voiceReady } from "./features";
 import { VoiceRec, type Recorded } from "./VoiceRec";
 import { sba } from "./sb";
+import { plan } from "./plan";
 
 const WEATHER = ["☀️", "🌤️", "⛅", "☁️", "🌧️", "⛈️", "🌨️", "🌬️", "🌫️"];
 const MOODS = ["😄", "😊", "😌", "😐", "😩", "🥵", "🥶", "😴", "🤕"];
@@ -50,7 +51,8 @@ function previousEnd(date: string, exceptId?: string) {
 
 export function newDraft(date = nzToday()): Draft {
   const prev = previousEnd(date);
-  return {
+  const p = plan.value?.date === date ? plan.value : null; // the day planned in "Mon étape" fills the arrival
+  const draft: Draft = {
     id: crypto.randomUUID(), date, day_number: dayNumberFor(date), kind: "hike",
     title: null, title_en: null, story: null, story_en: null,
     start_km: prev.km, end_km: null, start_lng: prev.point[0], start_lat: prev.point[1], end_lng: null, end_lat: null,
@@ -58,6 +60,8 @@ export function newDraft(date = nzToday()): Draft {
     weather: null, mood: null, cover_media_id: null, track: null, published: true,
     media: [], removedMedia: [], status: "editing", error: null, updatedAt: Date.now(), isNew: true,
   };
+  if (p && p.toKm > (prev.km ?? -1)) Object.assign(draft, { end_km: p.toKm, end_lng: p.toC[0], end_lat: p.toC[1], end_name: p.toName });
+  return draft;
 }
 
 export function draftFromDay(d: Day): Draft {

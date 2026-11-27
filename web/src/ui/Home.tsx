@@ -23,7 +23,7 @@ import { altText, openPlace, PlaceBadge, placeName } from "./Place";
 import { arrival, go, hrefFor, isDesktop } from "./state";
 import { startTrailMode } from "./TrailMode";
 import { shortPlace, TrailStrip } from "./TrailStrip";
-import { useWeather } from "./WeatherClock";
+import { WeatherCard } from "./Weather";
 
 // ------------------------------------------------------------------ helpers shared with the other views
 
@@ -71,14 +71,12 @@ function Status() {
 /** Weather where he is and the time in New Zealand, said in a sentence. */
 function Conditions() {
   const l = lang.value;
-  const wx = useWeather(l);
   const now = new Date(clock.value);
   const h = nzHour(now);
   const night = h >= 21 || h < 6;
   const time = nzTime(l, now);
   return (
     <p class="conditions">
-      {wx ? `${t("wxLine", { icon: wx.icon, temp: wx.temp, label: wx.label })} ` : ""}
       {night ? t("timeNight", { time }) : t("timeDay", { time })}
     </p>
   );
@@ -293,6 +291,7 @@ export function Home() {
         <button class="searchbtn" type="button" onClick={openSearch}><Search />{t("searchPlaceholder")}</button>
       )}
       {ph === "before" ? <Before /> : <Now />}
+      <WeatherCard />
 
       {ph === "before" && intro && (
         <div class="prose voice block">{intro.split(/\n{2,}/).map((p) => <p>{typo(p)}</p>)}</div>
