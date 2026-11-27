@@ -15,7 +15,8 @@ import { NoteToEwan } from "./NoteToEwan";
 import { Seg } from "./Seg";
 import { ArrowRight, ChevronRight, Eye, Play, Search, Trail } from "./icons";
 import { PackRow } from "./Pack";
-import { Films } from "./Film";
+import { FilmCard } from "./Film";
+import { GuideRow } from "./Guide";
 import { NotifyCard } from "./Notify";
 import { QuestionsRow } from "./Questions";
 import { SponsorsRow } from "./Sponsors";
@@ -291,13 +292,15 @@ export function Home() {
         <button class="searchbtn" type="button" onClick={openSearch}><Search />{t("searchPlaceholder")}</button>
       )}
       {ph === "before" ? <Before /> : <Now />}
+      {/* a kilometre or a helping hand: right under where I am, where everyone sees it */}
+      <SponsorsRow block />
       <WeatherCard />
 
       {ph === "before" && intro && (
         <div class="prose voice block">{intro.split(/\n{2,}/).map((p) => <p>{typo(p)}</p>)}</div>
       )}
-      {/* before I leave: the two films (the trail in 30 seconds, the kiwi's short); then they stay on the "About" page */}
-      {ph === "before" && <Films />}
+      {/* before I leave: the trail in 30 seconds (then it stays on the "About" page); the kiwi's short closes the page */}
+      {ph === "before" && <FilmCard film="trail" />}
       {/* (before I leave, the moment to sign up: after that it stays further down, and on the "About" page) */}
       {ph === "before" && <NotifyCard block />}
       {ph === "before" && <PackRow block />}
@@ -305,6 +308,7 @@ export function Home() {
       {latest && <Feature d={latest} />}
 
       <OnHisWay />
+      <GuideRow block />
 
       {earlier.length > 0 && (
         <section class="block">
@@ -318,8 +322,8 @@ export function Home() {
 
       <div class="block"><NoteToEwan dayId={null} /></div>
       <QuestionsRow block />
-      <SponsorsRow block />
       {ph !== "before" && <NotifyCard block />}
+      <FilmCard film="kiwi" />
       <Footer />
     </div>
   );

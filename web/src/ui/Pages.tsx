@@ -14,7 +14,8 @@ import { bandSupported, PhotoBand } from "./PhotoBand";
 import { go, goBack, hrefFor, openTunnel, tunnelOpen } from "./state";
 import { TrailStrip } from "./TrailStrip";
 import { PackRow } from "./Pack";
-import { Films } from "./Film";
+import { FilmCard } from "./Film";
+import { GuideRow } from "./Guide";
 import { NotifyCard } from "./Notify";
 import { QuestionsRow } from "./Questions";
 import { SponsorsRow } from "./Sponsors";
@@ -445,10 +446,11 @@ export function About() {
     <div class="page">
       <PageHead title={t("about")} />
       {intro && <div class="prose voice" style={{ marginTop: "16px" }}>{intro.split(/\n{2,}/).map((p) => <p>{typo(p)}</p>)}</div>}
-      <Films />
+      <SponsorsRow block />
+      <FilmCard film="trail" />
+      <GuideRow block />
       <PackRow block />
       <QuestionsRow block />
-      <SponsorsRow block />
 
       <section class="block">
         <h2 class="h-section" style={{ marginBottom: "14px" }}>{t("followTitle")}</h2>
@@ -476,6 +478,8 @@ export function About() {
       <button class="btn btn--tint btn--block block" type="button" onClick={replayIntro}>
         <Play />{t("replayIntro")}
       </button>
+
+      <FilmCard film="kiwi" />
 
       <section class="block">
         <h2 class="h-section" style={{ fontSize: "17px" }}>{t("credits")}</h2>

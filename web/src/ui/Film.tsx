@@ -24,16 +24,6 @@ const FILMS = {
 const filmSrc = (f: FilmId, l: Lang, wide: boolean) => `${DIR}${FILMS[f].file}-${l}-${cut(wide)}.mp4`;
 const stillSrc = (f: FilmId, l: Lang, wide: boolean) => `${DIR}${FILMS[f].poster}-${l}-${cut(wide)}.jpg`;
 
-/** Both films, side by side: the trail in 30 seconds, then the kiwi's short. */
-export function Films() {
-  return (
-    <div class="films block">
-      <FilmCard film="trail" />
-      <FilmCard film="kiwi" />
-    </div>
-  );
-}
-
 export function FilmCard({ film = "trail" }: { film?: FilmId }) {
   const [open, setOpen] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
